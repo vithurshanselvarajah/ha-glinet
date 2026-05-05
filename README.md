@@ -92,5 +92,4 @@ Maintained by Vithurshan Selvarajah.
 
 ## Special Thanks 
 
-HarvsG for his original project to act as inspiration
-GL-INet for both their amazing hardware and API documentation
+HarvsG for his original project to act as inspiration & GL-INet for both their amazing hardware and API documentation
