@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test and lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install test tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest ruff
+
+      - name: Validate JSON metadata
+        run: |
+          python -m json.tool custom_components/ha_glinet/manifest.json >/dev/null
+          python -m json.tool hacs.json >/dev/null
+
+      - name: Compile Python
+        run: python -m compileall -q custom_components tests
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      - name: Run Ruff
+        run: ruff check custom_components tests
+
+      - name: Validate manifest version
+        run: |
+          python - <<'PY'
+          import json
+          import tomllib
+          from pathlib import Path
+
+          manifest = json.loads(Path("custom_components/ha_glinet/manifest.json").read_text())
+          project = tomllib.loads(Path("pyproject.toml").read_text())
+          manifest_version = manifest["version"]
+          project_version = project["project"]["version"]
+          if manifest_version != project_version:
+              raise SystemExit(
+                  f"manifest version {manifest_version} does not match "
+                  f"pyproject version {project_version}"
+              )
+          print(f"Version OK: {manifest_version}")
+          PY

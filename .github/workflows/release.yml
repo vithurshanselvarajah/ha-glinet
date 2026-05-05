@@ -1,0 +1,222 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Release channel
+        required: true
+        default: beta
+        type: choice
+        options:
+          - beta
+          - release
+
+permissions:
+  contents: write
+  models: read
+
+jobs:
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.mode.outputs.should_release }}
+      channel: ${{ steps.mode.outputs.channel }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      artifact_name: ${{ steps.version.outputs.artifact_name }}
+
+    steps:
+      - name: Check release trigger
+        id: mode
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message || '' }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_CHANNEL: ${{ inputs.channel || '' }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          should_release=false
+          channel=
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            should_release=true
+            channel="$INPUT_CHANNEL"
+          elif [[ "$COMMIT_MESSAGE" == *"release:"* && "$REF_NAME" == "main" ]]; then
+            should_release=true
+            channel=release
+          elif [[ "$COMMIT_MESSAGE" == *"beta:"* ]]; then
+            should_release=true
+            channel=beta
+          fi
+
+          echo "should_release=$should_release" >> "$GITHUB_OUTPUT"
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+
+      - name: Check out repository
+        if: steps.mode.outputs.should_release == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from manifest
+        if: steps.mode.outputs.should_release == 'true'
+        id: version
+        env:
+          CHANNEL: ${{ steps.mode.outputs.channel }}
+          RUN_NUMBER: ${{ github.run_number }}
+          SHA_SHORT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          version="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          print(json.loads(Path("custom_components/ha_glinet/manifest.json").read_text())["version"])
+          PY
+          )"
+
+          if [[ "$CHANNEL" == "release" ]]; then
+            tag="v${version}"
+            artifact_name="ha_glinet-${version}.zip"
+          else
+            tag="v${version}-beta.${RUN_NUMBER}"
+            artifact_name="ha_glinet-${version}-beta.${RUN_NUMBER}.zip"
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: Test release candidate
+    needs: prepare
+    if: needs.prepare.outputs.should_release == 'true'
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  release:
+    name: Publish ${{ needs.prepare.outputs.channel }}
+    needs:
+      - prepare
+      - test
+    if: needs.prepare.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build HACS archive
+        env:
+          ARTIFACT_NAME: ${{ needs.prepare.outputs.artifact_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          zip -r "dist/${ARTIFACT_NAME}" custom_components/ha_glinet \
+            -x "__pycache__/*" \
+            -x "*/__pycache__/*" \
+            -x "*.pyc"
+
+      - name: Collect commits for changelog
+        id: commits
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          previous_tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+          if [[ -n "$previous_tag" ]]; then
+            range="${previous_tag}..HEAD"
+          else
+            range="HEAD"
+          fi
+
+          {
+            echo "commits<<EOF"
+            git log "$range" --pretty=format:"- %s (%h)" --no-merges
+            echo
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Generate changelog with GitHub AI
+        id: ai_changelog
+        continue-on-error: true
+        uses: actions/ai-inference@v1
+        with:
+          model: openai/gpt-4o
+          max-tokens: 700
+          system-prompt: >-
+            You write concise GitHub release notes for a Home Assistant custom
+            integration. Use Markdown bullets. Do not invent changes.
+          prompt: |
+            Create release notes for ha-glinet.
+
+            Channel: ${{ needs.prepare.outputs.channel }}
+            Version: ${{ needs.prepare.outputs.version }}
+            Tag: ${{ needs.prepare.outputs.tag }}
+
+            Commits:
+            ${{ steps.commits.outputs.commits }}
+
+      - name: Write release notes
+        env:
+          AI_NOTES_FILE: ${{ steps.ai_changelog.outputs.response-file }}
+          CHANNEL: ${{ needs.prepare.outputs.channel }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          COMMITS: ${{ steps.commits.outputs.commits }}
+        run: |
+          set -euo pipefail
+
+          {
+            echo "# ha-glinet ${VERSION}"
+            echo
+            echo "Channel: ${CHANNEL}"
+            echo
+            if [[ -n "${AI_NOTES_FILE:-}" && -s "$AI_NOTES_FILE" ]]; then
+              cat "$AI_NOTES_FILE"
+            else
+              echo "## Changes"
+              echo
+              if [[ -n "$COMMITS" ]]; then
+                echo "$COMMITS"
+              else
+                echo "- Release ${TAG}"
+              fi
+            fi
+            echo
+            echo "## HACS"
+            echo
+            echo "Download the attached ha_glinet zip archive or install/update through HACS."
+          } > release-notes.md
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          CHANNEL: ${{ needs.prepare.outputs.channel }}
+          ARTIFACT_NAME: ${{ needs.prepare.outputs.artifact_name }}
+        run: |
+          set -euo pipefail
+
+          prerelease_flag=
+          title="ha-glinet ${TAG}"
+          if [[ "$CHANNEL" == "beta" ]]; then
+            prerelease_flag="--prerelease"
+            title="ha-glinet ${TAG} beta"
+          fi
+
+          gh release create "$TAG" \
+            "dist/${ARTIFACT_NAME}" \
+            --title "$title" \
+            --notes-file release-notes.md \
+            $prerelease_flag

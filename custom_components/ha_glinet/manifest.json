@@ -1,0 +1,15 @@
+{
+  "domain": "ha_glinet",
+  "name": "GL-INet",
+  "codeowners": ["@vithurshanselvarajah"],
+  "config_flow": true,
+  "dependencies": ["network", "http"],
+  "documentation": "https://github.com/vithurshanselvarajah/ha-glinet",
+  "dhcp": [{ "hostname": "*gl-*", "macaddress": "9483C4*" }],
+  "homekit": {},
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/vithurshanselvarajah/ha-glinet/issues",
+  "requirements": ["passlib==1.7.4"],
+  "version": "1.0.0"
+}

@@ -1,0 +1,17 @@
+DOMAIN = "ha_glinet"
+API_PATH = "/rpc"
+INTEGRATION_NAME = "GL-INet"
+DEFAULT_URL = "http://192.168.8.1"
+DEFAULT_USERNAME = "root"
+DEFAULT_PASSWORD = "goodlife"
+CONF_TITLE = "title"
+
+SERVICE_GET_SMS = "get_sms"
+SERVICE_REMOVE_SMS = "remove_sms"
+SERVICE_REFRESH_SMS = "refresh_sms"
+SERVICE_SEND_SMS = "send_sms"
+
+ATTR_MESSAGE_ID = "message_id"
+ATTR_SCOPE = "scope"
+ATTR_RECIPIENT = "recipient"
+ATTR_TEXT = "text"

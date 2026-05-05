@@ -1,0 +1,44 @@
+{
+  "title": "GL-INet",
+  "config": {
+    "step": {
+      "user": {
+        "description": "Enter the connection details for your GL-INet router",
+        "data": {
+          "host": "Router Address",
+          "password": "Admin Password",
+          "consider_home": "Away Delay"
+        },
+        "data_description": {
+          "host": "Use the router URL or IP address (for example: http://192.168.8.1).",
+          "password": "Provide the same password you use for the router admin interface.",
+          "consider_home": "Set how many seconds a client can be offline before it is marked away."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to reach the router",
+      "invalid_auth": "The password was rejected",
+      "unknown": "Something went wrong while validating settings"
+    },
+    "abort": {
+      "already_configured": "This GL-INet router is already set up"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "host": "Router Address",
+          "password": "Admin Password",
+          "consider_home": "Away Delay"
+        },
+        "data_description": {
+          "host": "Use the router URL or IP address (for example: http://192.168.8.1).",
+          "password": "Provide the same password you use for the router admin interface.",
+          "consider_home": "Set how many seconds a client can be offline before it is marked away."
+        }
+      }
+    }
+  }
+}

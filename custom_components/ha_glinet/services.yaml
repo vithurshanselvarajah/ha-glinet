@@ -1,0 +1,53 @@
+send_sms:
+  name: Send SMS
+  description: Send a text message through a GL-INet router with SMS support.
+  fields:
+    recipient:
+      selector:
+        text:
+      required: true
+      example: "1234567890"
+    text:
+      selector:
+        text:
+          multiline: true
+      required: true
+      example: "Router test message"
+
+refresh_clients:
+  name: Refresh clients
+  description: Refresh tracked clients and clear the router client cache when supported.
+  fields:
+    mac:
+      selector:
+        text:
+      required: false
+
+get_sms:
+  name: Get SMS messages
+  description: Retrieve all SMS messages from the router. Returns message list in action response.
+  fields:
+    mac:
+      selector:
+        text:
+      required: false
+
+remove_sms:
+  name: Remove SMS
+  description: Deletes SMS messages from the router.
+  fields:
+    scope:
+      name: Scope
+      description: "The range of SMS to remove (10: Single message, 11: All, 0: All unread, 1: All read, 2: All sent, 12: All received)."
+      selector:
+        number:
+          min: 0
+          max: 13
+          mode: box
+      required: true
+      default: 10
+    message_id:
+      name: Message ID
+      description: The unique identifier for the SMS (required for scope 10).
+      selector:
+        text:

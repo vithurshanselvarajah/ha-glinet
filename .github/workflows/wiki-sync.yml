@@ -1,0 +1,84 @@
+name: Wiki Content Sync
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+  repository_dispatch:
+    types: [docs]
+  workflow_dispatch:
+  gollum:
+
+env:
+  GIT_AUTHOR_NAME: GitHub Action
+  GIT_AUTHOR_EMAIL: action@github.com
+  SYNC_CHANGES_REPO_NAME: docs-sync
+
+jobs:
+
+  sync-content-to-wiki:
+    if: always() && format('refs/heads/{0}', github.event.repository.default_branch) == github.ref && github.event_name != 'gollum'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Sync docs folder to wiki
+        uses: newrelic/wiki-sync-action@v1.0.1
+        with:
+          source: docs
+          destination: wiki
+          token: ${{ secrets.WIKI_SYNC_SECRET }}
+          gitAuthorName: ${{ env.GIT_AUTHOR_NAME }}
+          gitAuthorEmail: ${{ env.GIT_AUTHOR_EMAIL }}
+
+  sync-wiki-to-docs:
+    if: github.event_name == 'gollum'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.WIKI_SYNC_SECRET }}
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Check Home.md exists before reverse sync
+        id: safe
+        run: |
+          INDEX_EXISTS=$(find docs/* -name "Home.md")
+          if [ ! -z "$INDEX_EXISTS" ]; then
+            echo "Home.md found — reverse sync is safe"
+          else
+            echo -e "## Wiki → Docs sync blocked\n\nHome.md does not yet exist in \`docs/\`.\n\nRun the **sync-content-to-wiki** job manually first, then retry." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Create sync branch
+        run: git checkout -b "$SYNC_CHANGES_REPO_NAME"
+        shell: bash
+
+      - name: Sync Wiki to Docs
+        uses: newrelic/wiki-sync-action@v1.0.1
+        with:
+          source: wiki
+          destination: docs
+          token: ${{ secrets.WIKI_SYNC_SECRET }}
+          gitAuthorName: ${{ env.GIT_AUTHOR_NAME }}
+          gitAuthorEmail: ${{ env.GIT_AUTHOR_EMAIL }}
+          branch: ${{ env.SYNC_CHANGES_REPO_NAME }}
+
+      - name: Create pull request
+        uses: repo-sync/pull-request@v2
+        with:
+          source_branch: ${{ env.SYNC_CHANGES_REPO_NAME }}
+          destination_branch: ${{ github.event.repository.default_branch }}
+          pr_title: "[Docs] Sync wiki changes into main"
+          pr_body: |
+            :robot: **Automated PR** — syncs wiki edits back into `docs/` in the repository.
+
+            Review the diff before merging to ensure no unintended changes were made via the wiki editor.
+          pr_label: "docs,automation"
+          pr_draft: false
+          pr_allow_empty: false
+          github_token: ${{ secrets.WIKI_SYNC_SECRET }}

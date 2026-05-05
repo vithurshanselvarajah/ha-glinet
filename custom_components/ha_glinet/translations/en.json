@@ -1,0 +1,44 @@
+{
+  "title": "GL-INet",
+  "config": {
+    "step": {
+      "user": {
+        "description": "Provide router details to link your GL-INet device",
+        "data": {
+          "host": "Router Address",
+          "password": "Admin Password",
+          "consider_home": "Away Delay"
+        },
+        "data_description": {
+          "host": "Type the router hostname, URL, or IP address.",
+          "password": "Enter the admin password configured on your GL-INet router.",
+          "consider_home": "Number of seconds before a disconnected client is treated as away."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not contact the router",
+      "invalid_auth": "Authentication failed with the supplied password",
+      "unknown": "An unexpected validation issue occurred"
+    },
+    "abort": {
+      "already_configured": "This router has already been configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "host": "Router Address",
+          "password": "Admin Password",
+          "consider_home": "Away Delay"
+        },
+        "data_description": {
+          "host": "Type the router hostname, URL, or IP address.",
+          "password": "Enter the admin password configured on your GL-INet router.",
+          "consider_home": "Number of seconds before a disconnected client is treated as away."
+        }
+      }
+    }
+  }
+}

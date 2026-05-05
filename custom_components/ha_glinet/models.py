@@ -1,0 +1,185 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import StrEnum
+
+from homeassistant.util import dt as dt_util
+
+
+class DeviceInterfaceType(StrEnum):
+    WIFI_24 = "2.4GHz"
+    WIFI_5 = "5GHz"
+    LAN = "LAN"
+    WIFI_24_GUEST = "2.4GHz Guest"
+    WIFI_5_GUEST = "5GHz Guest"
+    UNKNOWN = "Unknown"
+    DONGLE = "Dongle"
+    BYPASS_ROUTE = "Bypass Route"
+    UNKNOWN2 = "Unknown"
+    MLO = "MLO"
+    MLO_GUEST = "MLO Guest"
+    WIFI_6 = "6GHz"
+    WIFI_6_GUEST = "6GHz Guest"
+
+
+@dataclass(slots=True)
+class WireGuardClient:
+    name: str
+    connected: bool = field(compare=False)
+    group_id: int = 0
+    peer_id: int = 0
+    tunnel_id: int | None = None
+
+
+@dataclass(slots=True)
+class WifiInterface:
+    name: str
+    enabled: bool
+    ssid: str
+    guest: bool
+    hidden: bool
+    encryption: str
+
+
+@dataclass(slots=True)
+class SmsMessage:
+    message_id: str
+    phone_number: str
+    text: str
+    bus: str | None = None
+    status: int | None = None
+    timestamp: str | None = None
+    read: bool | None = None
+
+
+class ClientDeviceInfo:
+    def __init__(self, mac: str, name: str | None = None) -> None:
+        self._mac = mac
+        self._name = name
+        self._ip_address: str | None = None
+        self._last_activity = dt_util.utcnow() - timedelta(days=1)
+        self._connected = False
+        self._interface_type = DeviceInterfaceType.UNKNOWN
+        self._rx_bytes: int | None = None
+        self._tx_bytes: int | None = None
+        self._rx_rate: int | None = None
+        self._tx_rate: int | None = None
+        self._last_traffic_update: datetime | None = None
+
+    def apply_update(self, dev_info: dict | None = None, consider_home: int = 0) -> None:
+        now = dt_util.utcnow()
+        if dev_info:
+            alias = str(dev_info.get("alias", "")).strip()
+            name = str(dev_info.get("name", "")).strip()
+            if alias:
+                self._name = alias
+            elif name and name != "*":
+                self._name = name
+            else:
+                self._name = self._mac.replace(":", "_")
+            self._ip_address = dev_info.get("ip")
+            self._last_activity = now
+            self._connected = bool(dev_info.get("online", False))
+            type_index = int(dev_info.get("type", 5))
+            interface_types = list(DeviceInterfaceType)
+            if 0 <= type_index < len(interface_types):
+                self._interface_type = interface_types[type_index]
+            else:
+                self._interface_type = DeviceInterfaceType.UNKNOWN
+            previous_rx_bytes = self._rx_bytes
+            previous_tx_bytes = self._tx_bytes
+            previous_traffic_update = self._last_traffic_update
+            self._rx_bytes = _first_int(
+                dev_info,
+                ("rx_bytes", "bytes_rx", "rx", "download", "down"),
+            )
+            self._tx_bytes = _first_int(
+                dev_info,
+                ("tx_bytes", "bytes_tx", "tx", "upload", "up"),
+            )
+            explicit_rx_rate = _first_int(
+                dev_info,
+                ("rx_rate", "rx_speed", "rx_bps", "download_speed", "down_speed", "down_rate"),
+            )
+            explicit_tx_rate = _first_int(
+                dev_info,
+                ("tx_rate", "tx_speed", "tx_bps", "upload_speed", "up_speed", "up_rate"),
+            )
+            self._rx_rate = explicit_rx_rate or _rate_from_delta(
+                previous_rx_bytes,
+                self._rx_bytes,
+                previous_traffic_update,
+                now,
+            )
+            self._tx_rate = explicit_tx_rate or _rate_from_delta(
+                previous_tx_bytes,
+                self._tx_bytes,
+                previous_traffic_update,
+                now,
+            )
+            if self._rx_bytes is not None or self._tx_bytes is not None:
+                self._last_traffic_update = now
+            return
+
+        if self._connected:
+            self._connected = (now - self._last_activity).total_seconds() < consider_home
+            self._ip_address = None
+
+    @property
+    def is_connected(self) -> bool:
+        return self._connected
+
+    @property
+    def interface_type(self) -> DeviceInterfaceType:
+        return self._interface_type
+
+    @property
+    def mac(self) -> str:
+        return self._mac
+
+    @property
+    def name(self) -> str | None:
+        return self._name
+
+    @property
+    def ip_address(self) -> str | None:
+        return self._ip_address
+
+    @property
+    def last_activity(self) -> datetime:
+        return self._last_activity
+
+    @property
+    def rx_rate(self) -> int | None:
+        return self._rx_rate
+
+    @property
+    def tx_rate(self) -> int | None:
+        return self._tx_rate
+
+
+def _first_int(data: dict, keys: tuple[str, ...]) -> int | None:
+    for key in keys:
+        value = data.get(key)
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(value)
+    return None
+
+
+def _rate_from_delta(
+    previous_value: int | None,
+    current_value: int | None,
+    previous_time: datetime | None,
+    current_time: datetime,
+) -> int | None:
+    if previous_value is None or current_value is None or previous_time is None:
+        return None
+    elapsed = (current_time - previous_time).total_seconds()
+    if elapsed <= 0 or current_value < previous_value:
+        return None
+    return int((current_value - previous_value) / elapsed)
