@@ -65,14 +65,14 @@ Simply put, I use this integration in my own home and wanted specific features t
 
 ## Documentation
 
-Detailed documentation lives in [docs](docs/README.md).
+Detailed documentation lives in [Wiki](https://github.com/vithurshanselvarajah/ha-glinet/wiki).
 
 Start with:
 
-- [Entity Reference](docs/entities.md)
-- [Services](docs/services.md)
-- [Router API Notes](docs/router-api.md)
-- [CI and Release Workflows](docs/ci-release.md)
+- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/entities)
+- [Services](https://github.com/vithurshanselvarajah/ha-glinet/wiki/services)
+- [Router API Notes](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api)
+- [CI and Release Workflows](https://github.com/vithurshanselvarajah/ha-glinet/wiki/ci-release)
 
 ## Development Checks
 
