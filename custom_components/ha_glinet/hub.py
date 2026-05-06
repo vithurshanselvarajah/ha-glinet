@@ -38,7 +38,15 @@ from .api import (
 )
 from .api.exceptions import AuthenticationError
 from .const import API_PATH, DEFAULT_USERNAME, DOMAIN
-from .models import ClientDeviceInfo, SmsMessage, WifiInterface, WireGuardClient
+from .models import (
+    ClientDeviceInfo,
+    RepeaterState,
+    RepeaterStatus,
+    ScannedNetwork,
+    SmsMessage,
+    WifiInterface,
+    WireGuardClient,
+)
 from .utils import compute_mac_offset
 
 if TYPE_CHECKING:
@@ -79,6 +87,7 @@ class GLinetHub:
         self._tailscale_config: dict[str, Any] = {}
         self._tailscale_connection: bool | None = None
         self._sms_messages: dict[str, SmsMessage] = {}
+        self._repeater_status: RepeaterStatus | None = None
 
         self._late_init_complete = False
         self._connect_error = False
@@ -153,6 +162,7 @@ class GLinetHub:
             self.fetch_wireguard_clients(),
             self.fetch_tailscale_state(),
             self.fetch_cellular_status(),
+            self.fetch_repeater_status(),
         )
         await self.fetch_sms_messages()
 
@@ -338,6 +348,48 @@ class GLinetHub:
             "default_bus": self._default_modem_bus,
         }
 
+    async def fetch_repeater_status(self) -> None:
+        response = await self._invoke_optional_api(self.router_api.get_repeater_status)
+        if response is None:
+            self._repeater_status = None
+            return
+        self._repeater_status = RepeaterStatus.from_api_response(response)
+
+    async def scan_wifi_networks(
+        self, all_band: bool = False, dfs: bool = False
+    ) -> list[ScannedNetwork]:
+        response = await self._invoke_api(
+            lambda: self.router_api.scan_wifi_networks(all_band=all_band, dfs=dfs)
+        )
+        if response is None:
+            return []
+        return [ScannedNetwork.from_api_response(network) for network in response]
+
+    async def connect_to_wifi(
+        self,
+        ssid: str,
+        password: str | None = None,
+        remember: bool = True,
+        bssid: str | None = None,
+    ) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.connect_repeater(
+                ssid=ssid, key=password, remember=remember, bssid=bssid
+            )
+        )
+        await self.fetch_repeater_status()
+
+    async def disconnect_wifi(self) -> None:
+        await self._invoke_api(self.router_api.disconnect_repeater)
+        await self.fetch_repeater_status()
+
+    async def get_saved_wifi_networks(self) -> list[dict[str, Any]]:
+        response = await self._invoke_api(self.router_api.get_saved_ap_list)
+        return response or []
+
+    async def remove_saved_wifi_network(self, ssid: str) -> None:
+        await self._invoke_api(lambda: self.router_api.remove_saved_ap(ssid))
+
     async def fetch_sms_messages(self) -> None:
         response = await self._invoke_optional_api(self.router_api.get_sms_messages)
         if response is None:
@@ -506,6 +558,16 @@ class GLinetHub:
     @property
     def default_modem_bus(self) -> str | None:
         return self._default_modem_bus
+
+    @property
+    def repeater_status(self) -> RepeaterStatus | None:
+        return self._repeater_status
+
+    @property
+    def repeater_connected(self) -> bool | None:
+        if self._repeater_status is None:
+            return None
+        return self._repeater_status.state == RepeaterState.CONNECTED
 
     @property
     def event_device_added(self) -> str:

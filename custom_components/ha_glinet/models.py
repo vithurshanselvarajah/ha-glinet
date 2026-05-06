@@ -7,6 +7,65 @@ from enum import IntEnum, StrEnum
 from homeassistant.util import dt as dt_util
 
 
+class RepeaterState(IntEnum):
+    NOT_USED = 0
+    CONNECTING = 1
+    CONNECTED = 2
+    FAILED = 3
+
+
+@dataclass(slots=True)
+class RepeaterStatus:
+    state: RepeaterState
+    ssid: str | None = None
+    bssid: str | None = None
+    channel: int | None = None
+    signal: int | None = None
+    ipv4_address: str | None = None
+    ipv4_gateway: str | None = None
+    fail_type: str | None = None
+
+    @classmethod
+    def from_api_response(cls, data: dict) -> RepeaterStatus:
+        ipv4 = data.get("ipv4") or {}
+        return cls(
+            state=RepeaterState(data.get("state", 0)),
+            ssid=data.get("ssid"),
+            bssid=data.get("bssid"),
+            channel=data.get("channel"),
+            signal=data.get("signal"),
+            ipv4_address=ipv4.get("ip"),
+            ipv4_gateway=ipv4.get("gateway"),
+            fail_type=data.get("fail_type"),
+        )
+
+
+@dataclass(slots=True)
+class ScannedNetwork:
+    ssid: str
+    bssid: str
+    signal: int
+    band: str
+    encryption_enabled: bool
+    encryption_type: str
+    saved: bool
+    channel: int | None = None
+
+    @classmethod
+    def from_api_response(cls, data: dict) -> ScannedNetwork:
+        encryption = data.get("encryption") or {}
+        return cls(
+            ssid=data.get("ssid", ""),
+            bssid=data.get("bssid", ""),
+            signal=data.get("signal", 0),
+            band=data.get("band", ""),
+            encryption_enabled=encryption.get("enabled", False),
+            encryption_type=encryption.get("description", "Open"),
+            saved=data.get("saved", False),
+            channel=data.get("channel"),
+        )
+
+
 class DeviceInterfaceType(StrEnum):
     WIFI_24 = "2.4GHz"
     WIFI_5 = "5GHz"

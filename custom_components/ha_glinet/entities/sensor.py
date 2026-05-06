@@ -18,6 +18,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.util.dt import utcnow
 
 from ..const import DOMAIN
+from ..models import RepeaterState
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -248,6 +249,50 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
             ],
         },
     ),
+    HubSensorEntityDescription(
+        key="repeater_state",
+        name="Repeater state",
+        has_entity_name=True,
+        icon="mdi:wifi-sync",
+        device_class=SensorDeviceClass.ENUM,
+        options=["not_used", "connecting", "connected", "failed"],
+        value_fn=lambda hub: _repeater_state_value(hub),
+        extra_attributes_fn=lambda hub: _repeater_state_attributes(hub),
+    ),
+    HubSensorEntityDescription(
+        key="repeater_ssid",
+        name="Repeater SSID",
+        has_entity_name=True,
+        icon="mdi:wifi",
+        value_fn=lambda hub: hub.repeater_status.ssid if hub.repeater_status else None,
+    ),
+    HubSensorEntityDescription(
+        key="repeater_signal",
+        name="Repeater signal",
+        has_entity_name=True,
+        icon="mdi:wifi-strength-2",
+        native_unit_of_measurement="dBm",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda hub: hub.repeater_status.signal if hub.repeater_status else None,
+    ),
+    HubSensorEntityDescription(
+        key="repeater_channel",
+        name="Repeater channel",
+        has_entity_name=True,
+        icon="mdi:radio-tower",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda hub: hub.repeater_status.channel if hub.repeater_status else None,
+    ),
+    HubSensorEntityDescription(
+        key="repeater_ip",
+        name="Repeater IP address",
+        has_entity_name=True,
+        icon="mdi:ip-network",
+        value_fn=lambda hub: hub.repeater_status.ipv4_address if hub.repeater_status else None,
+        extra_attributes_fn=lambda hub: {
+            "gateway": hub.repeater_status.ipv4_gateway
+        } if hub.repeater_status and hub.repeater_status.ipv4_gateway else None,
+    ),
 )
 
 
@@ -276,6 +321,29 @@ CLIENT_BANDWIDTH_SENSORS: tuple[ClientBandwidthEntityDescription, ...] = (
         value_fn=lambda device: device.tx_rate,
     ),
 )
+
+
+def _repeater_state_value(hub: GLinetHub) -> str | None:
+    if hub.repeater_status is None:
+        return None
+    state_map = {
+        RepeaterState.NOT_USED: "not_used",
+        RepeaterState.CONNECTING: "connecting",
+        RepeaterState.CONNECTED: "connected",
+        RepeaterState.FAILED: "failed",
+    }
+    return state_map.get(hub.repeater_status.state)
+
+
+def _repeater_state_attributes(hub: GLinetHub) -> dict[str, Any] | None:
+    if hub.repeater_status is None:
+        return None
+    attrs: dict[str, Any] = {}
+    if hub.repeater_status.bssid:
+        attrs["bssid"] = hub.repeater_status.bssid
+    if hub.repeater_status.fail_type:
+        attrs["fail_type"] = hub.repeater_status.fail_type
+    return attrs if attrs else None
 
 
 def _calc_usage_percent(total: Any, free: Any) -> float | None:

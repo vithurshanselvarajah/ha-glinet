@@ -17,7 +17,9 @@ async def async_setup_entry(
     _: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     hub: GLinetHub = entry.runtime_data
-    async_add_entities([InternetStatusBinarySensor(hub)], True)
+    async_add_entities(
+        [InternetStatusBinarySensor(hub), RepeaterConnectedBinarySensor(hub)], True
+    )
 
 
 class InternetStatusBinarySensor(BinarySensorEntity):
@@ -42,6 +44,40 @@ class InternetStatusBinarySensor(BinarySensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         return self._hub.internet_status
+
+
+class RepeaterConnectedBinarySensor(BinarySensorEntity):
+
+    _attr_has_entity_name = True
+    _attr_name = "Repeater connected"
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+    _attr_icon = "mdi:wifi-sync"
+
+    def __init__(self, hub: GLinetHub) -> None:
+        self._hub = hub
+        self._attr_device_info = hub.device_info
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_binary_sensor/{self._hub.device_mac}/repeater_connected"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._hub.repeater_connected
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        status = self._hub.repeater_status
+        if status is None:
+            return None
+        attrs: dict[str, Any] = {}
+        if status.ssid:
+            attrs["ssid"] = status.ssid
+        if status.bssid:
+            attrs["bssid"] = status.bssid
+        if status.signal is not None:
+            attrs["signal"] = status.signal
+        return attrs if attrs else None
 
 
 def _internet_is_connected(status: dict[str, Any]) -> bool | None:

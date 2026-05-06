@@ -40,5 +40,62 @@
         }
       }
     }
+  },
+  "entity": {
+    "sensor": {
+      "repeater_state": {
+        "name": "Repeater state",
+        "state": {
+          "not_used": "Not used",
+          "connecting": "Connecting",
+          "connected": "Connected",
+          "failed": "Failed"
+        }
+      },
+      "repeater_ssid": {
+        "name": "Repeater SSID"
+      },
+      "repeater_signal": {
+        "name": "Repeater signal"
+      },
+      "repeater_channel": {
+        "name": "Repeater channel"
+      },
+      "repeater_ip": {
+        "name": "Repeater IP address"
+      }
+    },
+    "binary_sensor": {
+      "repeater_connected": {
+        "name": "Repeater connected"
+      }
+    },
+    "button": {
+      "disconnect_repeater": {
+        "name": "Disconnect repeater"
+      }
+    }
+  },
+  "services": {
+    "scan_wifi": {
+      "name": "Scan WiFi networks",
+      "description": "Scan for available WiFi networks to connect in repeater mode."
+    },
+    "connect_wifi": {
+      "name": "Connect to WiFi",
+      "description": "Connect to an external WiFi network in repeater mode."
+    },
+    "disconnect_wifi": {
+      "name": "Disconnect WiFi",
+      "description": "Disconnect from the current external WiFi network."
+    },
+    "get_saved_networks": {
+      "name": "Get saved networks",
+      "description": "Get list of saved WiFi networks for repeater mode."
+    },
+    "remove_saved_network": {
+      "name": "Remove saved network",
+      "description": "Remove a saved WiFi network from the router."
+    }
   }
 }

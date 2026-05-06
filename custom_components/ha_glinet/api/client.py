@@ -523,6 +523,91 @@ class GLinetApiClient:
             raise ConnectionAbortedError("Tailscale authorization is incomplete")
         return True
 
+    async def get_repeater_status(self) -> dict[str, Any]:
+        response = await self._send_request(
+            self._build_sid_payload("call", ["repeater", "get_status"], self.sid)
+        )
+        return dict(response)
+
+    async def get_repeater_config(self) -> dict[str, Any]:
+        response = await self._send_request(
+            self._build_sid_payload("call", ["repeater", "get_config"], self.sid)
+        )
+        return dict(response)
+
+    async def set_repeater_config(
+        self,
+        auto: bool | None = None,
+        lock_band: str | None = None,
+        antijam: bool | None = None,
+        dfs: bool | None = None,
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {}
+        if auto is not None:
+            params["auto"] = auto
+        if lock_band is not None:
+            params["lock_band"] = lock_band
+        if antijam is not None:
+            params["antijam"] = antijam
+        if dfs is not None:
+            params["dfs"] = dfs
+        response = await self._send_request(
+            self._build_sid_payload("call", ["repeater", "set_config", params], self.sid)
+        )
+        return dict(response) if response else {}
+
+    async def scan_wifi_networks(
+        self, all_band: bool = False, dfs: bool = False
+    ) -> list[dict[str, Any]]:
+        params: dict[str, Any] = {}
+        if all_band:
+            params["all_band"] = True
+        if dfs:
+            params["dfs"] = True
+        response = await self._send_request(
+            self._build_sid_payload("call", ["repeater", "scan", params], self.sid),
+            timeout_seconds=LONG_TIMEOUT,
+        )
+        return list(dict(response).get("res", []))
+
+    async def connect_repeater(
+        self,
+        ssid: str,
+        key: str | None = None,
+        remember: bool = True,
+        bssid: str | None = None,
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {"ssid": ssid, "remember": remember}
+        if key:
+            params["key"] = key
+        if bssid:
+            params["bssid"] = bssid
+        response = await self._send_request(
+            self._build_sid_payload("call", ["repeater", "connect", params], self.sid),
+            timeout_seconds=LONG_TIMEOUT,
+        )
+        return dict(response) if response else {}
+
+    async def disconnect_repeater(self) -> dict[str, Any]:
+        response = await self._send_request(
+            self._build_sid_payload("call", ["repeater", "disconnect"], self.sid)
+        )
+        return dict(response) if response else {}
+
+    async def get_saved_ap_list(self) -> list[dict[str, Any]]:
+        response = await self._send_request(
+            self._build_sid_payload("call", ["repeater", "get_saved_ap_list"], self.sid)
+        )
+        return list(dict(response).get("res", []))
+
+    async def remove_saved_ap(self, ssid: str) -> dict[str, Any]:
+        response = await self._send_request(
+            self._build_sid_payload(
+                "call", ["repeater", "remove_saved_ap", {"ssid": ssid}], self.sid
+            )
+        )
+        return dict(response) if response else {}
+
     @property
     def logged_in(self) -> bool:
         return self._logged_in
