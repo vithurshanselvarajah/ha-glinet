@@ -367,7 +367,10 @@ class GLinetHub:
             lambda: self.router_api.scan_wifi_networks(all_band=all_band, dfs=dfs)
         )
         if response is None:
-            _LOGGER.warning("WiFi scan returned None, keeping %d cached networks", len(self._scanned_networks))
+            _LOGGER.warning(
+                "WiFi scan returned None, keeping %d cached networks",
+                len(self._scanned_networks),
+            )
             return self._scanned_networks
         networks = [ScannedNetwork.from_api_response(network) for network in response]
         _LOGGER.info("WiFi scan found %d networks", len(networks))
