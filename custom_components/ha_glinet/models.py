@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import StrEnum
+from enum import IntEnum, StrEnum
 
 from homeassistant.util import dt as dt_util
 
