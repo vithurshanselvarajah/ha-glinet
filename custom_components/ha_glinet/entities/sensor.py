@@ -229,10 +229,18 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         value_fn=lambda hub: len(hub.sms_messages),
         extra_attributes_fn=lambda hub: {
             "message_count": len(hub.sms_messages),
+            "incoming_count": sum(
+                1 for m in hub.sms_messages.values() if m.direction == "incoming"
+            ),
+            "outgoing_count": sum(
+                1 for m in hub.sms_messages.values() if m.direction == "outgoing"
+            ),
             "messages": [
                 {
                     "id": message_id,
-                    "from": message.phone_number,
+                    "phone_number": message.phone_number,
+                    "direction": message.direction,
+                    "status": message.status_label,
                     "timestamp": message.timestamp,
                     "text": message.text,
                 }
