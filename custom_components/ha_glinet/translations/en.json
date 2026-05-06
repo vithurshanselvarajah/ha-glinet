@@ -73,6 +73,14 @@
     "button": {
       "disconnect_repeater": {
         "name": "Disconnect repeater"
+      },
+      "scan_wifi": {
+        "name": "Scan WiFi networks"
+      }
+    },
+    "select": {
+      "wifi_network": {
+        "name": "WiFi network"
       }
     }
   },

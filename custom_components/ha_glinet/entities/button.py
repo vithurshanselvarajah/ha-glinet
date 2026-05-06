@@ -18,7 +18,7 @@ async def async_setup_entry(
 ) -> None:
     hub: GLinetHub = entry.runtime_data
     async_add_entities(
-        [RebootButton(hub), DisconnectRepeaterButton(hub)],
+        [RebootButton(hub), DisconnectRepeaterButton(hub), ScanWifiButton(hub)],
         True,
     )
 
@@ -69,3 +69,27 @@ class DisconnectRepeaterButton(ButtonEntity):
 
     async def async_press(self) -> None:
         await self._hub.disconnect_wifi()
+
+
+class ScanWifiButton(ButtonEntity):
+    _attr_icon = "mdi:wifi-sync"
+    _attr_has_entity_name = True
+
+    def __init__(self, hub: GLinetHub) -> None:
+        self._hub = hub
+        self._attr_device_info = hub.device_info
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_button/{self._hub.device_mac}/scan_wifi"
+
+    @property
+    def entity_category(self) -> EntityCategory:
+        return EntityCategory.CONFIG
+
+    @property
+    def name(self) -> str:
+        return "Scan WiFi networks"
+
+    async def async_press(self) -> None:
+        await self._hub.scan_wifi_networks()

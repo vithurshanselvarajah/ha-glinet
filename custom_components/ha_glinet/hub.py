@@ -88,6 +88,9 @@ class GLinetHub:
         self._tailscale_connection: bool | None = None
         self._sms_messages: dict[str, SmsMessage] = {}
         self._repeater_status: RepeaterStatus | None = None
+        self._scanned_networks: list[ScannedNetwork] = []
+        self._last_wifi_scan: datetime | None = None
+        self._saved_networks: list[dict[str, Any]] = []
 
         self._late_init_complete = False
         self._connect_error = False
@@ -163,6 +166,7 @@ class GLinetHub:
             self.fetch_tailscale_state(),
             self.fetch_cellular_status(),
             self.fetch_repeater_status(),
+            self.fetch_saved_networks(),
         )
         await self.fetch_sms_messages()
 
@@ -356,14 +360,22 @@ class GLinetHub:
         self._repeater_status = RepeaterStatus.from_api_response(response)
 
     async def scan_wifi_networks(
-        self, all_band: bool = False, dfs: bool = False
+        self, all_band: bool = False, dfs: bool = False, store_results: bool = True
     ) -> list[ScannedNetwork]:
+        _LOGGER.info("Starting WiFi network scan (all_band=%s, dfs=%s)", all_band, dfs)
         response = await self._invoke_api(
             lambda: self.router_api.scan_wifi_networks(all_band=all_band, dfs=dfs)
         )
         if response is None:
-            return []
-        return [ScannedNetwork.from_api_response(network) for network in response]
+            _LOGGER.warning("WiFi scan returned None, keeping %d cached networks", len(self._scanned_networks))
+            return self._scanned_networks
+        networks = [ScannedNetwork.from_api_response(network) for network in response]
+        _LOGGER.info("WiFi scan found %d networks", len(networks))
+        if store_results:
+            self._scanned_networks = networks
+            self._last_wifi_scan = datetime.now()
+            async_dispatcher_send(self.hass, self.event_networks_updated)
+        return networks
 
     async def connect_to_wifi(
         self,
@@ -383,12 +395,18 @@ class GLinetHub:
         await self._invoke_api(self.router_api.disconnect_repeater)
         await self.fetch_repeater_status()
 
+    async def fetch_saved_networks(self) -> None:
+        response = await self._invoke_optional_api(self.router_api.get_saved_ap_list)
+        if response is not None:
+            self._saved_networks = response
+
     async def get_saved_wifi_networks(self) -> list[dict[str, Any]]:
         response = await self._invoke_api(self.router_api.get_saved_ap_list)
         return response or []
 
     async def remove_saved_wifi_network(self, ssid: str) -> None:
         await self._invoke_api(lambda: self.router_api.remove_saved_ap(ssid))
+        await self.fetch_saved_networks()
 
     async def fetch_sms_messages(self) -> None:
         response = await self._invoke_optional_api(self.router_api.get_sms_messages)
@@ -570,12 +588,28 @@ class GLinetHub:
         return self._repeater_status.state == RepeaterState.CONNECTED
 
     @property
+    def scanned_networks(self) -> list[ScannedNetwork]:
+        return self._scanned_networks
+
+    @property
+    def saved_networks(self) -> list[dict[str, Any]]:
+        return self._saved_networks
+
+    @property
+    def last_wifi_scan(self) -> datetime | None:
+        return self._last_wifi_scan
+
+    @property
     def event_device_added(self) -> str:
         return f"{DOMAIN}-device-new-{self._factory_mac}"
 
     @property
     def event_device_updated(self) -> str:
         return f"{DOMAIN}-device-update-{self._factory_mac}"
+
+    @property
+    def event_networks_updated(self) -> str:
+        return f"{DOMAIN}-networks-update-{self._factory_mac}"
 
 
 def _first_bool(data: dict[str, Any], keys: tuple[str, ...]) -> bool | None:

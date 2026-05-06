@@ -19,6 +19,7 @@ from .models import TailscaleConnection
 
 DEFAULT_TIMEOUT = 2
 LONG_TIMEOUT = 5
+SCAN_TIMEOUT = 30
 NEW_VPN_CLIENT_VERSION = (4, 8, 0, 0)
 
 
@@ -566,7 +567,7 @@ class GLinetApiClient:
             params["dfs"] = True
         response = await self._send_request(
             self._build_sid_payload("call", ["repeater", "scan", params], self.sid),
-            timeout_seconds=LONG_TIMEOUT,
+            timeout_seconds=SCAN_TIMEOUT,
         )
         return list(dict(response).get("res", []))
 

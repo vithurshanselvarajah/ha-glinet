@@ -17,11 +17,13 @@ def _install_sensor_dependency_stubs() -> None:
         native_unit_of_measurement: str | None = None
         state_class: str | None = None
         suggested_display_precision: int | None = None
+        options: list[str] | None = None
 
     sensor = types.ModuleType("homeassistant.components.sensor")
     sensor.SensorDeviceClass = types.SimpleNamespace(
         DATA_RATE="data_rate",
         DATA_SIZE="data_size",
+        ENUM="enum",
         TEMPERATURE="temperature",
         TIMESTAMP="timestamp",
     )
