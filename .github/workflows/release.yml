@@ -142,7 +142,7 @@ jobs:
 
           {
             echo "commits<<EOF"
-            git log "$range" --pretty=format:"- %s (%h)" --no-merges
+            git log "$range" --pretty=format:"- %s (%h)%n%b" --name-only --no-merges
             echo
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
@@ -203,7 +203,8 @@ jobs:
           max-tokens: 700
           system-prompt: >-
             You write concise GitHub release notes for a Home Assistant custom
-            integration. Use Markdown bullets. Do not invent changes.
+            integration. Use Markdown bullets. Do not invent changes. Use the
+            commit subject, body, and changed files to summarize what changed.
           prompt: |
             Create release notes for ha-glinet.
 
