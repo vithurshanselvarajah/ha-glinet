@@ -65,7 +65,7 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 | Cellular SINR | Optional `modem/get_status` | Signal-to-Interference-plus-Noise Ratio in dB. |
 | Cellular band | Optional `modem/get_status` | The active frequency band/service type. |
 | Cellular network | Optional `modem/get_status` | Operator/network/mode when available. |
-| Text messages | Optional `sms/get_list` | Count of messages. Message details are exposed as attributes. |
+| Text messages | Optional `sms/get_list` | Count of messages. Attributes include `message_count`, `incoming_count`, `outgoing_count`, and a `messages` list with details like `id`, `phone_number`, `direction`, `status`, `text`, and `timestamp`. |
 
 ### Client Bandwidth
 

@@ -43,14 +43,15 @@ jobs:
 
           should_release=false
           channel=
+          lc_message="${COMMIT_MESSAGE,,}"
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             should_release=true
             channel="$INPUT_CHANNEL"
-          elif [[ "$COMMIT_MESSAGE" == *"release:"* && "$REF_NAME" == "main" ]]; then
+          elif [[ "$lc_message" == *"release:"* && "$REF_NAME" == "main" ]]; then
             should_release=true
             channel=release
-          elif [[ "$COMMIT_MESSAGE" == *"beta:"* ]]; then
+          elif [[ "$lc_message" == *"beta:"* ]]; then
             should_release=true
             channel=beta
           fi
@@ -142,8 +143,53 @@ jobs:
 
           {
             echo "commits<<EOF"
-            git log "$range" --pretty=format:"- %s (%h)" --no-merges
+            git log "$range" --pretty=format:"- %s (%h)%n%b" --name-only --no-merges
             echo
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Collect contributor shoutouts for changelog
+        id: contributors
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          previous_tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+          if [[ -n "$previous_tag" ]]; then
+            range="${previous_tag}..HEAD"
+            previous_authors="$(git log "$previous_tag" --format='%aN <%aE>' | sort -u)"
+          else
+            range="HEAD"
+            previous_authors=""
+          fi
+
+          range_authors="$(git log "$range" --format='%aN <%aE>' | sort -u)"
+          if [[ -n "$previous_authors" ]]; then
+            new_authors="$(comm -23 <(printf '%s\n' "$range_authors") <(printf '%s\n' "$previous_authors") | sed '/^$/d')"
+          else
+            new_authors="$range_authors"
+          fi
+
+          new_details=""
+          if [[ -n "$new_authors" ]]; then
+            while IFS= read -r author; do
+              if [[ -z "$author" ]]; then
+                continue
+              fi
+              new_details+="- ${author}\n"
+              while IFS= read -r commit_line; do
+                new_details+="  - ${commit_line}\n"
+              done < <(git log "$range" --author="$author" --pretty=format:'%s (%h)' --no-merges)
+              new_details+="\n"
+            done <<< "$new_authors"
+          fi
+
+          {
+            echo "new_contributor_details<<EOF"
+            if [[ -n "$new_details" ]]; then
+              printf '%b' "$new_details"
+            fi
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -156,7 +202,8 @@ jobs:
           max-tokens: 700
           system-prompt: >-
             You write concise GitHub release notes for a Home Assistant custom
-            integration. Use Markdown bullets. Do not invent changes.
+            integration. Use Markdown bullets. Do not invent changes. Use the
+            commit subject, body, and changed files to summarize what changed.
           prompt: |
             Create release notes for ha-glinet.
 
@@ -174,6 +221,7 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.version }}
           TAG: ${{ needs.prepare.outputs.tag }}
           COMMITS: ${{ steps.commits.outputs.commits }}
+          NEW_CONTRIBUTOR_DETAILS: ${{ steps.contributors.outputs.new_contributor_details }}
         run: |
           set -euo pipefail
 
@@ -192,6 +240,12 @@ jobs:
               else
                 echo "- Release ${TAG}"
               fi
+            fi
+            if [[ -n "${NEW_CONTRIBUTOR_DETAILS:-}" ]]; then
+              echo
+              echo "## New contributors"
+              echo
+              echo "$NEW_CONTRIBUTOR_DETAILS"
             fi
             echo
             echo "## HACS"

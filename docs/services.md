@@ -14,6 +14,15 @@ Sends an SMS message.
 Retrieves the list of SMS messages currently stored on the router. This service supports response data.
 - **`mac`** (Optional): Target a specific router by MAC address.
 
+**Response Format**:
+Returns a `messages` array containing SMS details:
+- `id`: Unique message identifier.
+- `phone_number`: The sender/recipient phone number.
+- `direction`: Message direction (`"incoming"`, `"outgoing"`, or `"unknown"`).
+- `status`: Human-readable status (e.g., `"Unread"`, `"Sent"`, `"Failed"`).
+- `text`: Message content.
+- `timestamp`: Message timestamp (if available).
+
 ### `remove_sms`
 Deletes SMS messages from the router based on a specified scope or ID.
 - **`scope`**: The range of messages to remove. Common values:

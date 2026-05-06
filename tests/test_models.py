@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from custom_components.ha_glinet.models import ClientDeviceInfo, DeviceInterfaceType
+from custom_components.ha_glinet.models import (
+    ClientDeviceInfo,
+    DeviceInterfaceType,
+    SmsDirection,
+    SmsMessage,
+    SmsStatus,
+)
 
 
 def test_client_device_uses_alias_before_name() -> None:
@@ -50,6 +56,53 @@ def test_client_device_extracts_bandwidth_from_common_keys() -> None:
     assert device.tx_bytes == 2000
     assert device.rx_rate == 300
     assert device.tx_rate == 400
+
+
+def test_sms_message_direction_incoming() -> None:
+    msg = SmsMessage(message_id="1", phone_number="123", text="hi", status=SmsStatus.UNREAD)
+    assert msg.direction == SmsDirection.INCOMING
+
+    msg.status = SmsStatus.READ
+    assert msg.direction == SmsDirection.INCOMING
+
+
+def test_sms_message_direction_outgoing() -> None:
+    msg = SmsMessage(message_id="1", phone_number="123", text="hi", status=SmsStatus.SENT)
+    assert msg.direction == SmsDirection.OUTGOING
+
+    msg.status = SmsStatus.SENDING
+    assert msg.direction == SmsDirection.OUTGOING
+
+    msg.status = SmsStatus.WAITING
+    assert msg.direction == SmsDirection.OUTGOING
+
+    msg.status = SmsStatus.FAILED
+    assert msg.direction == SmsDirection.OUTGOING
+
+
+def test_sms_message_direction_unknown() -> None:
+    msg = SmsMessage(message_id="1", phone_number="123", text="hi", status=None)
+    assert msg.direction == SmsDirection.UNKNOWN
+
+    msg.status = 999  # Unknown status
+    assert msg.direction == SmsDirection.UNKNOWN
+
+
+def test_sms_message_status_label() -> None:
+    msg = SmsMessage(message_id="1", phone_number="123", text="hi", status=SmsStatus.UNREAD)
+    assert msg.status_label == "Unread"
+
+    msg.status = SmsStatus.SENT
+    assert msg.status_label == "Sent"
+
+    msg.status = SmsStatus.FAILED
+    assert msg.status_label == "Failed"
+
+    msg.status = None
+    assert msg.status_label == "Unknown"
+
+    msg.status = 999
+    assert msg.status_label == "Unknown (999)"
 
 
 def test_client_device_computes_rates_from_byte_deltas() -> None:

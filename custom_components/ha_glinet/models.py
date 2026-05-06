@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import StrEnum
+from enum import IntEnum, StrEnum
 
 from homeassistant.util import dt as dt_util
 
@@ -42,6 +42,21 @@ class WifiInterface:
     encryption: str
 
 
+class SmsDirection(StrEnum):
+    INCOMING = "incoming"
+    OUTGOING = "outgoing"
+    UNKNOWN = "unknown"
+
+
+class SmsStatus(IntEnum):
+    UNREAD = 0
+    READ = 1
+    SENT = 2
+    SENDING = 3
+    WAITING = 4
+    FAILED = 5
+
+
 @dataclass(slots=True)
 class SmsMessage:
     message_id: str
@@ -51,6 +66,30 @@ class SmsMessage:
     status: int | None = None
     timestamp: str | None = None
     read: bool | None = None
+
+    @property
+    def direction(self) -> SmsDirection:
+        if self.status is None:
+            return SmsDirection.UNKNOWN
+        if self.status in {SmsStatus.UNREAD, SmsStatus.READ}:
+            return SmsDirection.INCOMING
+        if self.status in {SmsStatus.SENT, SmsStatus.SENDING, SmsStatus.WAITING, SmsStatus.FAILED}:
+            return SmsDirection.OUTGOING
+        return SmsDirection.UNKNOWN
+
+    @property
+    def status_label(self) -> str:
+        status_labels = {
+            SmsStatus.UNREAD: "Unread",
+            SmsStatus.READ: "Read",
+            SmsStatus.SENT: "Sent",
+            SmsStatus.SENDING: "Sending",
+            SmsStatus.WAITING: "Waiting",
+            SmsStatus.FAILED: "Failed",
+        }
+        if self.status is None:
+            return "Unknown"
+        return status_labels.get(self.status, f"Unknown ({self.status})")
 
 
 class ClientDeviceInfo:

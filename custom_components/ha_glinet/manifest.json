@@ -11,5 +11,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/vithurshanselvarajah/ha-glinet/issues",
   "requirements": ["passlib==1.7.4"],
-  "version": "1.0.0"
+  "version": "1.0.1"
 }

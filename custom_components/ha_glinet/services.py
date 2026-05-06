@@ -46,6 +46,8 @@ async def async_register_services(hass: HomeAssistant) -> None:
                 {
                     "id": msg.message_id,
                     "phone_number": msg.phone_number,
+                    "direction": msg.direction.value,
+                    "status": msg.status_label,
                     "text": msg.text,
                     "timestamp": msg.timestamp,
                 }
