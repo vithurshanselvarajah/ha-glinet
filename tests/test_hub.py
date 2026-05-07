@@ -18,6 +18,7 @@ def _hub_with_devices() -> GLinetHub:
     hub = GLinetHub.__new__(GLinetHub)
     hub._options = {"consider_home": 0}
     hub._factory_mac = "00:00:00:00:00:00"
+    hub._host = "192.168.8.1"
     hub._devices = {"aa:bb:cc:dd:ee:ff": ClientDeviceInfo("aa:bb:cc:dd:ee:ff")}
     hub._devices["aa:bb:cc:dd:ee:ff"].apply_update({"online": True})
     hub._invoke_api = _invoke_api_empty_clients
@@ -127,6 +128,7 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
     hub._modems = {"1-1": {}}
     hub._saved_networks = [{"ssid": "old"}]
     hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._host = "192.168.8.1"
     hub.hass = object()
 
     called: list[str] = []
@@ -163,6 +165,7 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
     hub.fetch_repeater_status = fake_fetch_repeater_status
     hub.fetch_repeater_config = fake_fetch_repeater_config
     hub.fetch_saved_networks = fake_fetch_saved_networks
+    hub.refresh_session_token = _noop
 
     await hub.fetch_all_data()
 
@@ -187,6 +190,7 @@ async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {CONF_ENABLED_FEATURES: []}
     hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._host = "192.168.8.1"
     hub.hass = object()
 
     called: list[str] = []
@@ -207,6 +211,7 @@ async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
     hub.fetch_internet_status = fake_fetch_internet_status
     hub.fetch_connected_devices = fake_fetch_connected_devices
     hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
+    hub.refresh_session_token = _noop
 
     await hub.fetch_all_data()
 
@@ -226,6 +231,7 @@ async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> No
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {CONF_ENABLED_FEATURES: [FEATURE_WIREGUARD]}
     hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._host = "192.168.8.1"
     hub.hass = object()
 
     called: list[str] = []
@@ -250,6 +256,7 @@ async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> No
     hub.fetch_connected_devices = fake_fetch_connected_devices
     hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
     hub.fetch_wireguard_clients = fake_fetch_wireguard_clients
+    hub.refresh_session_token = _noop
 
     await hub.fetch_all_data()
 
