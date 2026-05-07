@@ -46,12 +46,12 @@ def pytest_configure() -> None:
             (),
             {"__call__": lambda self, x: x, "__init__": lambda *a, **k: None},
         )
-        voluptuous.Required = lambda *args, **kwargs: args[0]
-        voluptuous.Optional = lambda *args, **kwargs: args[0]
-        voluptuous.All = lambda *args, **kwargs: args[0]
-        voluptuous.Coerce = lambda *args, **kwargs: args[0]
-        voluptuous.Clamp = lambda *args, **kwargs: args[0]
-        voluptuous.In = lambda *args, **kwargs: args[0]
+        voluptuous.Required = lambda *args, **kwargs: args[0] if args else None
+        voluptuous.Optional = lambda *args, **kwargs: args[0] if args else None
+        voluptuous.All = lambda *args, **kwargs: args[0] if args else None
+        voluptuous.Coerce = lambda *args, **kwargs: args[0] if args else None
+        voluptuous.Clamp = lambda *args, **kwargs: args[0] if args else None
+        voluptuous.In = lambda *args, **kwargs: args[0] if args else None
         sys.modules.setdefault("voluptuous", voluptuous)
 
     try:
