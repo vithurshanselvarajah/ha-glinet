@@ -7,14 +7,14 @@ name = "ha-glinet"
 version = "1.0.1"
 description = "Unified GL-INet Home Assistant integration with bundled API client"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 authors = [
     { name = "Vithurshan Selvarajah" },
 ]
 dependencies = [
-    "homeassistant>=2025.1.0",
+    "homeassistant>=2026.5.0",
     "passlib>=1.7.4",
-    "pytest>=8.3.0",
+    "pytest>=9.0.3",
 ]
 
 [tool.ruff]
