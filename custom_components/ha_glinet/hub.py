@@ -163,8 +163,6 @@ class GLinetHub:
                     entry.unique_id,
                     entry.original_name,
                 )
-
-        await self.refresh_session_token()
         await self.fetch_all_data()
         async_track_time_interval(self.hass, self._async_poll_update, SCAN_INTERVAL)
 
@@ -196,20 +194,44 @@ class GLinetHub:
 
     async def refresh_session_token(self) -> None:
         api = self.router_api
-        try:
-            await api.authenticate(
-                self._settings.get(CONF_USERNAME, DEFAULT_USERNAME),
-                self._settings[CONF_PASSWORD],
-            )
-            _LOGGER.info("GL-INet router %s token was renewed", self._host)
-        except (AuthenticationError, TokenError) as exc:
-            _LOGGER.exception(
-                "GL-INet router %s failed to renew the token",
-                self._host,
-            )
-            raise ConfigEntryAuthFailed from exc
+        attempts = 3
+        for attempt in range(attempts):
+            try:
+                await api.authenticate(
+                    self._settings.get(CONF_USERNAME, DEFAULT_USERNAME),
+                    self._settings[CONF_PASSWORD],
+                )
+                _LOGGER.debug("GL-INet router %s token was renewed", self._host)
+                return
+            except (AuthenticationError, TokenError, NonZeroResponse) as exc:
+                if attempt < attempts - 1:
+                    _LOGGER.debug(
+                        "Attempt %d/%d: GL-INet router %s failed to renew token: %s. Retrying...",
+                        attempt + 1,
+                        attempts,
+                        self._host,
+                        exc,
+                    )
+                    continue
+                _LOGGER.error(
+                    "GL-INet router %s failed to renew the token after %d attempts: %s.",
+                    self._host,
+                    attempts,
+                    exc,
+                )
+                raise ConfigEntryAuthFailed from exc
 
     async def fetch_all_data(self, _: datetime | None = None) -> None:
+        try:
+            await self.refresh_session_token()
+        except ConfigEntryAuthFailed:
+            raise
+        except (APIClientError, ClientError, TimeoutError, OSError):
+            _LOGGER.debug(
+                "Proactive token refresh failed for %s; will retry during API calls",
+                self._host,
+            )
+
         tasks: list[Awaitable[Any]] = [
             self.fetch_system_status(),
             self.fetch_internet_status(),
