@@ -508,9 +508,16 @@ class GLinetHub:
         return self._default_modem_bus
 
     @property
+    def has_modem(self) -> bool:
+        return bool(self._modems)
+
+    @property
     def has_sim_card(self) -> bool:
+        if not self._modems:
+            return False
         for modem in self._modems.values():
-            if modem.get("simcard") or modem.get("sim_card") or modem.get("sim"):
+            sim_status = modem.get("simcard") or modem.get("sim_card") or modem.get("sim")
+            if sim_status not in (None, False, 0, "none", ""):
                 return True
         return False
 

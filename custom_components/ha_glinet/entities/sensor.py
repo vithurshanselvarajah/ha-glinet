@@ -313,11 +313,11 @@ async def async_setup_entry(
         for description in SYSTEM_SENSORS
         if description.value_fn(hub.router_status) is not None
     ]
-    entities.extend(
-        HubStatusSensor(hub=hub, entity_description=description)
-        for description in HUB_SENSORS
-        if not description.requires_sim or hub.has_sim_card
-    )
+    for description in HUB_SENSORS:
+        if description.requires_sim and not hub.has_sim_card:
+            _LOGGER.debug("Skipping sensor %s (requires SIM)", description.key)
+            continue
+        entities.append(HubStatusSensor(hub=hub, entity_description=description))
     entities.append(
         SystemUptimeSensor(
             hub=hub,
@@ -389,6 +389,18 @@ class HubStatusSensor(SensorEntity):
     @property
     def unique_id(self) -> str:
         return f"glinet_sensor/{self.hub.device_mac}/{self.entity_description.key}"
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        if self.entity_description.requires_sim:
+            return self.hub.has_sim_card
+        return True
+
+    @property
+    def entity_registry_visible_default(self) -> bool:
+        if self.entity_description.requires_sim:
+            return self.hub.has_sim_card
+        return True
 
     @property
     def native_value(self) -> int | float | str | None:
