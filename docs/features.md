@@ -29,6 +29,14 @@
 - Send text messages when the router exposes SMS support.
 - Remove text messages when the router exposes SMS support.
 
+## Authentication & Session Management
+
+To ensure reliable communication and minimize session expiration issues:
+- **Proactive Refresh**: The integration refreshes the session token at the beginning of every polling cycle.
+- **Retry Mechanism**: Token renewal attempts are retried up to 3 times if the router returns an authentication or token error.
+- **Detailed Logging**: If renewal fails, the integration logs the specific error response or exception received from the router for easier troubleshooting.
+- **Graceful Failure**: If all retries fail, a re-authentication flow is triggered in Home Assistant to prompt the user for credentials.
+
 ## Setup Configuration Options
 
 When adding the GL.iNet integration or modifying it via the **Configure** menu, the following options are available:

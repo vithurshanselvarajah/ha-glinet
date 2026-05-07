@@ -11,6 +11,7 @@ This project is inspired by [HarvsG/ha-glinet4-integration](https://github.com/H
 Included features:
 
 - Config flow setup with DHCP discovery.
+- Robust session management with proactive token renewal and automatic retries.
 - Router reboot button.
 - Connected device trackers.
 - WAN IP and internet connectivity sensors.
