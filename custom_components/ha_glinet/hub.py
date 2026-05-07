@@ -610,6 +610,18 @@ class GLinetHub:
         return self._repeater_status.state == RepeaterState.CONNECTED
 
     @property
+    def repeater_config(self) -> dict[str, Any]:
+        return self._repeater_config
+
+    @property
+    def repeater_auto_switch(self) -> bool | None:
+        return self._repeater_config.get("auto")
+
+    @property
+    def repeater_band(self) -> str | None:
+        return self._repeater_config.get("lock_band")
+
+    @property
     def scanned_networks(self) -> list[ScannedNetwork]:
         return self._scanned_networks
 
