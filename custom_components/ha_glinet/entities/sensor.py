@@ -315,7 +315,6 @@ async def async_setup_entry(
     ]
     for description in HUB_SENSORS:
         if description.requires_sim and not hub.has_sim_card:
-            _LOGGER.debug("Skipping sensor %s (requires SIM)", description.key)
             continue
         entities.append(HubStatusSensor(hub=hub, entity_description=description))
     entities.append(
