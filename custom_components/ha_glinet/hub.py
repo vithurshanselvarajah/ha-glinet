@@ -508,6 +508,13 @@ class GLinetHub:
         return self._default_modem_bus
 
     @property
+    def has_sim_card(self) -> bool:
+        for modem in self._modems.values():
+            if modem.get("simcard") or modem.get("sim_card") or modem.get("sim"):
+                return True
+        return False
+
+    @property
     def event_device_added(self) -> str:
         return f"{DOMAIN}-device-new-{self._factory_mac}"
 

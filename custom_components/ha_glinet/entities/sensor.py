@@ -121,6 +121,7 @@ SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
 class HubSensorEntityDescription(SensorEntityDescription):
     value_fn: Callable[[GLinetHub], int | float | str | None]
     extra_attributes_fn: Callable[[GLinetHub], dict[str, Any]] | None = None
+    requires_sim: bool = False
 
 
 HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
@@ -134,6 +135,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
     ),
     HubSensorEntityDescription(
         key="cellular_signal",
+        requires_sim=True,
         name="Cellular signal",
         has_entity_name=True,
         icon="mdi:signal-cellular-2",
@@ -153,6 +155,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:signal-cellular-outline",
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
+        requires_sim=True,
         value_fn=lambda hub: _first_int(
             hub.cellular_status,
             ("rssi",),
@@ -166,6 +169,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:signal-variant",
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
+        requires_sim=True,
         value_fn=lambda hub: _first_int(
             hub.cellular_status,
             ("rsrp",),
@@ -179,6 +183,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:signal-distance-variant",
         native_unit_of_measurement="dB",
         state_class=SensorStateClass.MEASUREMENT,
+        requires_sim=True,
         value_fn=lambda hub: _first_int(
             hub.cellular_status,
             ("rsrq",),
@@ -192,6 +197,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:signal-3g",
         native_unit_of_measurement="dB",
         state_class=SensorStateClass.MEASUREMENT,
+        requires_sim=True,
         value_fn=lambda hub: _first_int(
             hub.cellular_status,
             ("sinr",),
@@ -203,6 +209,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular band",
         has_entity_name=True,
         icon="mdi:cellphone-wireless",
+        requires_sim=True,
         value_fn=lambda hub: _first_value(
             hub.cellular_status,
             ("band", "network_type", "service_type"),
@@ -214,6 +221,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular network",
         has_entity_name=True,
         icon="mdi:signal-cellular-outline",
+        requires_sim=True,
         value_fn=lambda hub: _first_value(
             hub.cellular_status,
             ("network", "operator", "operator_name", "carrier", "mode", "service_type"),
@@ -222,6 +230,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
     ),
     HubSensorEntityDescription(
         key="sms_messages",
+        requires_sim=True,
         name="Text messages",
         has_entity_name=True,
         icon="mdi:message-text",
@@ -307,6 +316,7 @@ async def async_setup_entry(
     entities.extend(
         HubStatusSensor(hub=hub, entity_description=description)
         for description in HUB_SENSORS
+        if not description.requires_sim or hub.has_sim_card
     )
     entities.append(
         SystemUptimeSensor(
