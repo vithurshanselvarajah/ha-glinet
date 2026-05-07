@@ -81,6 +81,14 @@
     "select": {
       "wifi_network": {
         "name": "WiFi network"
+      },
+      "repeater_band": {
+        "name": "Repeater band"
+      }
+    },
+    "switch": {
+      "repeater_auto_switch": {
+        "name": "Repeater auto-switch networks"
       }
     }
   },

@@ -21,11 +21,20 @@ HEADER_KNOWN = "-- Known Networks --"
 HEADER_AVAILABLE = "-- Available Networks --"
 
 
+BAND_AUTO = "Auto"
+BAND_5GHZ = "5GHz"
+BAND_24GHZ = "2.4GHz"
+
+BAND_OPTIONS = [BAND_AUTO, BAND_5GHZ, BAND_24GHZ]
+BAND_TO_API = {BAND_AUTO: None, BAND_5GHZ: "5g", BAND_24GHZ: "2g"}
+API_TO_BAND = {None: BAND_AUTO, "5g": BAND_5GHZ, "2g": BAND_24GHZ}
+
+
 async def async_setup_entry(
     _: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     hub: GLinetHub = entry.runtime_data
-    async_add_entities([WifiNetworkSelect(hub)], True)
+    async_add_entities([WifiNetworkSelect(hub), RepeaterBandSelect(hub)], True)
 
 
 class WifiNetworkSelect(SelectEntity):
@@ -148,3 +157,29 @@ class WifiNetworkSelect(SelectEntity):
                 "Network '%s' requires password - use connect_wifi service to connect",
                 option,
             )
+
+
+class RepeaterBandSelect(SelectEntity):
+
+    _attr_has_entity_name = True
+    _attr_name = "Repeater band"
+    _attr_icon = "mdi:wifi-settings"
+    _attr_options = BAND_OPTIONS
+
+    def __init__(self, hub: GLinetHub) -> None:
+        self._hub = hub
+        self._attr_device_info = hub.device_info
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_select/{self._hub.device_mac}/repeater_band"
+
+    @property
+    def current_option(self) -> str | None:
+        band = self._hub.repeater_band
+        return API_TO_BAND.get(band, BAND_AUTO)
+
+    async def async_select_option(self, option: str) -> None:
+        api_value = BAND_TO_API.get(option)
+        await self._hub.set_repeater_band(api_value)
+        self.async_write_ha_state()

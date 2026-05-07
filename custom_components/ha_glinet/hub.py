@@ -88,6 +88,7 @@ class GLinetHub:
         self._tailscale_connection: bool | None = None
         self._sms_messages: dict[str, SmsMessage] = {}
         self._repeater_status: RepeaterStatus | None = None
+        self._repeater_config: dict[str, Any] = {}
         self._scanned_networks: list[ScannedNetwork] = []
         self._last_wifi_scan: datetime | None = None
         self._saved_networks: list[dict[str, Any]] = []
@@ -166,6 +167,7 @@ class GLinetHub:
             self.fetch_tailscale_state(),
             self.fetch_cellular_status(),
             self.fetch_repeater_status(),
+            self.fetch_repeater_config(),
             self.fetch_saved_networks(),
         )
         await self.fetch_sms_messages()
@@ -358,6 +360,23 @@ class GLinetHub:
             self._repeater_status = None
             return
         self._repeater_status = RepeaterStatus.from_api_response(response)
+
+    async def fetch_repeater_config(self) -> None:
+        response = await self._invoke_optional_api(self.router_api.get_repeater_config)
+        if response is not None:
+            self._repeater_config = response
+
+    async def set_repeater_auto_switch(self, enabled: bool) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.set_repeater_config(auto=enabled)
+        )
+        await self.fetch_repeater_config()
+
+    async def set_repeater_band(self, band: str | None) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.set_repeater_config(lock_band=band)
+        )
+        await self.fetch_repeater_config()
 
     async def scan_wifi_networks(
         self, all_band: bool = False, dfs: bool = False, store_results: bool = True
