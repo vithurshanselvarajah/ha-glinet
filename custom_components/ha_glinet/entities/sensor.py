@@ -17,8 +17,9 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.util.dt import utcnow
 
-from ..const import DOMAIN
+from ..const import DOMAIN, FEATURE_CELLULAR, FEATURE_REPEATER, FEATURE_SMS
 from ..models import RepeaterState
+from ..utils import get_first_int, get_first_value
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -140,7 +141,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:signal-cellular-2",
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: _first_int(
+        value_fn=lambda hub: get_first_int(
             hub.cellular_status,
             ("signal", "signal_strength", "rssi", "rsrp", "csq"),
             nested=("modem", "cellular", "sim", "signal"),
@@ -154,7 +155,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:signal-cellular-outline",
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: _first_int(
+        value_fn=lambda hub: get_first_int(
             hub.cellular_status,
             ("rssi",),
             nested=("modem", "cellular", "sim", "signal"),
@@ -167,7 +168,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:signal-variant",
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: _first_int(
+        value_fn=lambda hub: get_first_int(
             hub.cellular_status,
             ("rsrp",),
             nested=("modem", "cellular", "sim", "signal"),
@@ -180,7 +181,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:signal-distance-variant",
         native_unit_of_measurement="dB",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: _first_int(
+        value_fn=lambda hub: get_first_int(
             hub.cellular_status,
             ("rsrq",),
             nested=("modem", "cellular", "sim", "signal"),
@@ -193,7 +194,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:signal-3g",
         native_unit_of_measurement="dB",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: _first_int(
+        value_fn=lambda hub: get_first_int(
             hub.cellular_status,
             ("sinr",),
             nested=("modem", "cellular", "sim", "signal"),
@@ -204,7 +205,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular band",
         has_entity_name=True,
         icon="mdi:cellphone-wireless",
-        value_fn=lambda hub: _first_value(
+        value_fn=lambda hub: get_first_value(
             hub.cellular_status,
             ("band", "network_type", "service_type"),
             nested=("modem", "cellular", "sim"),
@@ -215,7 +216,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular network",
         has_entity_name=True,
         icon="mdi:signal-cellular-outline",
-        value_fn=lambda hub: _first_value(
+        value_fn=lambda hub: get_first_value(
             hub.cellular_status,
             ("network", "operator", "operator_name", "carrier", "mode", "service_type"),
             nested=("modem", "cellular", "sim"),
@@ -294,6 +295,27 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         } if hub.repeater_status and hub.repeater_status.ipv4_gateway else None,
     ),
 )
+
+FEATURE_SENSOR_MAP: dict[str, str] = {
+    "cellular_signal": FEATURE_CELLULAR,
+    "cellular_rssi": FEATURE_CELLULAR,
+    "cellular_rsrp": FEATURE_CELLULAR,
+    "cellular_rsrq": FEATURE_CELLULAR,
+    "cellular_sinr": FEATURE_CELLULAR,
+    "cellular_band": FEATURE_CELLULAR,
+    "cellular_network": FEATURE_CELLULAR,
+    "sms_messages": FEATURE_SMS,
+    "repeater_state": FEATURE_REPEATER,
+    "repeater_ssid": FEATURE_REPEATER,
+    "repeater_signal": FEATURE_REPEATER,
+    "repeater_channel": FEATURE_REPEATER,
+    "repeater_ip": FEATURE_REPEATER,
+}
+
+
+def _sensor_is_enabled(hub: GLinetHub, description: HubSensorEntityDescription) -> bool:
+    feature = FEATURE_SENSOR_MAP.get(description.key)
+    return feature is None or hub.feature_enabled(feature)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -375,6 +397,7 @@ async def async_setup_entry(
     entities.extend(
         HubStatusSensor(hub=hub, entity_description=description)
         for description in HUB_SENSORS
+        if _sensor_is_enabled(hub, description)
     )
     entities.append(
         SystemUptimeSensor(
@@ -497,58 +520,3 @@ class ClientBandwidthSensor(SensorEntity):
     def native_value(self) -> int | None:
         self._device = self._hub.tracked_devices.get(self._device.mac, self._device)
         return self.entity_description.value_fn(self._device)
-
-
-def _first_value(
-    data: dict[str, Any],
-    keys: tuple[str, ...],
-    nested: tuple[str, ...] = (),
-) -> str | None:
-    for source in _candidate_dicts(data, nested):
-        for key in keys:
-            value = source.get(key)
-            if value not in (None, ""):
-                return str(value)
-    return None
-
-
-def _first_int(
-    data: dict[str, Any],
-    keys: tuple[str, ...],
-    nested: tuple[str, ...] = (),
-) -> int | None:
-    for source in _candidate_dicts(data, nested):
-        for key in keys:
-            value = source.get(key)
-            if isinstance(value, bool):
-                continue
-            if isinstance(value, int):
-                return value
-            if isinstance(value, float):
-                return int(value)
-    return None
-
-
-def _candidate_dicts(data: dict[str, Any], nested: tuple[str, ...]) -> list[dict[str, Any]]:
-    candidates = [data]
-    for key in nested:
-        value = data.get(key)
-        if isinstance(value, dict):
-            candidates.append(value)
-    candidates.extend(_walk_nested_dicts(data))
-    return candidates
-
-
-def _walk_nested_dicts(value: Any) -> list[dict[str, Any]]:
-    candidates: list[dict[str, Any]] = []
-    if isinstance(value, dict):
-        for child in value.values():
-            if isinstance(child, dict):
-                candidates.append(child)
-                candidates.extend(_walk_nested_dicts(child))
-            elif isinstance(child, list):
-                candidates.extend(_walk_nested_dicts(child))
-    elif isinstance(value, list):
-        for child in value:
-            candidates.extend(_walk_nested_dicts(child))
-    return candidates

@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 from homeassistant.components.button import ButtonEntity
 from homeassistant.const import EntityCategory
 
+from ..const import FEATURE_REPEATER
+
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
@@ -17,10 +19,10 @@ async def async_setup_entry(
     _: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     hub: GLinetHub = entry.runtime_data
-    async_add_entities(
-        [RebootButton(hub), DisconnectRepeaterButton(hub), ScanWifiButton(hub)],
-        True,
-    )
+    entities = [RebootButton(hub)]
+    if hub.feature_enabled(FEATURE_REPEATER):
+        entities.extend([DisconnectRepeaterButton(hub), ScanWifiButton(hub)])
+    async_add_entities(entities, True)
 
 
 class RebootButton(ButtonEntity):

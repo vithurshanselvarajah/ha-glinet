@@ -38,9 +38,36 @@ def pytest_configure() -> None:
     sys.modules.setdefault("passlib.hash", passlib_hash)
 
     try:
+        __import__("voluptuous")
+    except ModuleNotFoundError:
+        voluptuous = types.ModuleType("voluptuous")
+        voluptuous.Schema = type(
+            "Schema",
+            (),
+            {"__call__": lambda self, x: x, "__init__": lambda *a, **k: None},
+        )
+        voluptuous.Required = lambda *args, **kwargs: args[0]
+        voluptuous.Optional = lambda *args, **kwargs: args[0]
+        voluptuous.All = lambda *args, **kwargs: args[0]
+        voluptuous.Coerce = lambda *args, **kwargs: args[0]
+        voluptuous.Clamp = lambda *args, **kwargs: args[0]
+        voluptuous.In = lambda *args, **kwargs: args[0]
+        sys.modules.setdefault("voluptuous", voluptuous)
+
+    try:
         __import__("homeassistant")
     except ModuleNotFoundError:
         homeassistant = types.ModuleType("homeassistant")
+        config_entries = types.ModuleType("homeassistant.config_entries")
+
+        class MockFlow:
+            def __init_subclass__(cls, **kwargs: Any) -> None:
+                super().__init_subclass__()
+
+        config_entries.ConfigFlow = MockFlow
+        config_entries.OptionsFlow = MockFlow
+        homeassistant.config_entries = config_entries
+
         components = types.ModuleType("homeassistant.components")
         device_tracker = types.ModuleType("homeassistant.components.device_tracker")
         device_tracker.CONF_CONSIDER_HOME = "consider_home"
@@ -55,10 +82,18 @@ def pytest_configure() -> None:
         const.CONF_USERNAME = "username"
 
         exceptions = types.ModuleType("homeassistant.exceptions")
+        exceptions.HomeAssistantError = type("HomeAssistantError", (Exception,), {})
         exceptions.ConfigEntryAuthFailed = type("ConfigEntryAuthFailed", (Exception,), {})
         exceptions.ConfigEntryNotReady = type("ConfigEntryNotReady", (Exception,), {})
 
         helpers = types.ModuleType("homeassistant.helpers")
+        helpers.selector = types.ModuleType("homeassistant.helpers.selector")
+        helpers.selector.TextSelector = lambda *args, **kwargs: None
+        helpers.selector.TextSelectorConfig = lambda *args, **kwargs: None
+        helpers.selector.TextSelectorType = types.SimpleNamespace(URL="url", PASSWORD="password")
+        helpers.selector.SelectSelector = lambda *args, **kwargs: None
+        helpers.selector.SelectSelectorConfig = lambda *args, **kwargs: None
+
         entity_registry = types.ModuleType("homeassistant.helpers.entity_registry")
         entity_registry.async_get = lambda hass: None
         entity_registry.async_entries_for_config_entry = lambda registry, entry_id: []
@@ -80,8 +115,21 @@ def pytest_configure() -> None:
         entity = types.ModuleType("homeassistant.helpers.entity")
         entity.DeviceInfo = dict
 
+        helpers.config_validation = types.ModuleType("homeassistant.helpers.config_validation")
+        helpers.config_validation.string = lambda v: v
+        helpers.config_validation.boolean = lambda v: v
+        helpers.config_validation.integer = lambda v: v
+
         event = types.ModuleType("homeassistant.helpers.event")
         event.async_track_time_interval = lambda *args, **kwargs: None
+
+        core = types.ModuleType("homeassistant.core")
+        core.HomeAssistant = object
+        core.callback = lambda func: func
+        core.SupportsResponse = types.SimpleNamespace(ONLY="only", OPTIONAL="optional", NONE="none")
+
+        data_entry_flow = types.ModuleType("homeassistant.data_entry_flow")
+        data_entry_flow.AbortFlow = type("AbortFlow", (Exception,), {})
 
         util = types.ModuleType("homeassistant.util")
         dt = types.ModuleType("homeassistant.util.dt")
@@ -95,24 +143,33 @@ def pytest_configure() -> None:
         helpers.event = event
         util.dt = dt
         homeassistant.components = components
+        homeassistant.config_entries = config_entries
+        homeassistant.core = core
         homeassistant.const = const
+        homeassistant.data_entry_flow = data_entry_flow
         homeassistant.exceptions = exceptions
         homeassistant.helpers = helpers
         homeassistant.util = util
-        sys.modules.setdefault("homeassistant", homeassistant)
-        sys.modules.setdefault("homeassistant.components", components)
-        sys.modules.setdefault("homeassistant.components.device_tracker", device_tracker)
-        sys.modules.setdefault("homeassistant.const", const)
-        sys.modules.setdefault("homeassistant.exceptions", exceptions)
-        sys.modules.setdefault("homeassistant.helpers", helpers)
-        sys.modules.setdefault("homeassistant.helpers.entity_registry", entity_registry)
-        sys.modules.setdefault("homeassistant.helpers.aiohttp_client", aiohttp_client)
-        sys.modules.setdefault("homeassistant.helpers.device_registry", device_registry)
-        sys.modules.setdefault("homeassistant.helpers.dispatcher", dispatcher)
-        sys.modules.setdefault("homeassistant.helpers.entity", entity)
-        sys.modules.setdefault("homeassistant.helpers.event", event)
-        sys.modules.setdefault("homeassistant.util", util)
-        sys.modules.setdefault("homeassistant.util.dt", dt)
+
+        sys.modules["homeassistant"] = homeassistant
+        sys.modules["homeassistant.config_entries"] = config_entries
+        sys.modules["homeassistant.core"] = core
+        sys.modules["homeassistant.data_entry_flow"] = data_entry_flow
+        sys.modules["homeassistant.components"] = components
+        sys.modules["homeassistant.components.device_tracker"] = device_tracker
+        sys.modules["homeassistant.const"] = const
+        sys.modules["homeassistant.exceptions"] = exceptions
+        sys.modules["homeassistant.helpers"] = helpers
+        sys.modules["homeassistant.helpers.selector"] = helpers.selector
+        sys.modules["homeassistant.helpers.config_validation"] = helpers.config_validation
+        sys.modules["homeassistant.helpers.entity_registry"] = entity_registry
+        sys.modules["homeassistant.helpers.aiohttp_client"] = aiohttp_client
+        sys.modules["homeassistant.helpers.device_registry"] = device_registry
+        sys.modules["homeassistant.helpers.dispatcher"] = dispatcher
+        sys.modules["homeassistant.helpers.entity"] = entity
+        sys.modules["homeassistant.helpers.event"] = event
+        sys.modules["homeassistant.util"] = util
+        sys.modules["homeassistant.util.dt"] = dt
 
 
 def pytest_pyfunc_call(pyfuncitem: Any) -> bool:

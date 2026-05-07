@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import EntityCategory
 
+from ..const import FEATURE_REPEATER, FEATURE_TAILSCALE, FEATURE_WIREGUARD
+
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
@@ -21,13 +23,14 @@ async def async_setup_entry(
     _: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     hub: GLinetHub = entry.runtime_data
-    entities: list[SwitchEntity] = [
-        WireGuardSwitch(hub, client) for client in hub.vpn_clients.values()
-    ]
-    if hub.has_tailscale:
+    entities: list[SwitchEntity] = []
+    if hub.feature_enabled(FEATURE_WIREGUARD):
+        entities.extend(WireGuardSwitch(hub, client) for client in hub.vpn_clients.values())
+    if hub.has_tailscale and hub.feature_enabled(FEATURE_TAILSCALE):
         entities.append(TailscaleSwitch(hub))
     entities.extend(WifiApSwitch(hub, name, iface) for name, iface in hub.wifi_interfaces.items())
-    entities.append(RepeaterAutoSwitchSwitch(hub))
+    if hub.feature_enabled(FEATURE_REPEATER):
+        entities.append(RepeaterAutoSwitchSwitch(hub))
     async_add_entities(entities, True)
 
 

@@ -17,11 +17,17 @@ from homeassistant.helpers.device_registry import format_mac
 from .api import GLinetApiClient, NonZeroResponse
 from .const import (
     API_PATH,
+    CONF_ENABLED_FEATURES,
     CONF_TITLE,
     DEFAULT_PASSWORD,
     DEFAULT_URL,
     DEFAULT_USERNAME,
     DOMAIN,
+    FEATURE_CELLULAR,
+    FEATURE_REPEATER,
+    FEATURE_SMS,
+    FEATURE_TAILSCALE,
+    FEATURE_WIREGUARD,
     INTEGRATION_NAME,
 )
 from .utils import compute_mac_offset
@@ -31,6 +37,21 @@ if TYPE_CHECKING:
     from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
 
 _LOGGER = logging.getLogger(__name__)
+
+FEATURE_OPTIONS = [
+    {"label": "Cellular", "value": FEATURE_CELLULAR},
+    {"label": "Repeater", "value": FEATURE_REPEATER},
+    {"label": "SMS", "value": FEATURE_SMS},
+    {"label": "Tailscale", "value": FEATURE_TAILSCALE},
+    {"label": "WireGuard", "value": FEATURE_WIREGUARD},
+]
+DEFAULT_ENABLED_FEATURES = [
+    FEATURE_CELLULAR,
+    FEATURE_REPEATER,
+    FEATURE_SMS,
+    FEATURE_TAILSCALE,
+    FEATURE_WIREGUARD,
+]
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -44,11 +65,20 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
             CONF_CONSIDER_HOME,
             default=DEFAULT_CONSIDER_HOME.total_seconds(),
         ): vol.All(vol.Coerce(int), vol.Clamp(min=0, max=900)),
+        vol.Optional(
+            CONF_ENABLED_FEATURES,
+            default=DEFAULT_ENABLED_FEATURES,
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=FEATURE_OPTIONS,
+                multiple=True,
+            )
+        ),
     }
 )
 
 
-class TestingHub:
+class SetupHub:
 
     def __init__(self, host: str, hass: HomeAssistant) -> None:
         self.host = host
@@ -83,7 +113,7 @@ class TestingHub:
 async def process_user_input(
     data: dict[str, Any], hass: HomeAssistant, raise_on_invalid_auth: bool = True
 ) -> dict[str, Any]:
-    hub = TestingHub(data[CONF_HOST], hass)
+    hub = SetupHub(data[CONF_HOST], hass)
     if not await hub.check_reachable():
         raise CannotConnect
 
@@ -101,6 +131,10 @@ async def process_user_input(
             CONF_CONSIDER_HOME: data.get(
                 CONF_CONSIDER_HOME,
                 DEFAULT_CONSIDER_HOME.total_seconds(),
+            ),
+            CONF_ENABLED_FEATURES: data.get(
+                CONF_ENABLED_FEATURES,
+                DEFAULT_ENABLED_FEATURES,
             ),
         },
     }
@@ -195,7 +229,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
         data_schema = self.add_suggested_values_to_schema(
             STEP_USER_DATA_SCHEMA,
-            self.config_entry.data,
+            {**self.config_entry.data, **self.config_entry.options},
         )
         return self.async_show_form(step_id="init", data_schema=data_schema, errors=errors)
 

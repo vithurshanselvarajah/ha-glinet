@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
 from homeassistant.const import EntityCategory
 
+from ..const import FEATURE_REPEATER
+
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
@@ -17,9 +19,10 @@ async def async_setup_entry(
     _: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     hub: GLinetHub = entry.runtime_data
-    async_add_entities(
-        [InternetStatusBinarySensor(hub), RepeaterConnectedBinarySensor(hub)], True
-    )
+    entities = [InternetStatusBinarySensor(hub)]
+    if hub.feature_enabled(FEATURE_REPEATER):
+        entities.append(RepeaterConnectedBinarySensor(hub))
+    async_add_entities(entities, True)
 
 
 class InternetStatusBinarySensor(BinarySensorEntity):

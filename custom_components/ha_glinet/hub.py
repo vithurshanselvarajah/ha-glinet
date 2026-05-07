@@ -37,7 +37,18 @@ from .api import (
     TokenError,
 )
 from .api.exceptions import AuthenticationError
-from .const import API_PATH, DEFAULT_USERNAME, DOMAIN
+from .const import (
+    API_PATH,
+    CONF_ENABLED_FEATURES,
+    DEFAULT_USERNAME,
+    DOMAIN,
+    FEATURE_CELLULAR,
+    FEATURE_OPTIONS,
+    FEATURE_REPEATER,
+    FEATURE_SMS,
+    FEATURE_TAILSCALE,
+    FEATURE_WIREGUARD,
+)
 from .models import (
     ClientDeviceInfo,
     RepeaterState,
@@ -47,7 +58,7 @@ from .models import (
     WifiInterface,
     WireGuardClient,
 )
-from .utils import compute_mac_offset
+from .utils import compute_mac_offset, get_first_int
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -97,6 +108,13 @@ class GLinetHub:
         self._connect_error = False
         self._token_error = False
 
+    @property
+    def enabled_features(self) -> set[str]:
+        return set(self._settings.get(CONF_ENABLED_FEATURES, FEATURE_OPTIONS))
+
+    def feature_enabled(self, feature: str) -> bool:
+        return feature in self.enabled_features
+
     async def async_initialize_hub(self) -> None:
         if not self._late_init_complete:
             await self._async_load_router_info()
@@ -105,7 +123,41 @@ class GLinetHub:
         track_entries: list[RegistryEntry] = er.async_entries_for_config_entry(
             entity_registry, self._entry.entry_id
         )
+
+        feature_map = {
+            FEATURE_CELLULAR: ["cellular_"],
+            FEATURE_SMS: ["sms_messages", "text_messages"],
+            FEATURE_REPEATER: [
+                "repeater_",
+                "wifi_network",
+                "scan_wifi",
+                "disconnect_repeater",
+            ],
+            FEATURE_TAILSCALE: ["tailscale"],
+            FEATURE_WIREGUARD: [
+                "wireguard_client",
+                "vpn_client",
+                "wg_client",
+            ],
+        }
+
         for entry in track_entries:
+            removed = False
+            for feature, keywords in feature_map.items():
+                if not self.feature_enabled(feature):
+                    if any(k in entry.unique_id for k in keywords):
+                        _LOGGER.debug(
+                            "Removing orphan entity %s (feature %s disabled)",
+                            entry.entity_id,
+                            feature,
+                        )
+                        entity_registry.async_remove(entry.entity_id)
+                        removed = True
+                        break
+
+            if removed:
+                continue
+
             if entry.domain == TRACKER_DOMAIN:
                 self._devices[entry.unique_id] = ClientDeviceInfo(
                     entry.unique_id,
@@ -158,19 +210,54 @@ class GLinetHub:
             raise ConfigEntryAuthFailed from exc
 
     async def fetch_all_data(self, _: datetime | None = None) -> None:
-        await asyncio.gather(
+        tasks: list[Awaitable[Any]] = [
             self.fetch_system_status(),
             self.fetch_internet_status(),
             self.fetch_connected_devices(),
             self.fetch_wifi_interfaces(),
-            self.fetch_wireguard_clients(),
-            self.fetch_tailscale_state(),
-            self.fetch_cellular_status(),
-            self.fetch_repeater_status(),
-            self.fetch_repeater_config(),
-            self.fetch_saved_networks(),
-        )
-        await self.fetch_sms_messages()
+        ]
+
+        if self.feature_enabled(FEATURE_WIREGUARD):
+            tasks.append(self.fetch_wireguard_clients())
+        else:
+            self._wireguard_clients = {}
+            self._wireguard_connections = None
+
+        if self.feature_enabled(FEATURE_TAILSCALE):
+            tasks.append(self.fetch_tailscale_state())
+        else:
+            self._tailscale_config = {}
+            self._tailscale_connection = None
+
+        if self.feature_enabled(FEATURE_CELLULAR):
+            tasks.append(self.fetch_cellular_status())
+        else:
+            self._cellular_status = {}
+            self._modems = {}
+            self._cached_modem_info = None
+            self._default_modem_bus = None
+
+        if self.feature_enabled(FEATURE_REPEATER):
+            tasks.extend(
+                [
+                    self.fetch_repeater_status(),
+                    self.fetch_repeater_config(),
+                    self.fetch_saved_networks(),
+                ]
+            )
+        else:
+            self._repeater_status = None
+            self._repeater_config = {}
+            self._scanned_networks = []
+            self._saved_networks = []
+            self._last_wifi_scan = None
+
+        await asyncio.gather(*tasks)
+
+        if self.feature_enabled(FEATURE_SMS):
+            await self.fetch_sms_messages()
+        else:
+            self._sms_messages = {}
 
     async def _async_poll_update(self, _: datetime | None = None) -> None:
         await self.fetch_all_data()
@@ -185,10 +272,11 @@ class GLinetHub:
                 _LOGGER.exception("GL-INet router %s did not respond in time", self._host)
             self._connect_error = True
             return None
-        except TokenError:
+        except (TokenError, AuthenticationError):
             if not self._connect_error:
                 _LOGGER.warning(
-                    "GL-INet router %s rejected the token; a reauthentication will be attempted",
+                    "GL-INet router %s rejected the token or access was denied; "
+                    "a reauthentication will be attempted",
                     self._host,
                 )
             self._connect_error = True
@@ -218,6 +306,9 @@ class GLinetHub:
     async def _invoke_optional_api(self, api_callable: Callable[[], Awaitable[T]]) -> T | None:
         try:
             return await api_callable()
+        except (TokenError, AuthenticationError):
+            self._token_error = True
+            return None
         except (APIClientError, OSError, TimeoutError, ValueError):
             _LOGGER.debug("Optional GL-INet router API is unavailable", exc_info=True)
             return None
@@ -449,7 +540,7 @@ class GLinetHub:
                 phone_number=str(item.get("phone_number") or item.get("sender") or ""),
                 text=str(item.get("body") or ""),
                 bus=item.get("bus"),
-                status=_first_int(item, ("status",)),
+                status=get_first_int(item, ("status",)),
                 timestamp=item.get("date") or item.get("time") or item.get("timestamp"),
                 read=_sms_status_is_read(item.get("status")),
             )
@@ -570,16 +661,6 @@ class GLinetHub:
         return sum(1 for device in self._devices.values() if device.is_connected)
 
     @property
-    def total_client_rx_rate(self) -> int | None:
-        rates = [device.rx_rate for device in self._devices.values() if device.rx_rate is not None]
-        return sum(rates) if rates else None
-
-    @property
-    def total_client_tx_rate(self) -> int | None:
-        rates = [device.tx_rate for device in self._devices.values() if device.tx_rate is not None]
-        return sum(rates) if rates else None
-
-    @property
     def has_tailscale(self) -> bool:
         return bool(self._tailscale_config)
 
@@ -644,35 +725,6 @@ class GLinetHub:
     @property
     def event_networks_updated(self) -> str:
         return f"{DOMAIN}-networks-update-{self._factory_mac}"
-
-
-def _first_bool(data: dict[str, Any], keys: tuple[str, ...]) -> bool | None:
-    for key in keys:
-        value = data.get(key)
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, int):
-            return value != 0
-        if isinstance(value, str):
-            lowered = value.lower()
-            if lowered in {"1", "true", "on", "enabled", "enable"}:
-                return True
-            if lowered in {"0", "false", "off", "disabled", "disable"}:
-                return False
-    return None
-
-
-def _first_int(data: dict[str, Any], keys: tuple[str, ...]) -> int | None:
-    for key in keys:
-        value = data.get(key)
-        if isinstance(value, bool):
-            continue
-        if isinstance(value, int):
-            return value
-        if isinstance(value, float):
-            return int(value)
-    return None
-
 
 def _merge_modem_lists(
     info_modems: list[dict[str, Any]],

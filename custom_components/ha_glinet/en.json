@@ -69,12 +69,6 @@
       "connected_clients": {
         "name": "Connected clients"
       },
-      "total_download": {
-        "name": "Total download"
-      },
-      "total_upload": {
-        "name": "Total upload"
-      },
       "cellular_signal": {
         "name": "Cellular signal"
       },

@@ -17,7 +17,8 @@
 - Per-client bandwidth rate sensors attached to client MAC devices.
 - Cellular signal and network sensors using the optional `modem` module.
 - Text message count sensor with message details as attributes.
-- `send_sms`, `get_sms`, `remove_sms`, and `refresh_sms` services.
+- `send_sms`, `get_sms`, `remove_saved_network`, and `refresh_sms` services.
+- Repeater mode scanning, connect/disconnect, saved network management, and repeater state support.
 
 ## Supported Actions
 
@@ -28,6 +29,27 @@
 - Send text messages when the router exposes SMS support.
 - Remove text messages when the router exposes SMS support.
 
+## Setup Configuration Options
+
+When adding the GL.iNet integration or modifying it via the **Configure** menu, the following options are available:
+
+- **Router URL**: The network address of your router (e.g., `http://192.168.8.1`). HTTPS is supported if configured on the router.
+- **Admin Password**: The password for the `root` account used to access the GL.iNet admin panel.
+- **Consider Home**: Defines the grace period (in seconds) before a device is marked as "Away" in Home Assistant. This helps prevent devices from flickering when they briefly drop off the network.
+- **Enabled Features**: A selection of optional modules to activate for this router instance:
+    - **Cellular**: Enables signal and network monitoring for routers with internal or USB modems.
+    - **Repeater**: Enables WiFi station mode management, scanning, and saved network control.
+    - **SMS**: Enables the text message inbox sensor and SMS sending/management actions.
+    - **Tailscale / WireGuard**: Enables monitoring and toggling of VPN connections.
+
 ## Optional Router Support
 
-GL.iNet firmware varies by model and firmware generation. The integration treats cellular and SMS as optional modules. Unsupported API calls are skipped without failing setup.
+GL.iNet firmware varies by model and firmware generation. The integration treats WireGuard, cellular, repeater, SMS, and Tailscale as optional modules. During setup you can choose which of these optional features to enable, and unsupported or unavailable APIs are skipped without failing setup.
+
+If you disable all optional features, the integration still registers core router status sensors and entities. 
+
+### Dynamic Configuration & Cleanup
+
+The integration dynamically manages its footprint based on your selections in the **Configure** menu:
+- **Entity Cleanup**: When a feature is disabled, the integration automatically removes any associated entities from the Home Assistant Entity Registry.
+- **Action Cleanup**: Services (Actions) are registered at the domain level. If a feature (like SMS) is disabled across all configured routers, the corresponding services are automatically removed from Home Assistant to keep the UI clean.

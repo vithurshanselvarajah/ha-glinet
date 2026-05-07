@@ -7,12 +7,13 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.core import callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
+from ..const import FEATURE_REPEATER
+from ..hub import GLinetHub
+
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
-
-    from ..hub import GLinetHub
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,6 +35,8 @@ async def async_setup_entry(
     _: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     hub: GLinetHub = entry.runtime_data
+    if not hub.feature_enabled(FEATURE_REPEATER):
+        return
     async_add_entities([WifiNetworkSelect(hub), RepeaterBandSelect(hub)], True)
 
 
