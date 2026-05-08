@@ -37,9 +37,28 @@ from .api import (
     TokenError,
 )
 from .api.exceptions import AuthenticationError
-from .const import API_PATH, DEFAULT_USERNAME, DOMAIN
-from .models import ClientDeviceInfo, SmsMessage, WifiInterface, WireGuardClient
-from .utils import compute_mac_offset
+from .const import (
+    API_PATH,
+    CONF_ENABLED_FEATURES,
+    DEFAULT_USERNAME,
+    DOMAIN,
+    FEATURE_CELLULAR,
+    FEATURE_OPTIONS,
+    FEATURE_REPEATER,
+    FEATURE_SMS,
+    FEATURE_TAILSCALE,
+    FEATURE_WIREGUARD,
+)
+from .models import (
+    ClientDeviceInfo,
+    RepeaterState,
+    RepeaterStatus,
+    ScannedNetwork,
+    SmsMessage,
+    WifiInterface,
+    WireGuardClient,
+)
+from .utils import compute_mac_offset, get_first_int
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -79,10 +98,22 @@ class GLinetHub:
         self._tailscale_config: dict[str, Any] = {}
         self._tailscale_connection: bool | None = None
         self._sms_messages: dict[str, SmsMessage] = {}
+        self._repeater_status: RepeaterStatus | None = None
+        self._repeater_config: dict[str, Any] = {}
+        self._scanned_networks: list[ScannedNetwork] = []
+        self._last_wifi_scan: datetime | None = None
+        self._saved_networks: list[dict[str, Any]] = []
 
         self._late_init_complete = False
         self._connect_error = False
         self._token_error = False
+
+    @property
+    def enabled_features(self) -> set[str]:
+        return set(self._settings.get(CONF_ENABLED_FEATURES, FEATURE_OPTIONS))
+
+    def feature_enabled(self, feature: str) -> bool:
+        return feature in self.enabled_features
 
     async def async_initialize_hub(self) -> None:
         if not self._late_init_complete:
@@ -92,14 +123,46 @@ class GLinetHub:
         track_entries: list[RegistryEntry] = er.async_entries_for_config_entry(
             entity_registry, self._entry.entry_id
         )
+
+        feature_map = {
+            FEATURE_CELLULAR: ["cellular_"],
+            FEATURE_SMS: ["sms_messages", "text_messages"],
+            FEATURE_REPEATER: [
+                "repeater_",
+                "wifi_network",
+                "scan_wifi",
+                "disconnect_repeater",
+            ],
+            FEATURE_TAILSCALE: ["tailscale"],
+            FEATURE_WIREGUARD: [
+                "wireguard_client",
+                "vpn_client",
+                "wg_client",
+            ],
+        }
+
         for entry in track_entries:
+            removed = False
+            for feature, keywords in feature_map.items():
+                if not self.feature_enabled(feature):
+                    if any(k in entry.unique_id for k in keywords):
+                        _LOGGER.debug(
+                            "Removing orphan entity %s (feature %s disabled)",
+                            entry.entity_id,
+                            feature,
+                        )
+                        entity_registry.async_remove(entry.entity_id)
+                        removed = True
+                        break
+
+            if removed:
+                continue
+
             if entry.domain == TRACKER_DOMAIN:
                 self._devices[entry.unique_id] = ClientDeviceInfo(
                     entry.unique_id,
                     entry.original_name,
                 )
-
-        await self.refresh_session_token()
         await self.fetch_all_data()
         async_track_time_interval(self.hass, self._async_poll_update, SCAN_INTERVAL)
 
@@ -131,30 +194,92 @@ class GLinetHub:
 
     async def refresh_session_token(self) -> None:
         api = self.router_api
-        try:
-            await api.authenticate(
-                self._settings.get(CONF_USERNAME, DEFAULT_USERNAME),
-                self._settings[CONF_PASSWORD],
-            )
-            _LOGGER.info("GL-INet router %s token was renewed", self._host)
-        except (AuthenticationError, TokenError) as exc:
-            _LOGGER.exception(
-                "GL-INet router %s failed to renew the token",
-                self._host,
-            )
-            raise ConfigEntryAuthFailed from exc
+        attempts = 3
+        for attempt in range(attempts):
+            try:
+                await api.authenticate(
+                    self._settings.get(CONF_USERNAME, DEFAULT_USERNAME),
+                    self._settings[CONF_PASSWORD],
+                )
+                _LOGGER.debug("GL-INet router %s token was renewed", self._host)
+                return
+            except (AuthenticationError, TokenError, NonZeroResponse) as exc:
+                if attempt < attempts - 1:
+                    _LOGGER.debug(
+                        "Attempt %d/%d: GL-INet router %s failed to renew token: %s. Retrying...",
+                        attempt + 1,
+                        attempts,
+                        self._host,
+                        exc,
+                    )
+                    continue
+                _LOGGER.error(
+                    "GL-INet router %s failed to renew the token after %d attempts: %s.",
+                    self._host,
+                    attempts,
+                    exc,
+                )
+                raise ConfigEntryAuthFailed from exc
 
     async def fetch_all_data(self, _: datetime | None = None) -> None:
-        await asyncio.gather(
+        try:
+            await self.refresh_session_token()
+        except ConfigEntryAuthFailed:
+            raise
+        except (APIClientError, ClientError, TimeoutError, OSError):
+            _LOGGER.debug(
+                "Proactive token refresh failed for %s; will retry during API calls",
+                self._host,
+            )
+
+        tasks: list[Awaitable[Any]] = [
             self.fetch_system_status(),
             self.fetch_internet_status(),
             self.fetch_connected_devices(),
             self.fetch_wifi_interfaces(),
-            self.fetch_wireguard_clients(),
-            self.fetch_tailscale_state(),
-            self.fetch_cellular_status(),
-        )
-        await self.fetch_sms_messages()
+        ]
+
+        if self.feature_enabled(FEATURE_WIREGUARD):
+            tasks.append(self.fetch_wireguard_clients())
+        else:
+            self._wireguard_clients = {}
+            self._wireguard_connections = None
+
+        if self.feature_enabled(FEATURE_TAILSCALE):
+            tasks.append(self.fetch_tailscale_state())
+        else:
+            self._tailscale_config = {}
+            self._tailscale_connection = None
+
+        if self.feature_enabled(FEATURE_CELLULAR):
+            tasks.append(self.fetch_cellular_status())
+        else:
+            self._cellular_status = {}
+            self._modems = {}
+            self._cached_modem_info = None
+            self._default_modem_bus = None
+
+        if self.feature_enabled(FEATURE_REPEATER):
+            tasks.extend(
+                [
+                    self.fetch_repeater_status(),
+                    self.fetch_repeater_config(),
+                    self.fetch_saved_networks(),
+                ]
+            )
+        else:
+            self._repeater_status = None
+            self._repeater_config = {}
+            self._scanned_networks = []
+            self._saved_networks = []
+            self._last_wifi_scan = None
+
+        await asyncio.gather(*tasks)
+
+        if self.feature_enabled(FEATURE_SMS):
+            await self.fetch_sms_messages()
+        else:
+            self._sms_messages = {}
 
     async def _async_poll_update(self, _: datetime | None = None) -> None:
         await self.fetch_all_data()
@@ -169,10 +294,11 @@ class GLinetHub:
                 _LOGGER.exception("GL-INet router %s did not respond in time", self._host)
             self._connect_error = True
             return None
-        except TokenError:
+        except (TokenError, AuthenticationError):
             if not self._connect_error:
                 _LOGGER.warning(
-                    "GL-INet router %s rejected the token; a reauthentication will be attempted",
+                    "GL-INet router %s rejected the token or access was denied; "
+                    "a reauthentication will be attempted",
                     self._host,
                 )
             self._connect_error = True
@@ -202,6 +328,9 @@ class GLinetHub:
     async def _invoke_optional_api(self, api_callable: Callable[[], Awaitable[T]]) -> T | None:
         try:
             return await api_callable()
+        except (TokenError, AuthenticationError):
+            self._token_error = True
+            return None
         except (APIClientError, OSError, TimeoutError, ValueError):
             _LOGGER.debug("Optional GL-INet router API is unavailable", exc_info=True)
             return None
@@ -338,6 +467,82 @@ class GLinetHub:
             "default_bus": self._default_modem_bus,
         }
 
+    async def fetch_repeater_status(self) -> None:
+        response = await self._invoke_optional_api(self.router_api.get_repeater_status)
+        if response is None:
+            self._repeater_status = None
+            return
+        self._repeater_status = RepeaterStatus.from_api_response(response)
+
+    async def fetch_repeater_config(self) -> None:
+        response = await self._invoke_optional_api(self.router_api.get_repeater_config)
+        if response is not None:
+            self._repeater_config = response
+
+    async def set_repeater_auto_switch(self, enabled: bool) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.set_repeater_config(auto=enabled)
+        )
+        await self.fetch_repeater_config()
+
+    async def set_repeater_band(self, band: str | None) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.set_repeater_config(lock_band=band)
+        )
+        await self.fetch_repeater_config()
+
+    async def scan_wifi_networks(
+        self, all_band: bool = False, dfs: bool = False, store_results: bool = True
+    ) -> list[ScannedNetwork]:
+        _LOGGER.info("Starting WiFi network scan (all_band=%s, dfs=%s)", all_band, dfs)
+        response = await self._invoke_api(
+            lambda: self.router_api.scan_wifi_networks(all_band=all_band, dfs=dfs)
+        )
+        if response is None:
+            _LOGGER.warning(
+                "WiFi scan returned None, keeping %d cached networks",
+                len(self._scanned_networks),
+            )
+            return self._scanned_networks
+        networks = [ScannedNetwork.from_api_response(network) for network in response]
+        _LOGGER.info("WiFi scan found %d networks", len(networks))
+        if store_results:
+            self._scanned_networks = networks
+            self._last_wifi_scan = datetime.now()
+            async_dispatcher_send(self.hass, self.event_networks_updated)
+        return networks
+
+    async def connect_to_wifi(
+        self,
+        ssid: str,
+        password: str | None = None,
+        remember: bool = True,
+        bssid: str | None = None,
+    ) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.connect_repeater(
+                ssid=ssid, key=password, remember=remember, bssid=bssid
+            )
+        )
+        await self.fetch_repeater_status()
+
+    async def disconnect_wifi(self) -> None:
+        await self._invoke_api(self.router_api.disconnect_repeater)
+        await self.fetch_repeater_status()
+
+    async def fetch_saved_networks(self) -> None:
+        response = await self._invoke_optional_api(self.router_api.get_saved_ap_list)
+        if response is not None:
+            self._saved_networks = response
+
+    async def get_saved_wifi_networks(self) -> list[dict[str, Any]]:
+        response = await self._invoke_api(self.router_api.get_saved_ap_list)
+        return response or []
+
+    async def remove_saved_wifi_network(self, ssid: str) -> None:
+        await self._invoke_api(lambda: self.router_api.remove_saved_ap(ssid))
+        await self.fetch_saved_networks()
+
     async def fetch_sms_messages(self) -> None:
         response = await self._invoke_optional_api(self.router_api.get_sms_messages)
         if response is None:
@@ -357,7 +562,7 @@ class GLinetHub:
                 phone_number=str(item.get("phone_number") or item.get("sender") or ""),
                 text=str(item.get("body") or ""),
                 bus=item.get("bus"),
-                status=_first_int(item, ("status",)),
+                status=get_first_int(item, ("status",)),
                 timestamp=item.get("date") or item.get("time") or item.get("timestamp"),
                 read=_sms_status_is_read(item.get("status")),
             )
@@ -478,16 +683,6 @@ class GLinetHub:
         return sum(1 for device in self._devices.values() if device.is_connected)
 
     @property
-    def total_client_rx_rate(self) -> int | None:
-        rates = [device.rx_rate for device in self._devices.values() if device.rx_rate is not None]
-        return sum(rates) if rates else None
-
-    @property
-    def total_client_tx_rate(self) -> int | None:
-        rates = [device.tx_rate for device in self._devices.values() if device.tx_rate is not None]
-        return sum(rates) if rates else None
-
-    @property
     def has_tailscale(self) -> bool:
         return bool(self._tailscale_config)
 
@@ -508,6 +703,40 @@ class GLinetHub:
         return self._default_modem_bus
 
     @property
+    def repeater_status(self) -> RepeaterStatus | None:
+        return self._repeater_status
+
+    @property
+    def repeater_connected(self) -> bool | None:
+        if self._repeater_status is None:
+            return None
+        return self._repeater_status.state == RepeaterState.CONNECTED
+
+    @property
+    def repeater_config(self) -> dict[str, Any]:
+        return self._repeater_config
+
+    @property
+    def repeater_auto_switch(self) -> bool | None:
+        return self._repeater_config.get("auto")
+
+    @property
+    def repeater_band(self) -> str | None:
+        return self._repeater_config.get("lock_band")
+
+    @property
+    def scanned_networks(self) -> list[ScannedNetwork]:
+        return self._scanned_networks
+
+    @property
+    def saved_networks(self) -> list[dict[str, Any]]:
+        return self._saved_networks
+
+    @property
+    def last_wifi_scan(self) -> datetime | None:
+        return self._last_wifi_scan
+
+    @property
     def event_device_added(self) -> str:
         return f"{DOMAIN}-device-new-{self._factory_mac}"
 
@@ -515,34 +744,9 @@ class GLinetHub:
     def event_device_updated(self) -> str:
         return f"{DOMAIN}-device-update-{self._factory_mac}"
 
-
-def _first_bool(data: dict[str, Any], keys: tuple[str, ...]) -> bool | None:
-    for key in keys:
-        value = data.get(key)
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, int):
-            return value != 0
-        if isinstance(value, str):
-            lowered = value.lower()
-            if lowered in {"1", "true", "on", "enabled", "enable"}:
-                return True
-            if lowered in {"0", "false", "off", "disabled", "disable"}:
-                return False
-    return None
-
-
-def _first_int(data: dict[str, Any], keys: tuple[str, ...]) -> int | None:
-    for key in keys:
-        value = data.get(key)
-        if isinstance(value, bool):
-            continue
-        if isinstance(value, int):
-            return value
-        if isinstance(value, float):
-            return int(value)
-    return None
-
+    @property
+    def event_networks_updated(self) -> str:
+        return f"{DOMAIN}-networks-update-{self._factory_mac}"
 
 def _merge_modem_lists(
     info_modems: list[dict[str, Any]],

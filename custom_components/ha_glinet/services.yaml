@@ -51,3 +51,105 @@ remove_sms:
       description: The unique identifier for the SMS (required for scope 10).
       selector:
         text:
+
+scan_wifi:
+  name: Scan WiFi networks
+  description: Scan for available WiFi networks to connect in repeater mode. Returns network list in action response.
+  fields:
+    mac:
+      name: Router MAC
+      description: Target router MAC address (optional if only one router configured).
+      selector:
+        text:
+      required: false
+    all_band:
+      name: All bands
+      description: Scan all frequency bands instead of only the locked band.
+      selector:
+        boolean:
+      required: false
+      default: false
+    dfs:
+      name: Include DFS
+      description: Include DFS channels in scan results.
+      selector:
+        boolean:
+      required: false
+      default: false
+
+connect_wifi:
+  name: Connect to WiFi
+  description: Connect to an external WiFi network in repeater mode.
+  fields:
+    mac:
+      name: Router MAC
+      description: Target router MAC address (optional if only one router configured).
+      selector:
+        text:
+      required: false
+    ssid:
+      name: SSID
+      description: The network name to connect to.
+      selector:
+        text:
+      required: true
+      example: "CampgroundWiFi"
+    password:
+      name: Password
+      description: The network password (leave empty for open networks).
+      selector:
+        text:
+          type: password
+      required: false
+    remember:
+      name: Remember network
+      description: Save network credentials for auto-reconnect.
+      selector:
+        boolean:
+      required: false
+      default: true
+    bssid:
+      name: BSSID
+      description: Lock connection to specific access point MAC address.
+      selector:
+        text:
+      required: false
+
+disconnect_wifi:
+  name: Disconnect WiFi
+  description: Disconnect from the current external WiFi network.
+  fields:
+    mac:
+      name: Router MAC
+      description: Target router MAC address (optional if only one router configured).
+      selector:
+        text:
+      required: false
+
+get_saved_networks:
+  name: Get saved networks
+  description: Get list of saved WiFi networks for repeater mode. Returns network list in action response.
+  fields:
+    mac:
+      name: Router MAC
+      description: Target router MAC address (optional if only one router configured).
+      selector:
+        text:
+      required: false
+
+remove_saved_network:
+  name: Remove saved network
+  description: Remove a saved WiFi network from the router.
+  fields:
+    mac:
+      name: Router MAC
+      description: Target router MAC address (optional if only one router configured).
+      selector:
+        text:
+      required: false
+    ssid:
+      name: SSID
+      description: The network name to remove.
+      selector:
+        text:
+      required: true

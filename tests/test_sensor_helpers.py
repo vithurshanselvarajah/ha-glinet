@@ -17,11 +17,13 @@ def _install_sensor_dependency_stubs() -> None:
         native_unit_of_measurement: str | None = None
         state_class: str | None = None
         suggested_display_precision: int | None = None
+        options: list[str] | None = None
 
     sensor = types.ModuleType("homeassistant.components.sensor")
     sensor.SensorDeviceClass = types.SimpleNamespace(
         DATA_RATE="data_rate",
         DATA_SIZE="data_size",
+        ENUM="enum",
         TEMPERATURE="temperature",
         TIMESTAMP="timestamp",
     )
@@ -50,16 +52,16 @@ def _install_sensor_dependency_stubs() -> None:
 
 _install_sensor_dependency_stubs()
 
-from custom_components.ha_glinet.entities.sensor import _first_int, _first_value  # noqa: E402
+from custom_components.ha_glinet.utils import get_first_int, get_first_value  # noqa: E402
 
 
 def test_first_int_searches_nested_payloads() -> None:
     payload = {"wan": {"status": {"traffic": {"bytes_rx": 1234}}}}
 
-    assert _first_int(payload, ("bytes_rx",)) == 1234
+    assert get_first_int(payload, ("bytes_rx",)) == 1234
 
 
 def test_first_value_searches_nested_payloads() -> None:
     payload = {"modem": {"details": {"operator_name": "Example Mobile"}}}
 
-    assert _first_value(payload, ("operator_name",)) == "Example Mobile"
+    assert get_first_value(payload, ("operator_name",)) == "Example Mobile"

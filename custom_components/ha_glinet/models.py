@@ -6,6 +6,72 @@ from enum import IntEnum, StrEnum
 
 from homeassistant.util import dt as dt_util
 
+from .utils import calculate_rate, get_first_int
+
+
+class RepeaterState(IntEnum):
+    NOT_USED = 0
+    CONNECTING = 1
+    CONNECTED = 2
+    FAILED = 3
+
+
+@dataclass(slots=True)
+class RepeaterStatus:
+    state: RepeaterState
+    ssid: str | None = None
+    bssid: str | None = None
+    channel: int | None = None
+    signal: int | None = None
+    ipv4_address: str | None = None
+    ipv4_gateway: str | None = None
+    ipv4_dns: list[str] | None = None
+    device: str | None = None
+    fail_type: str | None = None
+
+    @classmethod
+    def from_api_response(cls, data: dict) -> RepeaterStatus:
+        ipv4 = data.get("ipv4") or {}
+        dns_list = ipv4.get("dns")
+        return cls(
+            state=RepeaterState(data.get("state", 0)),
+            ssid=data.get("ssid"),
+            bssid=data.get("bssid"),
+            channel=data.get("channel"),
+            signal=data.get("signal"),
+            ipv4_address=ipv4.get("ip"),
+            ipv4_gateway=ipv4.get("gateway"),
+            ipv4_dns=dns_list if isinstance(dns_list, list) else None,
+            device=data.get("device"),
+            fail_type=data.get("fail_type"),
+        )
+
+
+@dataclass(slots=True)
+class ScannedNetwork:
+    ssid: str
+    bssid: str
+    signal: int
+    band: str
+    encryption_enabled: bool
+    encryption_type: str
+    saved: bool
+    channel: int | None = None
+
+    @classmethod
+    def from_api_response(cls, data: dict) -> ScannedNetwork:
+        encryption = data.get("encryption") or {}
+        return cls(
+            ssid=data.get("ssid", ""),
+            bssid=data.get("bssid", ""),
+            signal=data.get("signal", 0),
+            band=data.get("band", ""),
+            encryption_enabled=encryption.get("enabled", False),
+            encryption_type=encryption.get("description", "Open"),
+            saved=data.get("saved", False),
+            channel=data.get("channel"),
+        )
+
 
 class DeviceInterfaceType(StrEnum):
     WIFI_24 = "2.4GHz"
@@ -129,29 +195,29 @@ class ClientDeviceInfo:
             previous_rx_bytes = self._rx_bytes
             previous_tx_bytes = self._tx_bytes
             previous_traffic_update = self._last_traffic_update
-            self._rx_bytes = _first_int(
+            self._rx_bytes = get_first_int(
                 dev_info,
                 ("rx_bytes", "bytes_rx", "rx", "download", "down"),
             )
-            self._tx_bytes = _first_int(
+            self._tx_bytes = get_first_int(
                 dev_info,
                 ("tx_bytes", "bytes_tx", "tx", "upload", "up"),
             )
-            explicit_rx_rate = _first_int(
+            explicit_rx_rate = get_first_int(
                 dev_info,
                 ("rx_rate", "rx_speed", "rx_bps", "download_speed", "down_speed", "down_rate"),
             )
-            explicit_tx_rate = _first_int(
+            explicit_tx_rate = get_first_int(
                 dev_info,
                 ("tx_rate", "tx_speed", "tx_bps", "upload_speed", "up_speed", "up_rate"),
             )
-            self._rx_rate = explicit_rx_rate or _rate_from_delta(
+            self._rx_rate = explicit_rx_rate or calculate_rate(
                 previous_rx_bytes,
                 self._rx_bytes,
                 previous_traffic_update,
                 now,
             )
-            self._tx_rate = explicit_tx_rate or _rate_from_delta(
+            self._tx_rate = explicit_tx_rate or calculate_rate(
                 previous_tx_bytes,
                 self._tx_bytes,
                 previous_traffic_update,
@@ -196,29 +262,3 @@ class ClientDeviceInfo:
     @property
     def tx_rate(self) -> int | None:
         return self._tx_rate
-
-
-def _first_int(data: dict, keys: tuple[str, ...]) -> int | None:
-    for key in keys:
-        value = data.get(key)
-        if isinstance(value, bool):
-            continue
-        if isinstance(value, int):
-            return value
-        if isinstance(value, float):
-            return int(value)
-    return None
-
-
-def _rate_from_delta(
-    previous_value: int | None,
-    current_value: int | None,
-    previous_time: datetime | None,
-    current_time: datetime,
-) -> int | None:
-    if previous_value is None or current_value is None or previous_time is None:
-        return None
-    elapsed = (current_time - previous_time).total_seconds()
-    if elapsed <= 0 or current_value < previous_value:
-        return None
-    return int((current_value - previous_value) / elapsed)

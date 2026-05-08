@@ -3,7 +3,7 @@
   "config": {
     "step": {
       "user": {
-        "description": "Enter the connection details for your GL-INet router",
+        "description": "Provide router details to link your GL-INet device",
         "data": {
           "host": "Router Address",
           "password": "Admin Password",
@@ -11,19 +11,19 @@
           "enabled_features": "Enabled Features"
         },
         "data_description": {
-          "host": "Use the router URL or IP address (for example: http://192.168.8.1).",
-          "password": "Provide the same password you use for the router admin interface.",
-          "consider_home": "Set how many seconds a client can be offline before it is marked away."
+          "host": "Type the router hostname, URL, or IP address.",
+          "password": "Enter the admin password configured on your GL-INet router.",
+          "consider_home": "Number of seconds before a disconnected client is treated as away."
         }
       }
     },
     "error": {
-      "cannot_connect": "Unable to reach the router",
-      "invalid_auth": "The password was rejected",
-      "unknown": "Something went wrong while validating settings"
+      "cannot_connect": "Could not contact the router",
+      "invalid_auth": "Authentication failed with the supplied password",
+      "unknown": "An unexpected validation issue occurred"
     },
     "abort": {
-      "already_configured": "This GL-INet router is already set up"
+      "already_configured": "This router has already been configured"
     }
   },
   "options": {
@@ -36,9 +36,9 @@
           "enabled_features": "Enabled Features"
         },
         "data_description": {
-          "host": "Use the router URL or IP address (for example: http://192.168.8.1).",
-          "password": "Provide the same password you use for the router admin interface.",
-          "consider_home": "Set how many seconds a client can be offline before it is marked away."
+          "host": "Type the router hostname, URL, or IP address.",
+          "password": "Enter the admin password configured on your GL-INet router.",
+          "consider_home": "Number of seconds before a disconnected client is treated as away."
         }
       }
     }
@@ -72,21 +72,6 @@
       "cellular_signal": {
         "name": "Cellular signal"
       },
-      "cellular_rssi": {
-        "name": "Cellular RSSI"
-      },
-      "cellular_rsrp": {
-        "name": "Cellular RSRP"
-      },
-      "cellular_rsrq": {
-        "name": "Cellular RSRQ"
-      },
-      "cellular_sinr": {
-        "name": "Cellular SINR"
-      },
-      "cellular_band": {
-        "name": "Cellular band"
-      },
       "cellular_network": {
         "name": "Cellular network"
       },
@@ -109,23 +94,10 @@
         "name": "Repeater signal"
       },
       "repeater_channel": {
-        "name": "Repeater channel",
-        "state": {
-          "2_4ghz": "2.4 GHz",
-          "5ghz": "5 GHz"
-        }
+        "name": "Repeater channel"
       },
       "repeater_ip": {
         "name": "Repeater IP address"
-      },
-      "repeater_gateway": {
-        "name": "Repeater gateway"
-      },
-      "repeater_dns": {
-        "name": "Repeater DNS"
-      },
-      "repeater_bssid": {
-        "name": "Repeater BSSID"
       }
     },
     "binary_sensor": {

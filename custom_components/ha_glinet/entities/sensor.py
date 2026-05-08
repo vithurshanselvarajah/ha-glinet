@@ -17,7 +17,9 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.util.dt import utcnow
 
-from ..const import DOMAIN
+from ..const import DOMAIN, FEATURE_CELLULAR, FEATURE_REPEATER, FEATURE_SMS
+from ..models import RepeaterState
+from ..utils import channel_to_band, get_first_int, get_first_value
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -139,7 +141,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:signal-cellular-2",
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: _first_int(
+        value_fn=lambda hub: get_first_int(
             hub.cellular_status,
             ("signal", "signal_strength", "rssi", "rsrp", "csq"),
             nested=("modem", "cellular", "sim", "signal"),
@@ -153,7 +155,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:signal-cellular-outline",
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: _first_int(
+        value_fn=lambda hub: get_first_int(
             hub.cellular_status,
             ("rssi",),
             nested=("modem", "cellular", "sim", "signal"),
@@ -166,7 +168,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:signal-variant",
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: _first_int(
+        value_fn=lambda hub: get_first_int(
             hub.cellular_status,
             ("rsrp",),
             nested=("modem", "cellular", "sim", "signal"),
@@ -179,7 +181,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:signal-distance-variant",
         native_unit_of_measurement="dB",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: _first_int(
+        value_fn=lambda hub: get_first_int(
             hub.cellular_status,
             ("rsrq",),
             nested=("modem", "cellular", "sim", "signal"),
@@ -192,7 +194,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:signal-3g",
         native_unit_of_measurement="dB",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: _first_int(
+        value_fn=lambda hub: get_first_int(
             hub.cellular_status,
             ("sinr",),
             nested=("modem", "cellular", "sim", "signal"),
@@ -203,7 +205,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular band",
         has_entity_name=True,
         icon="mdi:cellphone-wireless",
-        value_fn=lambda hub: _first_value(
+        value_fn=lambda hub: get_first_value(
             hub.cellular_status,
             ("band", "network_type", "service_type"),
             nested=("modem", "cellular", "sim"),
@@ -214,7 +216,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular network",
         has_entity_name=True,
         icon="mdi:signal-cellular-outline",
-        value_fn=lambda hub: _first_value(
+        value_fn=lambda hub: get_first_value(
             hub.cellular_status,
             ("network", "operator", "operator_name", "carrier", "mode", "service_type"),
             nested=("modem", "cellular", "sim"),
@@ -248,7 +250,93 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
             ],
         },
     ),
+    HubSensorEntityDescription(
+        key="repeater_state",
+        name="Repeater state",
+        has_entity_name=True,
+        icon="mdi:wifi-sync",
+        device_class=SensorDeviceClass.ENUM,
+        options=["not_used", "connecting", "connected", "failed"],
+        value_fn=lambda hub: _repeater_state_value(hub),
+        extra_attributes_fn=lambda hub: _repeater_state_attributes(hub),
+    ),
+    HubSensorEntityDescription(
+        key="repeater_ssid",
+        name="Repeater SSID",
+        has_entity_name=True,
+        icon="mdi:wifi",
+        value_fn=lambda hub: hub.repeater_status.ssid if hub.repeater_status else None,
+    ),
+    HubSensorEntityDescription(
+        key="repeater_signal",
+        name="Repeater signal",
+        has_entity_name=True,
+        icon="mdi:wifi-strength-2",
+        native_unit_of_measurement="dBm",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda hub: hub.repeater_status.signal if hub.repeater_status else None,
+    ),
+    HubSensorEntityDescription(
+        key="repeater_ip",
+        name="Repeater IP address",
+        has_entity_name=True,
+        icon="mdi:ip-network",
+        value_fn=lambda hub: hub.repeater_status.ipv4_address if hub.repeater_status else None,
+    ),
+    HubSensorEntityDescription(
+        key="repeater_gateway",
+        name="Repeater gateway",
+        has_entity_name=True,
+        icon="mdi:router-network",
+        value_fn=lambda hub: hub.repeater_status.ipv4_gateway if hub.repeater_status else None,
+    ),
+    HubSensorEntityDescription(
+        key="repeater_dns",
+        name="Repeater DNS",
+        has_entity_name=True,
+        icon="mdi:dns",
+        value_fn=lambda hub: (
+            hub.repeater_status.ipv4_dns[0]
+            if hub.repeater_status and hub.repeater_status.ipv4_dns
+            else None
+        ),
+        extra_attributes_fn=lambda hub: (
+            {"dns_servers": hub.repeater_status.ipv4_dns}
+            if hub.repeater_status and hub.repeater_status.ipv4_dns
+            else None
+        ),
+    ),
+    HubSensorEntityDescription(
+        key="repeater_bssid",
+        name="Repeater BSSID",
+        has_entity_name=True,
+        icon="mdi:access-point-network",
+        value_fn=lambda hub: hub.repeater_status.bssid if hub.repeater_status else None,
+    ),
 )
+
+FEATURE_SENSOR_MAP: dict[str, str] = {
+    "cellular_signal": FEATURE_CELLULAR,
+    "cellular_rssi": FEATURE_CELLULAR,
+    "cellular_rsrp": FEATURE_CELLULAR,
+    "cellular_rsrq": FEATURE_CELLULAR,
+    "cellular_sinr": FEATURE_CELLULAR,
+    "cellular_band": FEATURE_CELLULAR,
+    "cellular_network": FEATURE_CELLULAR,
+    "sms_messages": FEATURE_SMS,
+    "repeater_state": FEATURE_REPEATER,
+    "repeater_ssid": FEATURE_REPEATER,
+    "repeater_signal": FEATURE_REPEATER,
+    "repeater_ip": FEATURE_REPEATER,
+    "repeater_gateway": FEATURE_REPEATER,
+    "repeater_dns": FEATURE_REPEATER,
+    "repeater_bssid": FEATURE_REPEATER,
+}
+
+
+def _sensor_is_enabled(hub: GLinetHub, description: HubSensorEntityDescription) -> bool:
+    feature = FEATURE_SENSOR_MAP.get(description.key)
+    return feature is None or hub.feature_enabled(feature)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -278,6 +366,29 @@ CLIENT_BANDWIDTH_SENSORS: tuple[ClientBandwidthEntityDescription, ...] = (
 )
 
 
+def _repeater_state_value(hub: GLinetHub) -> str | None:
+    if hub.repeater_status is None:
+        return None
+    state_map = {
+        RepeaterState.NOT_USED: "not_used",
+        RepeaterState.CONNECTING: "connecting",
+        RepeaterState.CONNECTED: "connected",
+        RepeaterState.FAILED: "failed",
+    }
+    return state_map.get(hub.repeater_status.state)
+
+
+def _repeater_state_attributes(hub: GLinetHub) -> dict[str, Any] | None:
+    if hub.repeater_status is None:
+        return None
+    attrs: dict[str, Any] = {}
+    if hub.repeater_status.bssid:
+        attrs["bssid"] = hub.repeater_status.bssid
+    if hub.repeater_status.fail_type:
+        attrs["fail_type"] = hub.repeater_status.fail_type
+    return attrs if attrs else None
+
+
 def _calc_usage_percent(total: Any, free: Any) -> float | None:
     if not isinstance(total, (int, float)) or total <= 0:
         return None
@@ -295,7 +406,7 @@ def _resolve_uptime(seconds_uptime: float, last_value: datetime | None) -> datet
 
 
 async def async_setup_entry(
-    _: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     hub: GLinetHub = entry.runtime_data
     tracked: set[str] = set()
@@ -307,6 +418,7 @@ async def async_setup_entry(
     entities.extend(
         HubStatusSensor(hub=hub, entity_description=description)
         for description in HUB_SENSORS
+        if _sensor_is_enabled(hub, description)
     )
     entities.append(
         SystemUptimeSensor(
@@ -322,6 +434,9 @@ async def async_setup_entry(
             ),
         )
     )
+    if hub.feature_enabled(FEATURE_REPEATER):
+        entities.append(RepeaterChannelSensor(hub=hub))
+
     async_add_entities(entities, True)
 
     @callback
@@ -431,56 +546,35 @@ class ClientBandwidthSensor(SensorEntity):
         return self.entity_description.value_fn(self._device)
 
 
-def _first_value(
-    data: dict[str, Any],
-    keys: tuple[str, ...],
-    nested: tuple[str, ...] = (),
-) -> str | None:
-    for source in _candidate_dicts(data, nested):
-        for key in keys:
-            value = source.get(key)
-            if value not in (None, ""):
-                return str(value)
-    return None
+class RepeaterChannelSensor(SensorEntity):
+    """Sensor for repeater WiFi channel showing band and channel."""
 
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:radio-tower"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_translation_key = "repeater_channel"
 
-def _first_int(
-    data: dict[str, Any],
-    keys: tuple[str, ...],
-    nested: tuple[str, ...] = (),
-) -> int | None:
-    for source in _candidate_dicts(data, nested):
-        for key in keys:
-            value = source.get(key)
-            if isinstance(value, bool):
-                continue
-            if isinstance(value, int):
-                return value
-            if isinstance(value, float):
-                return int(value)
-    return None
+    def __init__(self, hub: GLinetHub) -> None:
+        self._hub = hub
+        self._attr_device_info = hub.device_info
+        self._attr_options = ["2_4ghz", "5ghz"]
 
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_sensor/{self._hub.device_mac}/repeater_channel"
 
-def _candidate_dicts(data: dict[str, Any], nested: tuple[str, ...]) -> list[dict[str, Any]]:
-    candidates = [data]
-    for key in nested:
-        value = data.get(key)
-        if isinstance(value, dict):
-            candidates.append(value)
-    candidates.extend(_walk_nested_dicts(data))
-    return candidates
+    @property
+    def native_value(self) -> str | None:
+        if not self._hub.repeater_status:
+            return None
+        channel = self._hub.repeater_status.channel
+        if channel is None:
+            return None
+        return channel_to_band(channel)
 
-
-def _walk_nested_dicts(value: Any) -> list[dict[str, Any]]:
-    candidates: list[dict[str, Any]] = []
-    if isinstance(value, dict):
-        for child in value.values():
-            if isinstance(child, dict):
-                candidates.append(child)
-                candidates.extend(_walk_nested_dicts(child))
-            elif isinstance(child, list):
-                candidates.extend(_walk_nested_dicts(child))
-    elif isinstance(value, list):
-        for child in value:
-            candidates.extend(_walk_nested_dicts(child))
-    return candidates
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        if not self._hub.repeater_status:
+            return None
+        channel = self._hub.repeater_status.channel
+        return {"channel": channel, "band": channel_to_band(channel)}

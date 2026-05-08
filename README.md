@@ -11,18 +11,23 @@ This project is inspired by [HarvsG/ha-glinet4-integration](https://github.com/H
 Included features:
 
 - Config flow setup with DHCP discovery.
+- Robust session management with proactive token renewal and automatic retries.
 - Router reboot button.
 - Connected device trackers.
 - WAN IP and internet connectivity sensors.
-- Connected client count and bandwidth sensors.
+- Connected client count sensor.
+- Per-client real-time bandwidth (upload/download) sensors.
 - System sensors for CPU temperature, load, memory, flash use, and uptime.
 - WiFi interface switches.
 - WireGuard client switches.
 - Tailscale switch.
 - Optional cellular signal/network sensors.
 - Optional SMS services for sending, viewing and managing text messages in the inbox.
+- Optional repeater mode support for WiFi scan, connect/disconnect, saved networks, and repeater state.
 
-GL.iNet firmware varies by router model. Optional APIs such as cellular and SMS are detected defensively and skipped when unsupported.
+During integration setup you can choose which optional GL.iNet features to enable, including WireGuard, cellular, repeater, SMS, and Tailscale. Unsupported choices are skipped gracefully.
+
+If no optional features are selected, the integration still exposes basic router sensors and device trackers; only optional modules are disabled.
 
 ## Why rebuild it? 
 
@@ -52,7 +57,8 @@ Simply put, I use this integration in my own home and wanted specific features t
 2. Click **Add Integration** in the bottom right.
 3. Search for **GL-INet** and select it.
 4. Enter your router's URL (default: `http://192.168.8.1`) and admin password.
-
+5. Configure setup options like **Consider Home** and **Enabled Features**. 
+6. Choose the optional GL.iNet features you want enabled for this router.
 *Note: You can use an HTTPS URL if your router is configured for it and Home Assistant can verify the certificate.*
 
 ## Project Layout

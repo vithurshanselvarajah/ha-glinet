@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import EntityCategory
 
+from ..const import FEATURE_REPEATER, FEATURE_TAILSCALE, FEATURE_WIREGUARD
+
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
@@ -21,14 +23,15 @@ async def async_setup_entry(
     _: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     hub: GLinetHub = entry.runtime_data
-    entities: list[SwitchEntity] = [
-        WireGuardSwitch(hub, client) for client in hub.vpn_clients.values()
-    ]
-    if hub.has_tailscale:
+    entities: list[SwitchEntity] = []
+    if hub.feature_enabled(FEATURE_WIREGUARD):
+        entities.extend(WireGuardSwitch(hub, client) for client in hub.vpn_clients.values())
+    if hub.has_tailscale and hub.feature_enabled(FEATURE_TAILSCALE):
         entities.append(TailscaleSwitch(hub))
     entities.extend(WifiApSwitch(hub, name, iface) for name, iface in hub.wifi_interfaces.items())
-    if entities:
-        async_add_entities(entities, True)
+    if hub.feature_enabled(FEATURE_REPEATER):
+        entities.append(RepeaterAutoSwitchSwitch(hub))
+    async_add_entities(entities, True)
 
 
 class GLinetSwitchBase(SwitchEntity):
@@ -200,3 +203,36 @@ class WireGuardSwitch(GLinetSwitchBase):
         if current is not None:
             self._client = current
         self._attr_is_on = self._client in (self._hub.active_vpn_connections or [])
+
+
+class RepeaterAutoSwitchSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:wifi-sync"
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/repeater_auto_switch"
+
+    @property
+    def name(self) -> str:
+        return "Repeater auto-switch networks"
+
+    async def async_turn_on(self, **_: Any) -> None:
+        try:
+            await self._hub.set_repeater_auto_switch(True)
+        except OSError:
+            _LOGGER.exception("Unable to enable repeater auto-switch")
+            return
+        self._attr_is_on = True
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        try:
+            await self._hub.set_repeater_auto_switch(False)
+        except OSError:
+            _LOGGER.exception("Unable to disable repeater auto-switch")
+            return
+        self._attr_is_on = False
+        self.async_write_ha_state()
+
+    async def async_update(self) -> None:
+        self._attr_is_on = self._hub.repeater_auto_switch

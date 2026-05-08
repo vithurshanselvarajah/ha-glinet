@@ -52,6 +52,8 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 
 | Entity | Source | Notes |
 | --- | --- | --- |
+| Connection status | `hub.internet_status` | Binary connectivity state. |
+| Public IP | `hub.internet_status` | The WAN IP address assigned to the router. |
 | Connected clients | `clients/get_list` | Count of currently online tracked clients. |
 
 ### Cellular and SMS
@@ -67,14 +69,45 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 | Cellular network | Optional `modem/get_status` | Operator/network/mode when available. |
 | Text messages | Optional `sms/get_list` | Count of messages. Attributes include `message_count`, `incoming_count`, `outgoing_count`, and a `messages` list with details like `id`, `phone_number`, `direction`, `status`, `text`, and `timestamp`. |
 
+### Repeater (WiFi Station)
+
+| Entity | Source | Notes |
+| --- | --- | --- |
+| Repeater state | Optional `repeater/get_status` | Current repeater connection state. |
+| Repeater SSID | Optional `repeater/get_status` | SSID of the connected external network. |
+| Repeater signal | Optional `repeater/get_status` | Signal strength of the repeater connection. |
+| Repeater channel | Optional `repeater/get_status` | Enum sensor showing the WiFi band. See [Channel-to-band mapping](#channel-to-band-mapping) below. |
+| Repeater IP address | Optional `repeater/get_status` | IP address assigned to the repeater interface. |
+| Repeater gateway | Optional `repeater/get_status` | Default gateway of the repeater interface. |
+| Repeater DNS | Optional `repeater/get_status` | Primary DNS server. Additional servers are listed in the `dns_servers` attribute. |
+| Repeater BSSID | Optional `repeater/get_status` | MAC address of the connected access point. |
+
+#### Channel-to-band mapping
+
+The **Repeater channel** sensor uses `SensorDeviceClass.ENUM` with a `channel_to_band()` helper (defined in `utils.py`) that converts the raw WiFi channel number into a band key:
+
+| Channel range | Band key | Displayed as |
+| --- | --- | --- |
+| 1 – 14 | `2_4ghz` | 2.4 GHz |
+| 36 – 177 | `5ghz` | 5 GHz |
+
+The raw channel number and band key are also exposed as `channel` and `band` extra state attributes.
+
 ### Client Bandwidth
 
-Each tracked client includes real-time bandwidth sensors:
+Each tracked client includes real-time bandwidth sensors attached to the client device:
 
 - Download rate
 - Upload rate
 
 These sensors are created only when the router reports bandwidth fields in the client list. Rates are calculated based on delta changes between polls if explicit rate fields are missing.
+
+## Selects
+
+| Entity | Source | Notes |
+| --- | --- | --- |
+| WiFi network | `hub.scanned_networks` | Choose a saved or available WiFi SSID for repeater mode. Groups options by "Known" and "Available". |
+| Repeater band | Optional `repeater/get_config` | Controls the locked wireless band used for repeater scanning and connection. |
 
 ## Switches
 
@@ -83,3 +116,4 @@ These sensors are created only when the router reports bandwidth fields in the c
 | WiFi interface switches | `wifi/get_config`, `wifi/set_config` | One switch per WiFi interface reported by the router. |
 | WireGuard client switches | `wg-client` and `vpn-client` APIs | One switch per WireGuard client config returned by the router. Newer firmware uses `vpn-client`; older firmware uses `wg-client`. |
 | Tailscale | `tailscale/get_status`, `tailscale/set_config` | Created when Tailscale is configured. |
+| Repeater auto-switch | `repeater/get_config` | Toggle whether the router automatically switches between saved networks. |
