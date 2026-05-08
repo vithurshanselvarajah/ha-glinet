@@ -19,7 +19,7 @@ from homeassistant.util.dt import utcnow
 
 from ..const import DOMAIN, FEATURE_CELLULAR, FEATURE_REPEATER, FEATURE_SMS
 from ..models import RepeaterState
-from ..utils import get_first_int, get_first_value
+from ..utils import channel_to_band, get_first_int, get_first_value
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -277,22 +277,41 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         value_fn=lambda hub: hub.repeater_status.signal if hub.repeater_status else None,
     ),
     HubSensorEntityDescription(
-        key="repeater_channel",
-        name="Repeater channel",
-        has_entity_name=True,
-        icon="mdi:radio-tower",
-        state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: hub.repeater_status.channel if hub.repeater_status else None,
-    ),
-    HubSensorEntityDescription(
         key="repeater_ip",
         name="Repeater IP address",
         has_entity_name=True,
         icon="mdi:ip-network",
         value_fn=lambda hub: hub.repeater_status.ipv4_address if hub.repeater_status else None,
-        extra_attributes_fn=lambda hub: {
-            "gateway": hub.repeater_status.ipv4_gateway
-        } if hub.repeater_status and hub.repeater_status.ipv4_gateway else None,
+    ),
+    HubSensorEntityDescription(
+        key="repeater_gateway",
+        name="Repeater gateway",
+        has_entity_name=True,
+        icon="mdi:router-network",
+        value_fn=lambda hub: hub.repeater_status.ipv4_gateway if hub.repeater_status else None,
+    ),
+    HubSensorEntityDescription(
+        key="repeater_dns",
+        name="Repeater DNS",
+        has_entity_name=True,
+        icon="mdi:dns",
+        value_fn=lambda hub: (
+            hub.repeater_status.ipv4_dns[0]
+            if hub.repeater_status and hub.repeater_status.ipv4_dns
+            else None
+        ),
+        extra_attributes_fn=lambda hub: (
+            {"dns_servers": hub.repeater_status.ipv4_dns}
+            if hub.repeater_status and hub.repeater_status.ipv4_dns
+            else None
+        ),
+    ),
+    HubSensorEntityDescription(
+        key="repeater_bssid",
+        name="Repeater BSSID",
+        has_entity_name=True,
+        icon="mdi:access-point-network",
+        value_fn=lambda hub: hub.repeater_status.bssid if hub.repeater_status else None,
     ),
 )
 
@@ -308,8 +327,10 @@ FEATURE_SENSOR_MAP: dict[str, str] = {
     "repeater_state": FEATURE_REPEATER,
     "repeater_ssid": FEATURE_REPEATER,
     "repeater_signal": FEATURE_REPEATER,
-    "repeater_channel": FEATURE_REPEATER,
     "repeater_ip": FEATURE_REPEATER,
+    "repeater_gateway": FEATURE_REPEATER,
+    "repeater_dns": FEATURE_REPEATER,
+    "repeater_bssid": FEATURE_REPEATER,
 }
 
 
@@ -385,7 +406,7 @@ def _resolve_uptime(seconds_uptime: float, last_value: datetime | None) -> datet
 
 
 async def async_setup_entry(
-    _: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     hub: GLinetHub = entry.runtime_data
     tracked: set[str] = set()
@@ -413,6 +434,9 @@ async def async_setup_entry(
             ),
         )
     )
+    if hub.feature_enabled(FEATURE_REPEATER):
+        entities.append(RepeaterChannelSensor(hub=hub))
+
     async_add_entities(entities, True)
 
     @callback
@@ -520,3 +544,38 @@ class ClientBandwidthSensor(SensorEntity):
     def native_value(self) -> int | None:
         self._device = self._hub.tracked_devices.get(self._device.mac, self._device)
         return self.entity_description.value_fn(self._device)
+
+
+class RepeaterChannelSensor(SensorEntity):
+    """Sensor for repeater WiFi channel showing band and channel."""
+
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:radio-tower"
+    _attr_translation_key = "repeater_channel"
+
+    def __init__(self, hub: GLinetHub) -> None:
+        self._hub = hub
+        self._attr_device_info = hub.device_info
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_sensor/{self._hub.device_mac}/repeater_channel"
+
+    @property
+    def native_value(self) -> str | None:
+        if not self._hub.repeater_status:
+            return None
+        channel = self._hub.repeater_status.channel
+        if channel is None:
+            return None
+        band = channel_to_band(channel)
+        if band:
+            return f"{band} ({channel})"
+        return str(channel)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        if not self._hub.repeater_status:
+            return None
+        channel = self._hub.repeater_status.channel
+        return {"channel": channel, "band": channel_to_band(channel)}

@@ -25,11 +25,14 @@ class RepeaterStatus:
     signal: int | None = None
     ipv4_address: str | None = None
     ipv4_gateway: str | None = None
+    ipv4_dns: list[str] | None = None
+    device: str | None = None
     fail_type: str | None = None
 
     @classmethod
     def from_api_response(cls, data: dict) -> RepeaterStatus:
         ipv4 = data.get("ipv4") or {}
+        dns_list = ipv4.get("dns")
         return cls(
             state=RepeaterState(data.get("state", 0)),
             ssid=data.get("ssid"),
@@ -38,6 +41,8 @@ class RepeaterStatus:
             signal=data.get("signal"),
             ipv4_address=ipv4.get("ip"),
             ipv4_gateway=ipv4.get("gateway"),
+            ipv4_dns=dns_list if isinstance(dns_list, list) else None,
+            device=data.get("device"),
             fail_type=data.get("fail_type"),
         )
 

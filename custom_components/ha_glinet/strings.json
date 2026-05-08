@@ -109,10 +109,23 @@
         "name": "Repeater signal"
       },
       "repeater_channel": {
-        "name": "Repeater channel"
+        "name": "Repeater channel",
+        "state": {
+          "2.4GHz": "2.4 GHz",
+          "5GHz": "5 GHz"
+        }
       },
       "repeater_ip": {
         "name": "Repeater IP address"
+      },
+      "repeater_gateway": {
+        "name": "Repeater gateway"
+      },
+      "repeater_dns": {
+        "name": "Repeater DNS"
+      },
+      "repeater_bssid": {
+        "name": "Repeater BSSID"
       }
     },
     "binary_sensor": {
