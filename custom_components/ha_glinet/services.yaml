@@ -166,11 +166,11 @@ set_fan_temperature:
       required: false
     temperature:
       name: Threshold temperature
-      description: Trigger temperature in Celsius (40-100).
+      description: Trigger temperature in Celsius (70-90).
       selector:
         number:
-          min: 40
-          max: 100
+          min: 70
+          max: 90
           unit_of_measurement: "°C"
           mode: slider
       required: true

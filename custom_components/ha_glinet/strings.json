@@ -314,7 +314,7 @@
       "fields": {
         "temperature": {
           "name": "Threshold temperature",
-          "description": "Trigger temperature in Celsius (40-100)."
+          "description": "Trigger temperature in Celsius (70-90)."
         },
         "mac": {
           "name": "MAC address",

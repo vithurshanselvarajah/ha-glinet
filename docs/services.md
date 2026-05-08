@@ -76,7 +76,7 @@ Removes a saved repeater WiFi network from the router.
 
 ### `set_fan_temperature`
 Sets the temperature threshold at which the router's fan will start running.
-- **`temperature`**: Target threshold temperature in Celsius (typically 40-100).
+- **`temperature`**: Target threshold temperature in Celsius (typically 70-90).
 - **`mac`** (Optional): Target a specific router by MAC address.
 
 > Note: Repeater services are only registered when the router entry has repeater support enabled.

@@ -283,7 +283,7 @@ async def async_register_services(hass: HomeAssistant) -> None:
             {
                 vol.Optional(CONF_MAC): cv.string,
                 vol.Required(ATTR_TEMPERATURE): vol.All(
-                    vol.Coerce(int), vol.Range(min=40, max=100)
+                    vol.Coerce(int), vol.Range(min=70, max=90)
                 ),
             }
         ),
