@@ -52,6 +52,7 @@ def pytest_configure() -> None:
         voluptuous.Coerce = lambda *args, **kwargs: args[0] if args else None
         voluptuous.Clamp = lambda *args, **kwargs: args[0] if args else None
         voluptuous.In = lambda *args, **kwargs: args[0] if args else None
+        voluptuous.Range = lambda *args, **kwargs: args[0] if args else None
         sys.modules.setdefault("voluptuous", voluptuous)
 
     try:
