@@ -92,6 +92,12 @@ py -m compileall -q custom_components tests
 
 CI runs those checks automatically for pushes and pull requests.
 
+## Support
+
+For support, questions, or community discussion, join our Discord channel:
+
+[![Discord](https://img.shields.io/discord/1370420790895317072?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Metvr5hC3m)
+
 ## Ownership
 
 Maintained by Vithurshan Selvarajah.
