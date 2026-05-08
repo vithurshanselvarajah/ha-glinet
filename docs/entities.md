@@ -76,8 +76,22 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 | Repeater state | Optional `repeater/get_status` | Current repeater connection state. |
 | Repeater SSID | Optional `repeater/get_status` | SSID of the connected external network. |
 | Repeater signal | Optional `repeater/get_status` | Signal strength of the repeater connection. |
-| Repeater channel | Optional `repeater/get_status` | Channel used by the repeater connection. |
+| Repeater channel | Optional `repeater/get_status` | Enum sensor showing the WiFi band. See [Channel-to-band mapping](#channel-to-band-mapping) below. |
 | Repeater IP address | Optional `repeater/get_status` | IP address assigned to the repeater interface. |
+| Repeater gateway | Optional `repeater/get_status` | Default gateway of the repeater interface. |
+| Repeater DNS | Optional `repeater/get_status` | Primary DNS server. Additional servers are listed in the `dns_servers` attribute. |
+| Repeater BSSID | Optional `repeater/get_status` | MAC address of the connected access point. |
+
+#### Channel-to-band mapping
+
+The **Repeater channel** sensor uses `SensorDeviceClass.ENUM` with a `channel_to_band()` helper (defined in `utils.py`) that converts the raw WiFi channel number into a band key:
+
+| Channel range | Band key | Displayed as |
+| --- | --- | --- |
+| 1 – 14 | `2_4ghz` | 2.4 GHz |
+| 36 – 177 | `5ghz` | 5 GHz |
+
+The raw channel number and band key are also exposed as `channel` and `band` extra state attributes.
 
 ### Client Bandwidth
 
