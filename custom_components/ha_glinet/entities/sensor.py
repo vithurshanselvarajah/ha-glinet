@@ -552,12 +552,12 @@ class RepeaterChannelSensor(SensorEntity):
     _attr_has_entity_name = True
     _attr_icon = "mdi:radio-tower"
     _attr_device_class = SensorDeviceClass.ENUM
-    _attr_options = ["2_4ghz", "5ghz"]
     _attr_translation_key = "repeater_channel"
 
     def __init__(self, hub: GLinetHub) -> None:
         self._hub = hub
         self._attr_device_info = hub.device_info
+        self._attr_options = ["2_4ghz", "5ghz"]
 
     @property
     def unique_id(self) -> str:
