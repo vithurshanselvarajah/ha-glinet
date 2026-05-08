@@ -5,6 +5,7 @@ from datetime import timedelta
 from custom_components.ha_glinet.models import (
     ClientDeviceInfo,
     DeviceInterfaceType,
+    FanStatus,
     SmsDirection,
     SmsMessage,
     SmsStatus,
@@ -133,3 +134,13 @@ def test_client_device_marks_missing_device_away_when_delay_is_zero() -> None:
     device.apply_update(None, consider_home=0)
 
     assert device.is_connected is False
+
+
+def test_fan_status_from_api_response() -> None:
+    status = {"status": True, "speed": 1000}
+    config = {"temperature": 75, "warn_temperature": 90}
+    fan = FanStatus.from_api_response(status, config)
+    assert fan.running is True
+    assert fan.speed == 1000
+    assert fan.temperature_threshold == 75
+    assert fan.warn_temperature == 90

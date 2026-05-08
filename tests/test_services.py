@@ -17,6 +17,7 @@ from custom_components.ha_glinet.const import (
     SERVICE_REMOVE_SMS,
     SERVICE_SCAN_WIFI,
     SERVICE_SEND_SMS,
+    SERVICE_SET_FAN_TEMPERATURE,
 )
 from custom_components.ha_glinet.services import (
     _enabled_features_from_entry,
@@ -92,6 +93,7 @@ async def test_register_services_records_only_enabled_feature_services() -> None
         SERVICE_DISCONNECT_WIFI,
         SERVICE_GET_SAVED_NETWORKS,
         SERVICE_REMOVE_SAVED_NETWORK,
+        SERVICE_SET_FAN_TEMPERATURE,
     }
 
 
@@ -101,7 +103,8 @@ async def test_register_services_skips_disabled_features() -> None:
 
     await async_register_services(hass)
 
-    assert hass.services.registrations == []
+    assert hass.services.has_service(DOMAIN, SERVICE_SET_FAN_TEMPERATURE)
+    assert [s for s, _ in hass.services.registrations if s != SERVICE_SET_FAN_TEMPERATURE] == []
 
 
 async def test_register_services_does_not_register_repeater_when_not_enabled() -> None:
