@@ -19,7 +19,7 @@ async def async_setup_entry(
     _: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     hub: GLinetHub = entry.runtime_data
-    entities = [RebootButton(hub)]
+    entities = [RebootButton(hub), TestFanButton(hub)]
     if hub.feature_enabled(FEATURE_REPEATER):
         entities.extend([DisconnectRepeaterButton(hub), ScanWifiButton(hub)])
     async_add_entities(entities, True)
@@ -95,3 +95,21 @@ class ScanWifiButton(ButtonEntity):
 
     async def async_press(self) -> None:
         await self._hub.scan_wifi_networks()
+
+class TestFanButton(ButtonEntity):
+    _attr_has_entity_name = True
+    _attr_name = "Fan test"
+    _attr_translation_key = "test_fan"
+    _attr_icon = "mdi:fan-alert"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, hub: GLinetHub) -> None:
+        self._hub = hub
+        self._attr_device_info = hub.device_info
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_button/{self._hub.device_mac}/test_fan"
+
+    async def async_press(self) -> None:
+        await self._hub.test_fan(duration=10)

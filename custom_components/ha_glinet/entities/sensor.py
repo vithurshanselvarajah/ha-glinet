@@ -313,6 +313,33 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:access-point-network",
         value_fn=lambda hub: hub.repeater_status.bssid if hub.repeater_status else None,
     ),
+    HubSensorEntityDescription(
+        key="fan_speed",
+        name="Fan speed",
+        translation_key="fan_speed",
+        has_entity_name=True,
+        icon="mdi:fan",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement="RPM",
+        value_fn=lambda hub: hub.fan_speed,
+        extra_attributes_fn=lambda hub: {
+            "running": hub.fan_running,
+            "temperature_threshold": hub.fan_temperature_threshold,
+        },
+    ),
+    HubSensorEntityDescription(
+        key="fan_temperature",
+        name="Fan threshold temperature",
+        translation_key="fan_temperature",
+        has_entity_name=True,
+        icon="mdi:thermometer-auto",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda hub: hub.fan_temperature_threshold,
+    ),
 )
 
 FEATURE_SENSOR_MAP: dict[str, str] = {

@@ -19,6 +19,7 @@
 - Text message count sensor with message details as attributes.
 - `send_sms`, `get_sms`, `remove_saved_network`, and `refresh_sms` services.
 - Repeater mode scanning, connect/disconnect, saved network management, and repeater state support.
+- Fan status monitoring, RPM speed, and threshold temperature control.
 
 ## Supported Actions
 
@@ -28,6 +29,8 @@
 - Enable or disable Tailscale when configured.
 - Send text messages when the router exposes SMS support.
 - Remove text messages when the router exposes SMS support.
+- Trigger a 10-second fan test.
+- Set the fan threshold temperature.
 
 ## Authentication & Session Management
 

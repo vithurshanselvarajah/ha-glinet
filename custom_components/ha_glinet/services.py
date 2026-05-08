@@ -17,6 +17,7 @@ from .const import (
     ATTR_REMEMBER,
     ATTR_SCOPE,
     ATTR_SSID,
+    ATTR_TEMPERATURE,
     ATTR_TEXT,
     CONF_ENABLED_FEATURES,
     DOMAIN,
@@ -32,6 +33,7 @@ from .const import (
     SERVICE_REMOVE_SMS,
     SERVICE_SCAN_WIFI,
     SERVICE_SEND_SMS,
+    SERVICE_SET_FAN_TEMPERATURE,
 )
 
 if TYPE_CHECKING:
@@ -67,6 +69,10 @@ async def async_register_services(hass: HomeAssistant) -> None:
     repeater_enabled = any(
         FEATURE_REPEATER in _enabled_features_from_entry(entry) for entry in entries
     )
+
+    async def async_set_fan_temperature(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        await hub.set_fan_temperature(call.data[ATTR_TEMPERATURE])
 
     async def async_send_sms(call: ServiceCall) -> None:
         hub = _get_hub(hass, call.data)
@@ -268,6 +274,20 @@ async def async_register_services(hass: HomeAssistant) -> None:
         ]:
             if hass.services.has_service(DOMAIN, service):
                 hass.services.async_remove(DOMAIN, service)
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_FAN_TEMPERATURE,
+        async_set_fan_temperature,
+        schema=vol.Schema(
+            {
+                vol.Optional(CONF_MAC): cv.string,
+                vol.Required(ATTR_TEMPERATURE): vol.All(
+                    vol.Coerce(int), vol.Range(min=70, max=90)
+                ),
+            }
+        ),
+    )
 
 
 def _get_hub(hass: HomeAssistant, call_data: dict[str, Any]) -> GLinetHub:

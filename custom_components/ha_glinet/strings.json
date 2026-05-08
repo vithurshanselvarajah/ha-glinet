@@ -126,6 +126,12 @@
       },
       "repeater_bssid": {
         "name": "Repeater BSSID"
+      },
+      "fan_speed": {
+        "name": "Fan speed"
+      },
+      "fan_temperature": {
+        "name": "Fan threshold temperature"
       }
     },
     "binary_sensor": {
@@ -134,6 +140,9 @@
       },
       "repeater_connected": {
         "name": "Repeater connected"
+      },
+      "fan_status": {
+        "name": "Fan status"
       }
     },
     "button": {
@@ -145,6 +154,9 @@
       },
       "scan_wifi": {
         "name": "Scan WiFi networks"
+      },
+      "test_fan": {
+        "name": "Fan test"
       }
     },
     "select": {
@@ -162,7 +174,8 @@
       "repeater_auto_switch": {
         "name": "Repeater auto-switch networks"
       }
-    }
+    },
+    "number": {}
   },
   "services": {
     "send_sms": {
@@ -288,6 +301,20 @@
         "ssid": {
           "name": "SSID",
           "description": "The name of the network to remove."
+        },
+        "mac": {
+          "name": "MAC address",
+          "description": "Optional MAC of the target router."
+        }
+      }
+    },
+    "set_fan_temperature": {
+      "name": "Set fan threshold temperature",
+      "description": "Set the temperature threshold at which the fan should start running.",
+      "fields": {
+        "temperature": {
+          "name": "Threshold temperature",
+          "description": "Trigger temperature in Celsius (70-90)."
         },
         "mac": {
           "name": "MAC address",

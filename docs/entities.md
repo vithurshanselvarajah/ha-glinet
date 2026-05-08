@@ -7,6 +7,7 @@ This integration exposes entities from data fetched through the GL.iNet JSON-RPC
 | Entity | Source | Notes |
 | --- | --- | --- |
 | Reboot | `system/reboot` | Reboots the router immediately. |
+| Fan test | Optional `fan/test_fan` | Diagnostic button to run the fan at full speed for 10 seconds. |
 
 ## Device Trackers
 
@@ -47,6 +48,8 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 | Memory usage | `system/get_status` | Calculated from total/free memory. |
 | Flash usage | `system/get_status` | Calculated from total/free flash. |
 | Uptime | `system/get_status` | Timestamp sensor. |
+| Fan speed | Optional `fan/get_status` | Diagnostic sensor showing current fan speed in RPM. |
+| Fan trigger temperature | Optional `fan/get_config` | Diagnostic sensor showing the current temperature threshold. |
 
 ### Internet and Traffic
 
@@ -101,6 +104,14 @@ Each tracked client includes real-time bandwidth sensors attached to the client 
 - Upload rate
 
 These sensors are created only when the router reports bandwidth fields in the client list. Rates are calculated based on delta changes between polls if explicit rate fields are missing.
+
+### Fan
+
+| Entity | Source | Notes |
+| --- | --- | --- |
+| Fan status | Optional `fan/get_status` | Binary sensor showing if the fan is currently active. |
+| Fan speed | Optional `fan/get_status` | Diagnostic sensor showing current fan speed in RPM. |
+| Fan threshold temperature | Optional `fan/get_config` | Diagnostic sensor showing the current temperature threshold. |
 
 ## Selects
 
