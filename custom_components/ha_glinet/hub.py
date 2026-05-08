@@ -51,6 +51,7 @@ from .const import (
 )
 from .models import (
     ClientDeviceInfo,
+    FanStatus,
     RepeaterState,
     RepeaterStatus,
     ScannedNetwork,
@@ -103,6 +104,7 @@ class GLinetHub:
         self._scanned_networks: list[ScannedNetwork] = []
         self._last_wifi_scan: datetime | None = None
         self._saved_networks: list[dict[str, Any]] = []
+        self._fan_status: FanStatus | None = None
 
         self._late_init_complete = False
         self._connect_error = False
@@ -237,6 +239,7 @@ class GLinetHub:
             self.fetch_internet_status(),
             self.fetch_connected_devices(),
             self.fetch_wifi_interfaces(),
+            self.fetch_fan_status(),
         ]
 
         if self.feature_enabled(FEATURE_WIREGUARD):
@@ -491,6 +494,21 @@ class GLinetHub:
         )
         await self.fetch_repeater_config()
 
+    async def fetch_fan_status(self) -> None:
+        status = await self._invoke_optional_api(self.router_api.get_fan_status)
+        if status is None:
+            self._fan_status = None
+            return
+        config = await self._invoke_optional_api(self.router_api.get_fan_config)
+        self._fan_status = FanStatus.from_api_response(status, config or {})
+
+    async def set_fan_temperature(self, temperature: int) -> None:
+        await self._invoke_api(lambda: self.router_api.set_fan_config(temperature))
+        await self.fetch_fan_status()
+
+    async def test_fan(self, duration: int = 10) -> None:
+        await self._invoke_api(lambda: self.router_api.test_fan(test=True, time=duration))
+
     async def scan_wifi_networks(
         self, all_band: bool = False, dfs: bool = False, store_results: bool = True
     ) -> list[ScannedNetwork]:
@@ -735,6 +753,36 @@ class GLinetHub:
     @property
     def last_wifi_scan(self) -> datetime | None:
         return self._last_wifi_scan
+
+    @property
+    def fan_status(self) -> FanStatus | None:
+        return self._fan_status
+
+    @property
+    def fan_running(self) -> bool | None:
+        if self._fan_status is None:
+            return None
+        return self._fan_status.running
+
+    @property
+    def fan_speed(self) -> int | None:
+        if self._fan_status is None:
+            return None
+        if not self._fan_status.running:
+            return 0
+        return self._fan_status.speed
+
+    @property
+    def fan_temperature_threshold(self) -> int | None:
+        if self._fan_status is None:
+            return None
+        return self._fan_status.temperature_threshold
+
+    @property
+    def fan_warn_temperature(self) -> int | None:
+        if self._fan_status is None:
+            return None
+        return self._fan_status.warn_temperature
 
     @property
     def event_device_added(self) -> str:

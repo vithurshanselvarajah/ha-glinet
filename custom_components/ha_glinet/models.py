@@ -48,6 +48,23 @@ class RepeaterStatus:
 
 
 @dataclass(slots=True)
+class FanStatus:
+    running: bool
+    speed: int | None = None
+    temperature_threshold: int | None = None
+    warn_temperature: int | None = None
+
+    @classmethod
+    def from_api_response(cls, status: dict, config: dict) -> FanStatus:
+        return cls(
+            running=status.get("status", False),
+            speed=status.get("speed"),
+            temperature_threshold=config.get("temperature"),
+            warn_temperature=config.get("warn_temperature"),
+        )
+
+
+@dataclass(slots=True)
 class ScannedNetwork:
     ssid: str
     bssid: str

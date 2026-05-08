@@ -126,6 +126,9 @@
       },
       "repeater_bssid": {
         "name": "Repeater BSSID"
+      },
+      "fan_speed": {
+        "name": "Fan speed"
       }
     },
     "binary_sensor": {
@@ -134,6 +137,9 @@
       },
       "repeater_connected": {
         "name": "Repeater connected"
+      },
+      "fan_running": {
+        "name": "Fan running"
       }
     },
     "button": {
@@ -145,6 +151,9 @@
       },
       "scan_wifi": {
         "name": "Scan WiFi networks"
+      },
+      "test_fan": {
+        "name": "Test fan"
       }
     },
     "select": {
@@ -161,6 +170,11 @@
       },
       "repeater_auto_switch": {
         "name": "Repeater auto-switch networks"
+      }
+    },
+    "number": {
+      "fan_temperature": {
+        "name": "Fan trigger temperature"
       }
     }
   },

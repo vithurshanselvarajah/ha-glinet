@@ -19,7 +19,7 @@ async def async_setup_entry(
     _: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     hub: GLinetHub = entry.runtime_data
-    entities = [InternetStatusBinarySensor(hub)]
+    entities = [InternetStatusBinarySensor(hub), FanRunningBinarySensor(hub)]
     if hub.feature_enabled(FEATURE_REPEATER):
         entities.append(RepeaterConnectedBinarySensor(hub))
     async_add_entities(entities, True)
@@ -80,6 +80,35 @@ class RepeaterConnectedBinarySensor(BinarySensorEntity):
             attrs["bssid"] = status.bssid
         if status.signal is not None:
             attrs["signal"] = status.signal
+        return attrs if attrs else None
+
+
+class FanRunningBinarySensor(BinarySensorEntity):
+
+    _attr_has_entity_name = True
+    _attr_name = "Fan running"
+    _attr_device_class = BinarySensorDeviceClass.RUNNING
+    _attr_icon = "mdi:fan"
+
+    def __init__(self, hub: GLinetHub) -> None:
+        self._hub = hub
+        self._attr_device_info = hub.device_info
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_binary_sensor/{self._hub.device_mac}/fan_running"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._hub.fan_running
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        attrs: dict[str, Any] = {}
+        if self._hub.fan_speed is not None:
+            attrs["speed"] = self._hub.fan_speed
+        if self._hub.fan_temperature_threshold is not None:
+            attrs["temperature_threshold"] = self._hub.fan_temperature_threshold
         return attrs if attrs else None
 
 

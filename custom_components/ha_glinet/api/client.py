@@ -609,6 +609,34 @@ class GLinetApiClient:
         )
         return dict(response) if response else {}
 
+    async def get_fan_status(self) -> dict[str, Any]:
+        response = await self._send_request(
+            self._build_sid_payload("call", ["fan", "get_status"], self.sid)
+        )
+        return dict(response)
+
+    async def get_fan_config(self) -> dict[str, Any]:
+        response = await self._send_request(
+            self._build_sid_payload("call", ["fan", "get_config"], self.sid)
+        )
+        return dict(response)
+
+    async def set_fan_config(self, temperature: int) -> dict[str, Any]:
+        response = await self._send_request(
+            self._build_sid_payload(
+                "call", ["fan", "set_config", {"temperature": temperature}], self.sid
+            )
+        )
+        return dict(response) if response else {}
+
+    async def test_fan(self, test: bool = True, time: int = 10) -> dict[str, Any]:
+        response = await self._send_request(
+            self._build_sid_payload(
+                "call", ["fan", "set_test", {"test": test, "time": time}], self.sid
+            )
+        )
+        return dict(response) if response else {}
+
     @property
     def logged_in(self) -> bool:
         return self._logged_in
