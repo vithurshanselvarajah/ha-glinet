@@ -109,7 +109,7 @@ These sensors are created only when the router reports bandwidth fields in the c
 
 | Entity | Source | Notes |
 | --- | --- | --- |
-| Fan running | Optional `fan/get_status` | Binary sensor showing if the fan is currently active. |
+| Fan status | Optional `fan/get_status` | Binary sensor showing if the fan is currently active. |
 | Fan speed | Optional `fan/get_status` | Diagnostic sensor showing current fan speed in RPM. |
 | Fan threshold temperature | Optional `fan/get_config` | Diagnostic sensor showing the current temperature threshold. |
 

@@ -85,8 +85,10 @@ class RepeaterConnectedBinarySensor(BinarySensorEntity):
 
 class FanRunningBinarySensor(BinarySensorEntity):
     _attr_has_entity_name = True
-    _attr_translation_key = "fan_running"
+    _attr_name = "Fan status"
+    _attr_translation_key = "fan_status"
     _attr_device_class = BinarySensorDeviceClass.RUNNING
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:fan"
 
     def __init__(self, hub: GLinetHub) -> None:

@@ -141,8 +141,8 @@
       "repeater_connected": {
         "name": "Repeater connected"
       },
-      "fan_running": {
-        "name": "Fan running"
+      "fan_status": {
+        "name": "Fan status"
       }
     },
     "button": {
