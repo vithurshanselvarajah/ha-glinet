@@ -49,14 +49,13 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 | Flash usage | `system/get_status` | Calculated from total/free flash. |
 | Uptime | `system/get_status` | Timestamp sensor. |
 | Fan speed | Optional `fan/get_status` | Diagnostic sensor showing current fan speed in RPM. |
-| Fan trigger temperature | Optional `fan/get_config` | Diagnostic sensor showing the current temperature threshold. |
+| Fan threshold temperature | Optional `fan/get_config` | Diagnostic sensor showing the current temperature threshold. |
 
 ### Internet and Traffic
 
 | Entity | Source | Notes |
 | --- | --- | --- |
-| Connection status | `hub.internet_status` | Binary connectivity state. |
-| Public IP | `hub.internet_status` | The WAN IP address assigned to the router. |
+| WAN IP | Optional `modem/get_status` | The IP address assigned to the internet interface (modem). |
 | Connected clients | `clients/get_list` | Count of currently online tracked clients. |
 
 ### Cellular and SMS

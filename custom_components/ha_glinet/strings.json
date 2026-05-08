@@ -132,12 +132,12 @@
       },
       "fan_temperature": {
         "name": "Fan threshold temperature"
+      },
+      "wan_ip": {
+        "name": "WAN IP"
       }
     },
     "binary_sensor": {
-      "internet": {
-        "name": "Internet"
-      },
       "repeater_connected": {
         "name": "Repeater connected"
       },

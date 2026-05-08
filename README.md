@@ -14,7 +14,7 @@ Included features:
 - Robust session management with proactive token renewal and automatic retries.
 - Router reboot button.
 - Connected device trackers.
-- WAN IP and internet connectivity sensors.
+- WAN IP address sensor.
 - Connected client count sensor.
 - Per-client real-time bandwidth (upload/download) sensors.
 - System sensors for CPU temperature, load, memory, flash use, and uptime.

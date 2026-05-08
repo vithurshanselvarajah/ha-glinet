@@ -212,11 +212,6 @@ class GLinetApiClient:
         )
         return response != []
 
-    async def get_internet_status(self) -> dict[str, Any]:
-        response = await self._send_request(
-            self._build_sid_payload("call", ["edgerouter", "get_status"], self.sid)
-        )
-        return dict(response)
 
     async def get_led_status(self) -> dict[str, Any]:
         response = await self._send_request(

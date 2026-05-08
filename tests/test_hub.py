@@ -136,9 +136,6 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
     async def fake_fetch_system_status() -> None:
         called.append("system")
 
-    async def fake_fetch_internet_status() -> None:
-        called.append("internet")
-
     async def fake_fetch_connected_devices() -> None:
         called.append("clients")
 
@@ -161,7 +158,6 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
         called.append("fan")
 
     hub.fetch_system_status = fake_fetch_system_status
-    hub.fetch_internet_status = fake_fetch_internet_status
     hub.fetch_connected_devices = fake_fetch_connected_devices
     hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
     hub.fetch_wireguard_clients = fake_fetch_wireguard_clients
@@ -175,7 +171,6 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
 
     assert called == [
         "system",
-        "internet",
         "clients",
         "wifi",
         "fan",
@@ -203,9 +198,6 @@ async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
     async def fake_fetch_system_status() -> None:
         called.append("system")
 
-    async def fake_fetch_internet_status() -> None:
-        called.append("internet")
-
     async def fake_fetch_connected_devices() -> None:
         called.append("clients")
 
@@ -216,7 +208,6 @@ async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
         called.append("fan")
 
     hub.fetch_system_status = fake_fetch_system_status
-    hub.fetch_internet_status = fake_fetch_internet_status
     hub.fetch_connected_devices = fake_fetch_connected_devices
     hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
     hub.fetch_fan_status = fake_fetch_fan_status
@@ -224,7 +215,7 @@ async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
 
     await hub.fetch_all_data()
 
-    assert called == ["system", "internet", "clients", "wifi", "fan"]
+    assert called == ["system", "clients", "wifi", "fan"]
     assert hub._wireguard_clients == {}
     assert hub._wireguard_connections is None
     assert hub._tailscale_config == {}
@@ -248,9 +239,6 @@ async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> No
     async def fake_fetch_system_status() -> None:
         called.append("system")
 
-    async def fake_fetch_internet_status() -> None:
-        called.append("internet")
-
     async def fake_fetch_connected_devices() -> None:
         called.append("clients")
 
@@ -264,7 +252,6 @@ async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> No
         called.append("fan")
 
     hub.fetch_system_status = fake_fetch_system_status
-    hub.fetch_internet_status = fake_fetch_internet_status
     hub.fetch_connected_devices = fake_fetch_connected_devices
     hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
     hub.fetch_wireguard_clients = fake_fetch_wireguard_clients
@@ -273,7 +260,7 @@ async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> No
 
     await hub.fetch_all_data()
 
-    assert called == ["system", "internet", "clients", "wifi", "fan", "wireguard"]
+    assert called == ["system", "clients", "wifi", "fan", "wireguard"]
 
 
 async def test_scan_wifi_networks_stores_results(monkeypatch) -> None:

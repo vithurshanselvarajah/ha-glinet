@@ -121,25 +121,6 @@ async def test_extract_response_data_rejects_unexpected_payload_shape() -> None:
         await _extract_response_data(response)
 
 
-async def test_get_internet_status_posts_edgerouter_call() -> None:
-    session = FakeSession([{"result": {"online": True, "ip": "203.0.113.10"}}])
-    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
-
-    assert await client.get_internet_status() == {"online": True, "ip": "203.0.113.10"}
-    assert session.requests == [
-        {
-            "url": "http://router/rpc",
-            "timeout": 2,
-            "json": {
-                "method": "call",
-                "jsonrpc": "2.0",
-                "params": ["sid-1", "edgerouter", "get_status"],
-                "id": 0,
-            },
-        }
-    ]
-
-
 async def test_get_online_clients_filters_offline_clients() -> None:
     session = FakeSession(
         [

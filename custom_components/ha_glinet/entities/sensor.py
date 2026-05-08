@@ -135,6 +135,18 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         value_fn=lambda hub: hub.online_client_count,
     ),
     HubSensorEntityDescription(
+        key="wan_ip",
+        name="WAN IP",
+        has_entity_name=True,
+        icon="mdi:ip-network",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda hub: get_first_value(
+            hub.cellular_status,
+            ("ip",),
+            nested=("modem", "cellular", "sim", "network", "ipv4"),
+        ),
+    ),
+    HubSensorEntityDescription(
         key="cellular_signal",
         name="Cellular signal",
         has_entity_name=True,

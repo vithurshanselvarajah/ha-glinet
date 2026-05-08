@@ -89,7 +89,6 @@ class GLinetHub:
         self._devices: dict[str, ClientDeviceInfo] = {}
         self._wifi_ifaces: dict[str, WifiInterface] = {}
         self._system_status: dict[str, Any] = {}
-        self._internet_status: dict[str, Any] = {}
         self._cellular_status: dict[str, Any] = {}
         self._modems: dict[str, dict[str, Any]] = {}
         self._cached_modem_info: dict[str, Any] | None = None
@@ -236,7 +235,6 @@ class GLinetHub:
 
         tasks: list[Awaitable[Any]] = [
             self.fetch_system_status(),
-            self.fetch_internet_status(),
             self.fetch_connected_devices(),
             self.fetch_wifi_interfaces(),
             self.fetch_fan_status(),
@@ -344,10 +342,6 @@ class GLinetHub:
             status = dict(response)
             self._system_status = status | dict(status.get("system", {}))
 
-    async def fetch_internet_status(self) -> None:
-        response = await self._invoke_api(self.router_api.get_internet_status)
-        if response:
-            self._internet_status = dict(response)
 
     async def fetch_connected_devices(self) -> None:
         new_device = False
@@ -688,9 +682,6 @@ class GLinetHub:
     def router_status(self) -> dict[str, Any]:
         return self._system_status
 
-    @property
-    def internet_status(self) -> dict[str, Any]:
-        return self._internet_status
 
     @property
     def cellular_status(self) -> dict[str, Any]:
