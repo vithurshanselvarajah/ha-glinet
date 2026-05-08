@@ -102,8 +102,8 @@
       "repeater_channel": {
         "name": "Repeater channel",
         "state": {
-          "2.4GHz": "2.4 GHz",
-          "5GHz": "5 GHz"
+          "2_4ghz": "2.4 GHz",
+          "5ghz": "5 GHz"
         }
       },
       "repeater_ip": {

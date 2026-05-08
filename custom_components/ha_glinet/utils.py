@@ -90,11 +90,10 @@ def _walk_nested_dicts(value: Any) -> list[dict[str, Any]]:
 
 
 def channel_to_band(channel: int | None) -> str | None:
-    """Convert WiFi channel number to band type (2.4GHz or 5GHz)."""
     if channel is None:
         return None
     if 1 <= channel <= 14:
-        return "2.4GHz"
+        return "2_4ghz"
     if 36 <= channel <= 177:
-        return "5GHz"
+        return "5ghz"
     return None

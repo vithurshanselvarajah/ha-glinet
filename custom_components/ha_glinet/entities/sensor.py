@@ -551,6 +551,8 @@ class RepeaterChannelSensor(SensorEntity):
 
     _attr_has_entity_name = True
     _attr_icon = "mdi:radio-tower"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = ["2_4ghz", "5ghz"]
     _attr_translation_key = "repeater_channel"
 
     def __init__(self, hub: GLinetHub) -> None:
@@ -568,10 +570,7 @@ class RepeaterChannelSensor(SensorEntity):
         channel = self._hub.repeater_status.channel
         if channel is None:
             return None
-        band = channel_to_band(channel)
-        if band:
-            return f"{band} ({channel})"
-        return str(channel)
+        return channel_to_band(channel)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
