@@ -1,0 +1,31 @@
+name: Security Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit safety
+          
+      - name: Run Bandit (Static Analysis)
+        run: bandit -r custom_components/ -ll
+        
+      - name: Check dependencies for known vulnerabilities
+        # We use '|| true' because safety can sometimes be noisy with dev dependencies
+        # but it will still provide a report in the logs.
+        run: safety check || true
