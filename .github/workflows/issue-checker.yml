@@ -8,6 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: write
+    if: |
+      github.event.issue.author_association != 'OWNER' &&
+      github.event.issue.author_association != 'MEMBER' &&
+      github.event.issue.author_association != 'COLLABORATOR'
     steps:
       - name: Check for template markers
         id: check
