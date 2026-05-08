@@ -84,9 +84,8 @@ class RepeaterConnectedBinarySensor(BinarySensorEntity):
 
 
 class FanRunningBinarySensor(BinarySensorEntity):
-
     _attr_has_entity_name = True
-    _attr_name = "Fan running"
+    _attr_translation_key = "fan_running"
     _attr_device_class = BinarySensorDeviceClass.RUNNING
     _attr_icon = "mdi:fan"
 

@@ -334,7 +334,7 @@ class GLinetHub:
         except (TokenError, AuthenticationError):
             self._token_error = True
             return None
-        except (APIClientError, OSError, TimeoutError, ValueError):
+        except (APIClientError, OSError, TimeoutError, ValueError, NonZeroResponse):
             _LOGGER.debug("Optional GL-INet router API is unavailable", exc_info=True)
             return None
 
@@ -777,12 +777,6 @@ class GLinetHub:
         if self._fan_status is None:
             return None
         return self._fan_status.temperature_threshold
-
-    @property
-    def fan_warn_temperature(self) -> int | None:
-        if self._fan_status is None:
-            return None
-        return self._fan_status.warn_temperature
 
     @property
     def event_device_added(self) -> str:

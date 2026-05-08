@@ -153,3 +153,25 @@ remove_saved_network:
       selector:
         text:
       required: true
+
+set_fan_temperature:
+  name: Set fan threshold temperature
+  description: Set the temperature threshold at which the fan should start running.
+  fields:
+    mac:
+      name: Router MAC
+      description: Target router MAC address (optional).
+      selector:
+        text:
+      required: false
+    temperature:
+      name: Threshold temperature
+      description: Trigger temperature in Celsius (40-100).
+      selector:
+        number:
+          min: 40
+          max: 100
+          unit_of_measurement: "°C"
+          mode: slider
+      required: true
+      example: 75

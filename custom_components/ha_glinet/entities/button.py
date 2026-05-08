@@ -97,8 +97,11 @@ class ScanWifiButton(ButtonEntity):
         await self._hub.scan_wifi_networks()
 
 class TestFanButton(ButtonEntity):
-    _attr_icon = "mdi:fan-alert"
     _attr_has_entity_name = True
+    _attr_name = "Fan test"
+    _attr_translation_key = "test_fan"
+    _attr_icon = "mdi:fan-alert"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, hub: GLinetHub) -> None:
         self._hub = hub
@@ -107,14 +110,6 @@ class TestFanButton(ButtonEntity):
     @property
     def unique_id(self) -> str:
         return f"glinet_button/{self._hub.device_mac}/test_fan"
-
-    @property
-    def entity_category(self) -> EntityCategory:
-        return EntityCategory.DIAGNOSTIC
-
-    @property
-    def name(self) -> str:
-        return "Test fan"
 
     async def async_press(self) -> None:
         await self._hub.test_fan(duration=10)
