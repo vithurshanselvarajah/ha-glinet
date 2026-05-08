@@ -96,7 +96,7 @@ CI runs those checks automatically for pushes and pull requests.
 
 For support, questions, or community discussion, join our Discord channel:
 
-[![Discord](https://img.shields.io/discord/1370420790895317072?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Metvr5hC3m)
+[![Discord](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Metvr5hC3m)
 
 ## Ownership
 
