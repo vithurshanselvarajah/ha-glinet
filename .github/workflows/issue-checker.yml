@@ -1,0 +1,40 @@
+name: Issue Template Checker
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  check-template:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Check for template markers
+        id: check
+        run: |
+          # The YAML template produces markdown headers for each ID
+          # We check if '### Router model' exists in the issue body
+          if [[ "${{ github.event.issue.body }}" == *"### Router model"* ]]; then
+            echo "valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "valid=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Close non-template issue
+        if: steps.check.outputs.valid == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "Thank you for opening this issue. However, it seems you didn't use the required bug report template. To help us troubleshoot, please [open a new issue using the template](https://github.com/" + context.repo.owner + "/" + context.repo.repo + "/issues/new?template=bug_report.yml) and provide the requested details. This issue will be closed for now."
+            });
+            github.rest.issues.update({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              state_reason: 'not_planned'
+            });
