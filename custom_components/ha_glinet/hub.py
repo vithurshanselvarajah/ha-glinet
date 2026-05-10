@@ -15,8 +15,6 @@ from homeassistant.components.device_tracker import (
 )
 from homeassistant.const import (
     CONF_HOST,
-    CONF_MAC,
-    CONF_MODEL,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
