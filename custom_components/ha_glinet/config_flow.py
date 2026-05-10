@@ -100,7 +100,7 @@ class SetupHub:
     async def attempt_login(self, password: str) -> bool:
         try:
             await self.router.authenticate(self.username, password)
-            info = await self.router.get_router_info()
+            info = await self.router.system.get_info()
         except (ConnectionRefusedError, NonZeroResponse):
             _LOGGER.info("Failed to authenticate with GL-INet router during validation")
             return False

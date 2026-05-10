@@ -79,7 +79,7 @@ class WifiApSwitch(GLinetSwitchBase):
 
     async def async_turn_on(self, **_: Any) -> None:
         try:
-            await self._hub.router_api.set_wifi_interface_enabled(self._iface_name, True)
+            await self._hub.set_wifi_interface_enabled(self._iface_name, True)
         except OSError:
             _LOGGER.exception("Unable to enable WiFi interface %s", self._iface_name)
             return
@@ -87,7 +87,7 @@ class WifiApSwitch(GLinetSwitchBase):
 
     async def async_turn_off(self, **_: Any) -> None:
         try:
-            await self._hub.router_api.set_wifi_interface_enabled(self._iface_name, False)
+            await self._hub.set_wifi_interface_enabled(self._iface_name, False)
         except OSError:
             _LOGGER.exception("Unable to disable WiFi interface %s", self._iface_name)
             return
@@ -120,7 +120,7 @@ class TailscaleSwitch(GLinetSwitchBase):
 
     async def async_turn_on(self, **_: Any) -> None:
         try:
-            await self._hub.router_api.connect_tailscale()
+            await self._hub.connect_tailscale()
         except OSError:
             _LOGGER.exception("Unable to enable tailscale connection")
             return
@@ -128,7 +128,7 @@ class TailscaleSwitch(GLinetSwitchBase):
 
     async def async_turn_off(self, **_: Any) -> None:
         try:
-            await self._hub.router_api.disconnect_tailscale()
+            await self._hub.disconnect_tailscale()
         except OSError:
             _LOGGER.exception("Unable to stop tailscale connection")
             return
@@ -163,9 +163,9 @@ class WireGuardSwitch(GLinetSwitchBase):
                 and self._client not in self._hub.connected_vpn_clients
             ):
                 for client in self._hub.connected_vpn_clients:
-                    await self._hub.router_api.stop_wireguard_client(client.peer_id)
+                    await self._hub.stop_vpn_client(client.peer_id)
 
-            await self._hub.router_api.start_wireguard_client(
+            await self._hub.start_vpn_client(
                 self._client.group_id,
                 self._client.tunnel_id or self._client.peer_id,
             )
@@ -176,7 +176,7 @@ class WireGuardSwitch(GLinetSwitchBase):
 
     async def async_turn_off(self, **_: Any) -> None:
         try:
-            await self._hub.router_api.stop_wireguard_client(
+            await self._hub.stop_vpn_client(
                 self._client.tunnel_id or self._client.peer_id
             )
         except OSError:

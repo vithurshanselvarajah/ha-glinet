@@ -191,7 +191,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 self._settings.get(CONF_USERNAME, DEFAULT_USERNAME),
                 self._settings[CONF_PASSWORD],
             )
-            router_info = await self._invoke_api(self._api.get_router_info)
+            router_info = await self._invoke_api(self._api.system.get_info)
         except (ClientError, TimeoutError, OSError) as exc:
             _LOGGER.exception("Error connecting to GL-INet router %s", self._host)
             raise ConfigEntryNotReady from exc
@@ -350,15 +350,18 @@ class GLinetHub(DataUpdateCoordinator[None]):
             return None
 
     async def fetch_system_status(self) -> None:
-        response = await self._invoke_api(self.router_api.get_router_status)
+        response = await self._invoke_api(self.router_api.system.get_status)
         if response:
             status = dict(response)
             self._system_status = status | dict(status.get("system", {}))
 
+    async def reboot(self, delay: int = 0) -> None:
+        await self._invoke_api(lambda: self.router_api.system.reboot(delay))
+
 
     async def fetch_connected_devices(self) -> None:
         new_device = False
-        connected_devices = await self._invoke_api(self.router_api.get_online_clients)
+        connected_devices = await self._invoke_api(self.router_api.clients.get_online)
         if connected_devices is None:
             return
 
@@ -390,7 +393,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             async_dispatcher_send(self.hass, self.event_device_added)
 
     async def fetch_wifi_interfaces(self) -> None:
-        response = await self._invoke_api(self.router_api.get_wifi_interfaces)
+        response = await self._invoke_api(self.router_api.wifi.get_interfaces)
         if not response:
             return
         for name, iface in response.items():
@@ -403,8 +406,14 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 encryption=str(iface.get("encryption", "UNKNOWN")),
             )
 
+    async def set_wifi_interface_enabled(self, iface_name: str, enabled: bool) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.wifi.set_interface_enabled(iface_name, enabled)
+        )
+        await self.fetch_wifi_interfaces()
+
     async def fetch_wireguard_clients(self) -> None:
-        response = await self._invoke_api(self.router_api.get_wireguard_clients)
+        response = await self._invoke_api(self.router_api.vpn.get_wireguard_clients)
         if response is None:
             return
 
@@ -426,7 +435,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._wireguard_connections = []
             return
 
-        state_response = await self._invoke_api(self.router_api.get_wireguard_state)
+        state_response = await self._invoke_api(self.router_api.vpn.get_wireguard_state)
         if state_response is None:
             return
 
@@ -443,8 +452,20 @@ class GLinetHub(DataUpdateCoordinator[None]):
             if client.connected:
                 self._wireguard_connections.append(client)
 
+    async def start_vpn_client(self, group_id: int, peer_id: int) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.vpn.start_wireguard_client(group_id, peer_id)
+        )
+        await self.fetch_wireguard_clients()
+
+    async def stop_vpn_client(self, peer_id: int) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.vpn.stop_wireguard_client(peer_id)
+        )
+        await self.fetch_wireguard_clients()
+
     async def fetch_tailscale_state(self) -> None:
-        details = await self._invoke_optional_api(self.router_api.get_tailscale_details)
+        details = await self._invoke_optional_api(self.router_api.tailscale.get_details)
         if not details:
             self._tailscale_config = {}
             self._tailscale_connection = None
@@ -453,14 +474,22 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._tailscale_config = details["config"]
         self._tailscale_connection = details["connection"] == TailscaleConnection.CONNECTED
 
+    async def connect_tailscale(self) -> None:
+        await self._invoke_api(self.router_api.tailscale.connect)
+        await self.fetch_tailscale_state()
+
+    async def disconnect_tailscale(self) -> None:
+        await self._invoke_api(self.router_api.tailscale.disconnect)
+        await self.fetch_tailscale_state()
+
     async def fetch_cellular_status(self) -> None:
         if self._cached_modem_info is None:
-            info_response = await self._invoke_optional_api(self.router_api.get_modem_info)
+            info_response = await self._invoke_optional_api(self.router_api.modem.get_info)
             self._cached_modem_info = dict(info_response or {})
         else:
             info_response = self._cached_modem_info
 
-        status_response = await self._invoke_optional_api(self.router_api.get_cellular_status)
+        status_response = await self._invoke_optional_api(self.router_api.modem.get_status)
 
         modems = _merge_modem_lists(
             dict(info_response or {}).get("modems", []),
@@ -478,50 +507,50 @@ class GLinetHub(DataUpdateCoordinator[None]):
         }
 
     async def fetch_repeater_status(self) -> None:
-        response = await self._invoke_optional_api(self.router_api.get_repeater_status)
+        response = await self._invoke_optional_api(self.router_api.repeater.get_status)
         if response is None:
             self._repeater_status = None
             return
         self._repeater_status = RepeaterStatus.from_api_response(response)
 
     async def fetch_repeater_config(self) -> None:
-        response = await self._invoke_optional_api(self.router_api.get_repeater_config)
+        response = await self._invoke_optional_api(self.router_api.repeater.get_config)
         if response is not None:
             self._repeater_config = response
 
     async def set_repeater_auto_switch(self, enabled: bool) -> None:
         await self._invoke_api(
-            lambda: self.router_api.set_repeater_config(auto=enabled)
+            lambda: self.router_api.repeater.set_config({"auto": enabled})
         )
         await self.fetch_repeater_config()
 
     async def set_repeater_band(self, band: str | None) -> None:
         await self._invoke_api(
-            lambda: self.router_api.set_repeater_config(lock_band=band)
+            lambda: self.router_api.repeater.set_config({"lock_band": band})
         )
         await self.fetch_repeater_config()
 
     async def fetch_fan_status(self) -> None:
-        status = await self._invoke_optional_api(self.router_api.get_fan_status)
+        status = await self._invoke_optional_api(self.router_api.fan.get_status)
         if status is None:
             self._fan_status = None
             return
-        config = await self._invoke_optional_api(self.router_api.get_fan_config)
+        config = await self._invoke_optional_api(self.router_api.fan.get_config)
         self._fan_status = FanStatus.from_api_response(status, config or {})
 
     async def set_fan_temperature(self, temperature: int) -> None:
-        await self._invoke_api(lambda: self.router_api.set_fan_config(temperature))
+        await self._invoke_api(lambda: self.router_api.fan.set_config(temperature))
         await self.fetch_fan_status()
 
     async def test_fan(self, duration: int = 10) -> None:
-        await self._invoke_api(lambda: self.router_api.test_fan(test=True, time=duration))
+        await self._invoke_api(lambda: self.router_api.fan.set_test(test=True, time=duration))
 
     async def scan_wifi_networks(
         self, all_band: bool = False, dfs: bool = False, store_results: bool = True
     ) -> list[ScannedNetwork]:
         _LOGGER.info("Starting WiFi network scan (all_band=%s, dfs=%s)", all_band, dfs)
         response = await self._invoke_api(
-            lambda: self.router_api.scan_wifi_networks(all_band=all_band, dfs=dfs)
+            lambda: self.router_api.repeater.scan({"all_band": all_band, "dfs": dfs})
         )
         if response is None:
             _LOGGER.warning(
@@ -545,31 +574,31 @@ class GLinetHub(DataUpdateCoordinator[None]):
         bssid: str | None = None,
     ) -> None:
         await self._invoke_api(
-            lambda: self.router_api.connect_repeater(
-                ssid=ssid, key=password, remember=remember, bssid=bssid
+            lambda: self.router_api.repeater.connect(
+                {"ssid": ssid, "key": password, "remember": remember, "bssid": bssid}
             )
         )
         await self.fetch_repeater_status()
 
     async def disconnect_wifi(self) -> None:
-        await self._invoke_api(self.router_api.disconnect_repeater)
+        await self._invoke_api(self.router_api.repeater.disconnect)
         await self.fetch_repeater_status()
 
     async def fetch_saved_networks(self) -> None:
-        response = await self._invoke_optional_api(self.router_api.get_saved_ap_list)
+        response = await self._invoke_optional_api(self.router_api.repeater.get_saved_ap_list)
         if response is not None:
             self._saved_networks = response
 
     async def get_saved_wifi_networks(self) -> list[dict[str, Any]]:
-        response = await self._invoke_api(self.router_api.get_saved_ap_list)
+        response = await self._invoke_api(self.router_api.repeater.get_saved_ap_list)
         return response or []
 
     async def remove_saved_wifi_network(self, ssid: str) -> None:
-        await self._invoke_api(lambda: self.router_api.remove_saved_ap(ssid))
+        await self._invoke_api(lambda: self.router_api.repeater.remove_saved_ap(ssid))
         await self.fetch_saved_networks()
 
     async def fetch_sms_messages(self) -> None:
-        response = await self._invoke_optional_api(self.router_api.get_sms_messages)
+        response = await self._invoke_optional_api(self.router_api.modem.get_sms_list)
         if response is None:
             return
         messages: dict[str, SmsMessage] = {}
@@ -601,7 +630,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         if bus is None:
             raise RuntimeError("No SMS-capable GL-INet modem was found")
         response = await self._invoke_optional_api(
-            lambda: self.router_api.send_sms(bus, recipient, text)
+            lambda: self.router_api.modem.send_sms(bus, recipient, text)
         )
         if response is None:
             raise RuntimeError("The router did not accept the SMS send request")
@@ -619,7 +648,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         if bus is None:
             raise RuntimeError("No GL-INet modem bus is available for SMS removal")
 
-        await self._invoke_optional_api(lambda: self.router_api.remove_sms(bus, scope, message_id))
+        await self._invoke_optional_api(lambda: self.router_api.modem.remove_sms(bus, scope, message_id))
         if scope == 10 and message_id:
             self._sms_messages.pop(message_id, None)
         else:

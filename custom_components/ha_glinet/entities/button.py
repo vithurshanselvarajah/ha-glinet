@@ -48,7 +48,7 @@ class RebootButton(CoordinatorEntity[GLinetHub], ButtonEntity):
         return "Reboot"
 
     async def async_press(self) -> None:
-        await self._hub.router_api.reboot_router()
+        await self._hub.reboot()
 
 
 class DisconnectRepeaterButton(CoordinatorEntity[GLinetHub], ButtonEntity):
