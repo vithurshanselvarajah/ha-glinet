@@ -5,6 +5,7 @@ DEFAULT_URL = "http://192.168.8.1"
 DEFAULT_USERNAME = "root"
 DEFAULT_PASSWORD = "ChangeMe!"
 CONF_TITLE = "title"
+CONF_SCAN_INTERVAL = "scan_interval"
 CONF_ENABLED_FEATURES = "enabled_features"
 
 FEATURE_CELLULAR = "cellular"

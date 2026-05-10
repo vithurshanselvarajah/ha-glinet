@@ -54,6 +54,7 @@ from .models import (
     FanStatus,
     RepeaterState,
     RepeaterStatus,
+    RouterStatus,
     ScannedNetwork,
     SmsMessage,
     WifiInterface,
@@ -93,7 +94,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
         self._devices: dict[str, ClientDeviceInfo] = {}
         self._wifi_ifaces: dict[str, WifiInterface] = {}
-        self._system_status: dict[str, Any] = {}
+        self._system_status: RouterStatus | None = None
         self._cellular_status: dict[str, Any] = {}
         self._modems: dict[str, dict[str, Any]] = {}
         self._cached_modem_info: dict[str, Any] | None = None

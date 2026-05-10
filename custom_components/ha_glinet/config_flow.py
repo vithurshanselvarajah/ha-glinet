@@ -18,6 +18,7 @@ from .api import GLinetApiClient, NonZeroResponse
 from .const import (
     API_PATH,
     CONF_ENABLED_FEATURES,
+    CONF_SCAN_INTERVAL,
     CONF_TITLE,
     DEFAULT_PASSWORD,
     DEFAULT_URL,
@@ -74,6 +75,10 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
                 multiple=True,
             )
         ),
+        vol.Optional(
+            CONF_SCAN_INTERVAL,
+            default=30,
+        ): vol.All(vol.Coerce(int), vol.Clamp(min=10, max=300)),
     }
 )
 
@@ -135,6 +140,10 @@ async def process_user_input(
             CONF_ENABLED_FEATURES: data.get(
                 CONF_ENABLED_FEATURES,
                 DEFAULT_ENABLED_FEATURES,
+            ),
+            CONF_SCAN_INTERVAL: data.get(
+                CONF_SCAN_INTERVAL,
+                30,
             ),
         },
     }

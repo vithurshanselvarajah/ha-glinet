@@ -152,6 +152,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular signal",
         has_entity_name=True,
         icon="mdi:signal-cellular-2",
+        entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda hub: get_first_int(
@@ -166,6 +167,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular RSSI",
         has_entity_name=True,
         icon="mdi:signal-cellular-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda hub: get_first_int(
@@ -179,6 +181,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular RSRP",
         has_entity_name=True,
         icon="mdi:signal-variant",
+        entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda hub: get_first_int(
@@ -192,6 +195,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular RSRQ",
         has_entity_name=True,
         icon="mdi:signal-distance-variant",
+        entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement="dB",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda hub: get_first_int(
@@ -205,6 +209,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular SINR",
         has_entity_name=True,
         icon="mdi:signal-3g",
+        entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement="dB",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda hub: get_first_int(
@@ -218,6 +223,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular band",
         has_entity_name=True,
         icon="mdi:cellphone-wireless",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: get_first_value(
             hub.cellular_status,
             ("band", "network_type", "service_type"),
@@ -229,6 +235,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular network",
         has_entity_name=True,
         icon="mdi:signal-cellular-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: get_first_value(
             hub.cellular_status,
             ("network", "operator", "operator_name", "carrier", "mode", "service_type"),
@@ -278,6 +285,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Repeater SSID",
         has_entity_name=True,
         icon="mdi:wifi",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: hub.repeater_status.ssid if hub.repeater_status else None,
     ),
     HubSensorEntityDescription(
@@ -285,6 +293,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Repeater signal",
         has_entity_name=True,
         icon="mdi:wifi-strength-2",
+        entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda hub: hub.repeater_status.signal if hub.repeater_status else None,
@@ -294,6 +303,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Repeater IP address",
         has_entity_name=True,
         icon="mdi:ip-network",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: hub.repeater_status.ipv4_address if hub.repeater_status else None,
     ),
     HubSensorEntityDescription(
@@ -301,6 +311,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Repeater gateway",
         has_entity_name=True,
         icon="mdi:router-network",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: hub.repeater_status.ipv4_gateway if hub.repeater_status else None,
     ),
     HubSensorEntityDescription(
@@ -308,6 +319,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Repeater DNS",
         has_entity_name=True,
         icon="mdi:dns",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: (
             hub.repeater_status.ipv4_dns[0]
             if hub.repeater_status and hub.repeater_status.ipv4_dns
@@ -324,6 +336,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Repeater BSSID",
         has_entity_name=True,
         icon="mdi:access-point-network",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: hub.repeater_status.bssid if hub.repeater_status else None,
     ),
     HubSensorEntityDescription(
@@ -596,6 +609,7 @@ class RepeaterChannelSensor(CoordinatorEntity[GLinetHub], SensorEntity):
     _attr_icon = "mdi:radio-tower"
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_translation_key = "repeater_channel"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, hub: GLinetHub) -> None:
         super().__init__(hub)
