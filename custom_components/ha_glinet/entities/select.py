@@ -4,8 +4,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.select import SelectEntity
-from homeassistant.core import callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import FEATURE_REPEATER
 from ..hub import GLinetHub
@@ -40,7 +39,7 @@ async def async_setup_entry(
     async_add_entities([WifiNetworkSelect(hub), RepeaterBandSelect(hub)], True)
 
 
-class WifiNetworkSelect(SelectEntity):
+class WifiNetworkSelect(CoordinatorEntity[GLinetHub], SelectEntity):
 
     _attr_has_entity_name = True
     _attr_name = "WiFi network"
@@ -48,22 +47,11 @@ class WifiNetworkSelect(SelectEntity):
     _attr_current_option: str | None = None
 
     def __init__(self, hub: GLinetHub) -> None:
+        super().__init__(hub)
         self._hub = hub
         self._attr_device_info = hub.device_info
         self._selected_ssid: str | None = None
 
-    async def async_added_to_hass(self) -> None:
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass,
-                self._hub.event_networks_updated,
-                self._handle_networks_updated,
-            )
-        )
-
-    @callback
-    def _handle_networks_updated(self) -> None:
-        self.async_write_ha_state()
 
     @property
     def unique_id(self) -> str:
@@ -162,7 +150,7 @@ class WifiNetworkSelect(SelectEntity):
             )
 
 
-class RepeaterBandSelect(SelectEntity):
+class RepeaterBandSelect(CoordinatorEntity[GLinetHub], SelectEntity):
 
     _attr_has_entity_name = True
     _attr_name = "Repeater band"
@@ -170,6 +158,7 @@ class RepeaterBandSelect(SelectEntity):
     _attr_options = BAND_OPTIONS
 
     def __init__(self, hub: GLinetHub) -> None:
+        super().__init__(hub)
         self._hub = hub
         self._attr_device_info = hub.device_info
 

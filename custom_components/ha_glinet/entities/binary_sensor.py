@@ -4,15 +4,15 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
 from homeassistant.const import EntityCategory
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import FEATURE_REPEATER
+from ..hub import GLinetHub
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
-
-    from ..hub import GLinetHub
 
 
 async def async_setup_entry(
@@ -25,7 +25,7 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
 
-class RepeaterConnectedBinarySensor(BinarySensorEntity):
+class RepeaterConnectedBinarySensor(CoordinatorEntity[GLinetHub], BinarySensorEntity):
 
     _attr_has_entity_name = True
     _attr_name = "Repeater connected"
@@ -33,6 +33,7 @@ class RepeaterConnectedBinarySensor(BinarySensorEntity):
     _attr_icon = "mdi:wifi-sync"
 
     def __init__(self, hub: GLinetHub) -> None:
+        super().__init__(hub)
         self._hub = hub
         self._attr_device_info = hub.device_info
 
@@ -59,7 +60,7 @@ class RepeaterConnectedBinarySensor(BinarySensorEntity):
         return attrs if attrs else None
 
 
-class FanRunningBinarySensor(BinarySensorEntity):
+class FanRunningBinarySensor(CoordinatorEntity[GLinetHub], BinarySensorEntity):
     _attr_has_entity_name = True
     _attr_name = "Fan status"
     _attr_translation_key = "fan_status"
@@ -68,6 +69,7 @@ class FanRunningBinarySensor(BinarySensorEntity):
     _attr_icon = "mdi:fan"
 
     def __init__(self, hub: GLinetHub) -> None:
+        super().__init__(hub)
         self._hub = hub
         self._attr_device_info = hub.device_info
 

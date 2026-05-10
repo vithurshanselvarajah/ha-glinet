@@ -46,6 +46,7 @@ When adding the GL.iNet integration or modifying it via the **Configure** menu, 
 
 - **Router URL**: The network address of your router (e.g., `http://192.168.8.1`). HTTPS is supported if configured on the router.
 - **Admin Password**: The password for the `root` account used to access the GL.iNet admin panel.
+- **Update Interval**: The polling frequency (in seconds) between 10s and 300s (default 30s). Increase this if you experience router slowdowns.
 - **Consider Home**: Defines the grace period (in seconds) before a device is marked as "Away" in Home Assistant. This helps prevent devices from flickering when they briefly drop off the network.
 - **Enabled Features**: A selection of optional modules to activate for this router instance:
     - **Cellular**: Enables signal and network monitoring for routers with internal or USB modems.
@@ -58,6 +59,16 @@ When adding the GL.iNet integration or modifying it via the **Configure** menu, 
 GL.iNet firmware varies by model and firmware generation. The integration treats WireGuard, cellular, repeater, SMS, and Tailscale as optional modules. During setup you can choose which of these optional features to enable, and unsupported or unavailable APIs are skipped without failing setup.
 
 If you disable all optional features, the integration still registers core router status sensors and entities. 
+
+## Diagnostics & Troubleshooting
+
+The integration provides a fully sanitized diagnostics export.
+You can download diagnostics directly from the device page in Home Assistant. The generated JSON file will safely mask all sensitive data including your MAC addresses, WiFi passwords, session IDs, and tokens.
+
+## Performance & Load Management
+
+To alleviate the heavy load on small travel routers during polling, the integration uses sequential API execution. Instead of blasting the router with multiple simultaneous JSON-RPC payloads every scan interval, requests are processed sequentially. This acts as a native rate-limiter and prevents HTTP server stutters or timeouts on the router.
+Furthermore, disabling unused features (via the Options Flow) completely removes those API calls from the loop, further reducing router CPU load.
 
 ### Dynamic Configuration & Cleanup
 

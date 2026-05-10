@@ -5,16 +5,16 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import EntityCategory
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import FEATURE_REPEATER, FEATURE_TAILSCALE, FEATURE_WIREGUARD
+from ..hub import GLinetHub
+from ..models import WifiInterface, WireGuardClient
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
-
-    from ..hub import GLinetHub
-    from ..models import WifiInterface, WireGuardClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,17 +34,13 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
 
-class GLinetSwitchBase(SwitchEntity):
+class GLinetSwitchBase(CoordinatorEntity[GLinetHub], SwitchEntity):
     _attr_has_entity_name = True
 
     def __init__(self, hub: GLinetHub) -> None:
+        super().__init__(hub)
         self._hub = hub
         self._attr_device_info = hub.device_info
-        self._attr_is_on: bool | None = None
-
-    @property
-    def is_on(self) -> bool | None:
-        return self._attr_is_on
 
     @property
     def entity_category(self) -> EntityCategory:
@@ -66,8 +62,9 @@ class WifiApSwitch(GLinetSwitchBase):
         return self._iface.ssid or self._iface.name
 
     @property
-    def icon(self) -> str:
-        return "mdi:wifi" if self.is_on else "mdi:wifi-off"
+    def is_on(self) -> bool | None:
+        self._iface = self._hub.wifi_interfaces.get(self._iface_name, self._iface)
+        return self._iface.enabled
 
     @property
     def extra_state_attributes(self) -> dict[str, str | bool]:
@@ -81,29 +78,20 @@ class WifiApSwitch(GLinetSwitchBase):
 
     async def async_turn_on(self, **_: Any) -> None:
         try:
-            await self._hub.router_api.set_wifi_interface_enabled(self._iface_name, True)
+            await self._hub.set_wifi_interface_enabled(self._iface_name, True)
         except OSError:
             _LOGGER.exception("Unable to enable WiFi interface %s", self._iface_name)
             return
-        self._attr_is_on = True
-        self.async_write_ha_state()
-        await self._hub.fetch_wifi_interfaces()
-        await self.async_update()
+        await self._hub.async_request_refresh()
 
     async def async_turn_off(self, **_: Any) -> None:
         try:
-            await self._hub.router_api.set_wifi_interface_enabled(self._iface_name, False)
+            await self._hub.set_wifi_interface_enabled(self._iface_name, False)
         except OSError:
             _LOGGER.exception("Unable to disable WiFi interface %s", self._iface_name)
             return
-        self._attr_is_on = False
-        self.async_write_ha_state()
-        await self._hub.fetch_wifi_interfaces()
-        await self.async_update()
+        await self._hub.async_request_refresh()
 
-    async def async_update(self) -> None:
-        self._iface = self._hub.wifi_interfaces.get(self._iface_name, self._iface)
-        self._attr_is_on = self._iface.enabled
 
 
 class TailscaleSwitch(GLinetSwitchBase):
@@ -125,27 +113,25 @@ class TailscaleSwitch(GLinetSwitchBase):
     def entity_registry_visible_default(self) -> bool:
         return self._hub.has_tailscale
 
+    @property
+    def is_on(self) -> bool | None:
+        return self._hub.tailscale_connected
+
     async def async_turn_on(self, **_: Any) -> None:
         try:
-            await self._hub.router_api.connect_tailscale()
+            await self._hub.connect_tailscale()
         except OSError:
             _LOGGER.exception("Unable to enable tailscale connection")
             return
-        self._attr_is_on = True
-        self.async_write_ha_state()
+        await self._hub.async_request_refresh()
 
     async def async_turn_off(self, **_: Any) -> None:
         try:
-            await self._hub.router_api.disconnect_tailscale()
+            await self._hub.disconnect_tailscale()
         except OSError:
             _LOGGER.exception("Unable to stop tailscale connection")
             return
-        self._attr_is_on = False
-        self.async_write_ha_state()
-
-    async def async_update(self) -> None:
-        await self._hub.fetch_tailscale_state()
-        self._attr_is_on = self._hub.tailscale_connected
+        await self._hub.async_request_refresh()
 
 class WireGuardSwitch(GLinetSwitchBase):
     _attr_icon = "mdi:vpn"
@@ -153,8 +139,6 @@ class WireGuardSwitch(GLinetSwitchBase):
     def __init__(self, hub: GLinetHub, client: WireGuardClient) -> None:
         super().__init__(hub)
         self._client = client
-        self._attr_is_on = False
-
     @property
     def unique_id(self) -> str:
         return f"glinet_switch/{self._hub.device_mac}/{self._client.name}/wireguard_client"
@@ -162,6 +146,13 @@ class WireGuardSwitch(GLinetSwitchBase):
     @property
     def name(self) -> str:
         return f"WG Client {self._client.name}"
+
+    @property
+    def is_on(self) -> bool | None:
+        current = self._hub.vpn_clients.get(self._client.peer_id)
+        if current is not None:
+            self._client = current
+        return self._client in (self._hub.active_vpn_connections or [])
 
     async def async_turn_on(self, **_: Any) -> None:
         try:
@@ -171,38 +162,27 @@ class WireGuardSwitch(GLinetSwitchBase):
                 and self._client not in self._hub.connected_vpn_clients
             ):
                 for client in self._hub.connected_vpn_clients:
-                    await self._hub.router_api.stop_wireguard_client(client.peer_id)
+                    await self._hub.stop_vpn_client(client.peer_id)
 
-            await self._hub.router_api.start_wireguard_client(
+            await self._hub.start_vpn_client(
                 self._client.group_id,
                 self._client.tunnel_id or self._client.peer_id,
             )
         except OSError:
             _LOGGER.exception("Unable to enable WireGuard client")
             return
-        self._attr_is_on = True
-        self.async_write_ha_state()
-        await self._hub.fetch_wireguard_clients()
-        await self.async_update()
+        await self._hub.async_request_refresh()
 
     async def async_turn_off(self, **_: Any) -> None:
         try:
-            await self._hub.router_api.stop_wireguard_client(
+            await self._hub.stop_vpn_client(
                 self._client.tunnel_id or self._client.peer_id
             )
         except OSError:
             _LOGGER.exception("Unable to stop WireGuard client")
             return
-        self._attr_is_on = False
-        self.async_write_ha_state()
-        await self._hub.fetch_wireguard_clients()
-        await self.async_update()
+        await self._hub.async_request_refresh()
 
-    async def async_update(self) -> None:
-        current = self._hub.vpn_clients.get(self._client.peer_id)
-        if current is not None:
-            self._client = current
-        self._attr_is_on = self._client in (self._hub.active_vpn_connections or [])
 
 
 class RepeaterAutoSwitchSwitch(GLinetSwitchBase):
@@ -216,14 +196,17 @@ class RepeaterAutoSwitchSwitch(GLinetSwitchBase):
     def name(self) -> str:
         return "Repeater auto-switch networks"
 
+    @property
+    def is_on(self) -> bool | None:
+        return self._hub.repeater_auto_switch
+
     async def async_turn_on(self, **_: Any) -> None:
         try:
             await self._hub.set_repeater_auto_switch(True)
         except OSError:
             _LOGGER.exception("Unable to enable repeater auto-switch")
             return
-        self._attr_is_on = True
-        self.async_write_ha_state()
+        await self._hub.async_request_refresh()
 
     async def async_turn_off(self, **_: Any) -> None:
         try:
@@ -231,8 +214,4 @@ class RepeaterAutoSwitchSwitch(GLinetSwitchBase):
         except OSError:
             _LOGGER.exception("Unable to disable repeater auto-switch")
             return
-        self._attr_is_on = False
-        self.async_write_ha_state()
-
-    async def async_update(self) -> None:
-        self._attr_is_on = self._hub.repeater_auto_switch
+        await self._hub.async_request_refresh()

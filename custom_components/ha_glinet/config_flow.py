@@ -18,6 +18,7 @@ from .api import GLinetApiClient, NonZeroResponse
 from .const import (
     API_PATH,
     CONF_ENABLED_FEATURES,
+    CONF_SCAN_INTERVAL,
     CONF_TITLE,
     DEFAULT_PASSWORD,
     DEFAULT_URL,
@@ -74,6 +75,10 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
                 multiple=True,
             )
         ),
+        vol.Optional(
+            CONF_SCAN_INTERVAL,
+            default=30,
+        ): vol.All(vol.Coerce(int), vol.Clamp(min=10, max=300)),
     }
 )
 
@@ -100,13 +105,13 @@ class SetupHub:
     async def attempt_login(self, password: str) -> bool:
         try:
             await self.router.authenticate(self.username, password)
-            info = await self.router.get_router_info()
+            info = await self.router.system.get_info()
         except (ConnectionRefusedError, NonZeroResponse):
             _LOGGER.info("Failed to authenticate with GL-INet router during validation")
             return False
 
-        self.router_mac = str(info[CONF_MAC])
-        self.router_model = str(info["model"])
+        self.router_mac = str(info.mac)
+        self.router_model = str(info.model)
         return self.router.logged_in
 
 
@@ -135,6 +140,10 @@ async def process_user_input(
             CONF_ENABLED_FEATURES: data.get(
                 CONF_ENABLED_FEATURES,
                 DEFAULT_ENABLED_FEATURES,
+            ),
+            CONF_SCAN_INTERVAL: data.get(
+                CONF_SCAN_INTERVAL,
+                30,
             ),
         },
     }

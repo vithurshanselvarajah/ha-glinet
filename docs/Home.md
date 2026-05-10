@@ -10,4 +10,4 @@ This folder documents the integration architecture, router API usage, and expose
 - [Modem API Coverage](https://github.com/vithurshanselvarajah/ha-glinet/wiki/modem-api)
 - [Router API Notes](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api)
 - [Services](https://github.com/vithurshanselvarajah/ha-glinet/wiki/services)
-
+- [Developer Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/developer-reference)

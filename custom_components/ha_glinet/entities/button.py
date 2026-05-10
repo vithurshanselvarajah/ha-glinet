@@ -4,15 +4,15 @@ from typing import TYPE_CHECKING
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.const import EntityCategory
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import FEATURE_REPEATER
+from ..hub import GLinetHub
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
-
-    from ..hub import GLinetHub
 
 
 async def async_setup_entry(
@@ -25,11 +25,12 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
 
-class RebootButton(ButtonEntity):
+class RebootButton(CoordinatorEntity[GLinetHub], ButtonEntity):
     _attr_icon = "mdi:restart"
     _attr_has_entity_name = True
 
     def __init__(self, hub: GLinetHub) -> None:
+        super().__init__(hub)
         self._hub = hub
         self._attr_device_info = hub.device_info
 
@@ -46,14 +47,15 @@ class RebootButton(ButtonEntity):
         return "Reboot"
 
     async def async_press(self) -> None:
-        await self._hub.router_api.reboot_router()
+        await self._hub.reboot()
 
 
-class DisconnectRepeaterButton(ButtonEntity):
+class DisconnectRepeaterButton(CoordinatorEntity[GLinetHub], ButtonEntity):
     _attr_icon = "mdi:wifi-off"
     _attr_has_entity_name = True
 
     def __init__(self, hub: GLinetHub) -> None:
+        super().__init__(hub)
         self._hub = hub
         self._attr_device_info = hub.device_info
 
@@ -73,11 +75,12 @@ class DisconnectRepeaterButton(ButtonEntity):
         await self._hub.disconnect_wifi()
 
 
-class ScanWifiButton(ButtonEntity):
+class ScanWifiButton(CoordinatorEntity[GLinetHub], ButtonEntity):
     _attr_icon = "mdi:wifi-sync"
     _attr_has_entity_name = True
 
     def __init__(self, hub: GLinetHub) -> None:
+        super().__init__(hub)
         self._hub = hub
         self._attr_device_info = hub.device_info
 
@@ -96,7 +99,7 @@ class ScanWifiButton(ButtonEntity):
     async def async_press(self) -> None:
         await self._hub.scan_wifi_networks()
 
-class TestFanButton(ButtonEntity):
+class TestFanButton(CoordinatorEntity[GLinetHub], ButtonEntity):
     _attr_has_entity_name = True
     _attr_name = "Fan test"
     _attr_translation_key = "test_fan"
@@ -104,6 +107,7 @@ class TestFanButton(ButtonEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, hub: GLinetHub) -> None:
+        super().__init__(hub)
         self._hub = hub
         self._attr_device_info = hub.device_info
 

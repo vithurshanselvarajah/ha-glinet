@@ -25,6 +25,8 @@ Included features:
 - Optional SMS services for sending, viewing and managing text messages in the inbox.
 - Optional repeater mode support for WiFi scan, connect/disconnect, saved networks, and repeater state.
 - Fan support (status, RPM, and temperature threshold control).
+- **Downloadable Diagnostics**: Provides a sanitized JSON snapshot for easier troubleshooting.
+
 
 During integration setup you can choose which optional GL.iNet features to enable, including WireGuard, cellular, repeater, SMS, and Tailscale. Unsupported choices are skipped gracefully.
 
@@ -58,7 +60,7 @@ Simply put, I use this integration in my own home and wanted specific features t
 2. Click **Add Integration** in the bottom right.
 3. Search for **GL-INet** and select it.
 4. Enter your router's URL (default: `http://192.168.8.1`) and admin password.
-5. Configure setup options like **Consider Home** and **Enabled Features**. 
+5. Configure setup options like **Consider Home**, **Update Interval**, and **Enabled Features**. 
 6. Choose the optional GL.iNet features you want enabled for this router.
 *Note: You can use an HTTPS URL if your router is configured for it and Home Assistant can verify the certificate.*
 
@@ -79,6 +81,7 @@ Start with:
 - [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/entities)
 - [Services](https://github.com/vithurshanselvarajah/ha-glinet/wiki/services)
 - [Router API Notes](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api)
+- [Developer Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/developer-reference)
 - [CI and Release Workflows](https://github.com/vithurshanselvarajah/ha-glinet/wiki/ci-release)
 
 ## Development Checks

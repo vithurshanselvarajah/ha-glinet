@@ -14,6 +14,7 @@ from custom_components.ha_glinet.api.exceptions import (
     TokenError,
     UnsuccessfulRequest,
 )
+from custom_components.ha_glinet.api.models import WifiInterfaceInfo
 
 
 class FakeResponse:
@@ -136,12 +137,12 @@ async def test_get_online_clients_filters_offline_clients() -> None:
     )
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
 
-    assert await client.get_online_clients() == {
+    assert await client.clients.get_online() == {
         "aa:aa:aa:aa:aa:aa": {"mac": "aa:aa:aa:aa:aa:aa", "online": True, "name": "phone"}
     }
 
 
-async def test_get_wifi_interfaces_redacts_keys_by_default() -> None:
+async def test_get_wifi_interfaces_returns_models() -> None:
     session = FakeSession(
         [
             {
@@ -149,7 +150,13 @@ async def test_get_wifi_interfaces_redacts_keys_by_default() -> None:
                     "res": [
                         {
                             "ifaces": [
-                                {"name": "wlan0", "ssid": "Main", "key": "secret"},
+                                {
+                                    "name": "wlan0",
+                                    "ssid": "Main",
+                                    "key": "secret",
+                                    "enabled": True,
+                                    "encryption": "psk2",
+                                },
                                 {"ssid": "Missing name", "key": "secret"},
                             ]
                         }
@@ -160,8 +167,10 @@ async def test_get_wifi_interfaces_redacts_keys_by_default() -> None:
     )
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
 
-    assert await client.get_wifi_interfaces() == {
-        "wlan0": {"name": "wlan0", "ssid": "Main", "key": None}
+    assert await client.wifi.get_interfaces() == {
+        "wlan0": WifiInterfaceInfo(
+            enabled=True, ssid="Main", guest=False, hidden=False, encryption="psk2"
+        )
     }
 
 
@@ -174,8 +183,8 @@ async def test_sms_methods_use_sms_module_payloads() -> None:
     )
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
 
-    assert await client.get_sms_messages() == [{"name": "sms-1", "body": "hello"}]
-    assert await client.send_sms("1-1", "+441234567890", "hi") == {"sent": True}
+    assert await client.modem.get_sms_list() == [{"name": "sms-1", "body": "hello"}]
+    assert await client.modem.send_sms("1-1", "+441234567890", "hi") == {"sent": True}
 
     assert session.requests[0]["json"]["params"] == ["sid-1", "modem", "get_sms_list", {}]
     assert session.requests[1]["json"]["params"] == [
@@ -195,7 +204,7 @@ async def test_get_modem_info_uses_documented_modem_endpoint() -> None:
     session = FakeSession([{"result": {"modems": [{"bus": "1-1"}]}}])
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
 
-    assert await client.get_modem_info() == {"modems": [{"bus": "1-1"}]}
+    assert await client.modem.get_info() == {"modems": [{"bus": "1-1"}]}
     assert session.requests[0]["json"]["params"] == ["sid-1", "modem", "get_info", {}]
 
 
@@ -204,8 +213,8 @@ async def test_wireguard_state_uses_new_vpn_client_module_for_new_firmware() -> 
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
     client._firmware_version = (4, 8, 0, 0)
 
-    assert await client.get_wireguard_state() == [{"type": "wireguard", "peer_id": 7}]
-    assert session.requests[0]["json"]["params"] == ["sid-1", "vpn-client", "get_status"]
+    assert await client.vpn.get_wireguard_state() == [{"type": "wireguard", "peer_id": 7}]
+    assert session.requests[0]["json"]["params"] == ["sid-1", "vpn-client", "get_status", {}]
 
 
 async def test_wireguard_state_uses_legacy_module_for_old_firmware() -> None:
@@ -213,5 +222,5 @@ async def test_wireguard_state_uses_legacy_module_for_old_firmware() -> None:
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
     client._firmware_version = (4, 7, 9, 0)
 
-    assert await client.get_wireguard_state() == [{"status": 1, "peer_id": 7}]
-    assert session.requests[0]["json"]["params"] == ["sid-1", "wg-client", "get_status"]
+    assert await client.vpn.get_wireguard_state() == [{"status": 1, "peer_id": 7}]
+    assert session.requests[0]["json"]["params"] == ["sid-1", "wg-client", "get_status", {}]

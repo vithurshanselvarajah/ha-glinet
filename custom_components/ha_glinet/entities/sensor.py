@@ -15,10 +15,13 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.dt import utcnow
 
+from ..api.models import RouterStatus
 from ..const import DOMAIN, FEATURE_CELLULAR, FEATURE_REPEATER, FEATURE_SMS
-from ..models import RepeaterState
+from ..hub import GLinetHub
+from ..models import ClientDeviceInfo, RepeaterState
 from ..utils import channel_to_band, get_first_int, get_first_value
 
 if TYPE_CHECKING:
@@ -27,14 +30,11 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-    from ..hub import GLinetHub
-    from ..models import ClientDeviceInfo
-
 
 @dataclass(frozen=True, kw_only=True)
 class SystemStatusEntityDescription(SensorEntityDescription):
-    value_fn: Callable[[dict[str, Any]], int | float | None]
-    extra_attributes_fn: Callable[[dict[str, Any]], dict[str, Any]] | None = None
+    value_fn: Callable[[RouterStatus | None], int | float | None]
+    extra_attributes_fn: Callable[[RouterStatus | None], dict[str, Any]] | None = None
 
 
 SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
@@ -48,7 +48,7 @@ SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        value_fn=lambda system_status: (system_status.get("cpu") or {}).get("temperature"),
+        value_fn=lambda s: s.temperature if s else None,
     ),
     SystemStatusEntityDescription(
         key="load_avg1",
@@ -58,7 +58,7 @@ SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
-        value_fn=lambda status: (status.get("load_average") or [None])[0],
+        value_fn=lambda s: (s.load_average or [None])[0] if s else None,
     ),
     SystemStatusEntityDescription(
         key="load_avg5",
@@ -68,7 +68,7 @@ SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
-        value_fn=lambda status: (status.get("load_average") or [None, None])[1],
+        value_fn=lambda s: (s.load_average or [None, None])[1] if s else None,
     ),
     SystemStatusEntityDescription(
         key="load_avg15",
@@ -78,7 +78,7 @@ SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
-        value_fn=lambda status: (status.get("load_average") or [None, None, None])[2],
+        value_fn=lambda s: (s.load_average or [None, None, None])[2] if s else None,
     ),
     SystemStatusEntityDescription(
         key="memory_use",
@@ -89,13 +89,10 @@ SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         native_unit_of_measurement=PERCENTAGE,
-        value_fn=lambda status: _calc_usage_percent(
-            status.get("memory_total"),
-            status.get("memory_free"),
-        ),
-        extra_attributes_fn=lambda status: {
-            "memory_total": status.get("memory_total"),
-            "memory_free": status.get("memory_free"),
+        value_fn=lambda s: _calc_usage_percent(s.memory_total, s.memory_free) if s else None,
+        extra_attributes_fn=lambda s: {
+            "memory_total": s.memory_total if s else None,
+            "memory_free": s.memory_free if s else None,
         },
     ),
     SystemStatusEntityDescription(
@@ -107,13 +104,10 @@ SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         native_unit_of_measurement=PERCENTAGE,
-        value_fn=lambda status: _calc_usage_percent(
-            status.get("flash_total"),
-            status.get("flash_free"),
-        ),
-        extra_attributes_fn=lambda status: {
-            "flash_total": status.get("flash_total"),
-            "flash_free": status.get("flash_free"),
+        value_fn=lambda s: _calc_usage_percent(s.flash_total, s.flash_free) if s else None,
+        extra_attributes_fn=lambda s: {
+            "flash_total": s.flash_total if s else None,
+            "flash_free": s.flash_free if s else None,
         },
     ),
 )
@@ -151,6 +145,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular signal",
         has_entity_name=True,
         icon="mdi:signal-cellular-2",
+        entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda hub: get_first_int(
@@ -165,6 +160,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular RSSI",
         has_entity_name=True,
         icon="mdi:signal-cellular-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda hub: get_first_int(
@@ -178,6 +174,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular RSRP",
         has_entity_name=True,
         icon="mdi:signal-variant",
+        entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda hub: get_first_int(
@@ -191,6 +188,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular RSRQ",
         has_entity_name=True,
         icon="mdi:signal-distance-variant",
+        entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement="dB",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda hub: get_first_int(
@@ -204,6 +202,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular SINR",
         has_entity_name=True,
         icon="mdi:signal-3g",
+        entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement="dB",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda hub: get_first_int(
@@ -217,6 +216,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular band",
         has_entity_name=True,
         icon="mdi:cellphone-wireless",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: get_first_value(
             hub.cellular_status,
             ("band", "network_type", "service_type"),
@@ -228,6 +228,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular network",
         has_entity_name=True,
         icon="mdi:signal-cellular-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: get_first_value(
             hub.cellular_status,
             ("network", "operator", "operator_name", "carrier", "mode", "service_type"),
@@ -277,6 +278,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Repeater SSID",
         has_entity_name=True,
         icon="mdi:wifi",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: hub.repeater_status.ssid if hub.repeater_status else None,
     ),
     HubSensorEntityDescription(
@@ -284,6 +286,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Repeater signal",
         has_entity_name=True,
         icon="mdi:wifi-strength-2",
+        entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement="dBm",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda hub: hub.repeater_status.signal if hub.repeater_status else None,
@@ -293,6 +296,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Repeater IP address",
         has_entity_name=True,
         icon="mdi:ip-network",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: hub.repeater_status.ipv4_address if hub.repeater_status else None,
     ),
     HubSensorEntityDescription(
@@ -300,6 +304,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Repeater gateway",
         has_entity_name=True,
         icon="mdi:router-network",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: hub.repeater_status.ipv4_gateway if hub.repeater_status else None,
     ),
     HubSensorEntityDescription(
@@ -307,6 +312,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Repeater DNS",
         has_entity_name=True,
         icon="mdi:dns",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: (
             hub.repeater_status.ipv4_dns[0]
             if hub.repeater_status and hub.repeater_status.ipv4_dns
@@ -323,6 +329,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Repeater BSSID",
         has_entity_name=True,
         icon="mdi:access-point-network",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: hub.repeater_status.bssid if hub.repeater_status else None,
     ),
     HubSensorEntityDescription(
@@ -501,8 +508,9 @@ async def async_setup_entry(
     )
 
 
-class GLinetSensorBase(SensorEntity):
+class GLinetSensorBase(CoordinatorEntity[GLinetHub], SensorEntity):
     def __init__(self, hub: GLinetHub, entity_description: SystemStatusEntityDescription) -> None:
+        super().__init__(hub)
         self.hub = hub
         self.entity_description = entity_description
         self._attr_device_info = hub.device_info
@@ -524,8 +532,9 @@ class SystemStatusSensor(GLinetSensorBase):
         return self.entity_description.value_fn(self.hub.router_status)
 
 
-class HubStatusSensor(SensorEntity):
+class HubStatusSensor(CoordinatorEntity[GLinetHub], SensorEntity):
     def __init__(self, hub: GLinetHub, entity_description: HubSensorEntityDescription) -> None:
+        super().__init__(hub)
         self.hub = hub
         self.entity_description = entity_description
         self._attr_device_info = hub.device_info
@@ -550,14 +559,15 @@ class SystemUptimeSensor(GLinetSensorBase):
 
     @property
     def native_value(self) -> datetime | None:
-        uptime = self.hub.router_status.get("uptime")
+        status = self.hub.router_status
+        uptime = status.uptime if status else None
         if not isinstance(uptime, (int, float)):
             return None
         self._current_value = _resolve_uptime(float(uptime), self._current_value)
         return self._current_value
 
 
-class ClientBandwidthSensor(SensorEntity):
+class ClientBandwidthSensor(CoordinatorEntity[GLinetHub], SensorEntity):
     _attr_has_entity_name = True
 
     def __init__(
@@ -566,6 +576,7 @@ class ClientBandwidthSensor(SensorEntity):
         device: ClientDeviceInfo,
         entity_description: ClientBandwidthEntityDescription,
     ) -> None:
+        super().__init__(hub)
         self._hub = hub
         self._device = device
         self.entity_description = entity_description
@@ -585,15 +596,17 @@ class ClientBandwidthSensor(SensorEntity):
         return self.entity_description.value_fn(self._device)
 
 
-class RepeaterChannelSensor(SensorEntity):
+class RepeaterChannelSensor(CoordinatorEntity[GLinetHub], SensorEntity):
     """Sensor for repeater WiFi channel showing band and channel."""
 
     _attr_has_entity_name = True
     _attr_icon = "mdi:radio-tower"
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_translation_key = "repeater_channel"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, hub: GLinetHub) -> None:
+        super().__init__(hub)
         self._hub = hub
         self._attr_device_info = hub.device_info
         self._attr_options = ["2_4ghz", "5ghz"]

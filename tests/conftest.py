@@ -124,6 +124,41 @@ def pytest_configure() -> None:
         event = types.ModuleType("homeassistant.helpers.event")
         event.async_track_time_interval = lambda *args, **kwargs: None
 
+        update_coordinator = types.ModuleType("homeassistant.helpers.update_coordinator")
+
+        class MockCoordinator:
+            def __init__(self, *args, **kwargs):
+                self.hass = args[0]
+                self.data = None
+
+            def __class_getitem__(cls, _):
+                return cls
+
+            async def async_config_entry_first_refresh(self):
+                pass
+
+            async def async_request_refresh(self):
+                pass
+
+            async def async_refresh(self):
+                pass
+
+        update_coordinator.DataUpdateCoordinator = MockCoordinator
+        update_coordinator.UpdateFailed = type("UpdateFailed", (Exception,), {})
+
+        class MockCoordinatorEntity:
+            def __init__(self, coordinator, *args, **kwargs):
+                self.coordinator = coordinator
+                self.hass = coordinator.hass
+
+            def __class_getitem__(cls, _):
+                return cls
+
+            def _handle_coordinator_update(self) -> None:
+                pass
+
+        update_coordinator.CoordinatorEntity = MockCoordinatorEntity
+
         core = types.ModuleType("homeassistant.core")
         core.HomeAssistant = object
         core.callback = lambda func: func
@@ -142,6 +177,7 @@ def pytest_configure() -> None:
         helpers.dispatcher = dispatcher
         helpers.entity = entity
         helpers.event = event
+        helpers.update_coordinator = update_coordinator
         util.dt = dt
         homeassistant.components = components
         homeassistant.config_entries = config_entries
@@ -169,6 +205,7 @@ def pytest_configure() -> None:
         sys.modules["homeassistant.helpers.dispatcher"] = dispatcher
         sys.modules["homeassistant.helpers.entity"] = entity
         sys.modules["homeassistant.helpers.event"] = event
+        sys.modules["homeassistant.helpers.update_coordinator"] = update_coordinator
         sys.modules["homeassistant.util"] = util
         sys.modules["homeassistant.util.dt"] = dt
 
