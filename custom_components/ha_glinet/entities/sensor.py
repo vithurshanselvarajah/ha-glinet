@@ -18,6 +18,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.dt import utcnow
 
+from ..api.models import RouterStatus
 from ..const import DOMAIN, FEATURE_CELLULAR, FEATURE_REPEATER, FEATURE_SMS
 from ..models import RepeaterState
 from ..utils import channel_to_band, get_first_int, get_first_value
@@ -34,8 +35,8 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, kw_only=True)
 class SystemStatusEntityDescription(SensorEntityDescription):
-    value_fn: Callable[[dict[str, Any]], int | float | None]
-    extra_attributes_fn: Callable[[dict[str, Any]], dict[str, Any]] | None = None
+    value_fn: Callable[[RouterStatus | None], int | float | None]
+    extra_attributes_fn: Callable[[RouterStatus | None], dict[str, Any]] | None = None
 
 
 SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
@@ -49,7 +50,7 @@ SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        value_fn=lambda system_status: (system_status.get("cpu") or {}).get("temperature"),
+        value_fn=lambda s: s.temperature if s else None,
     ),
     SystemStatusEntityDescription(
         key="load_avg1",
@@ -59,7 +60,7 @@ SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
-        value_fn=lambda status: (status.get("load_average") or [None])[0],
+        value_fn=lambda s: (s.load_average or [None])[0] if s else None,
     ),
     SystemStatusEntityDescription(
         key="load_avg5",
@@ -69,7 +70,7 @@ SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
-        value_fn=lambda status: (status.get("load_average") or [None, None])[1],
+        value_fn=lambda s: (s.load_average or [None, None])[1] if s else None,
     ),
     SystemStatusEntityDescription(
         key="load_avg15",
@@ -79,7 +80,7 @@ SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
-        value_fn=lambda status: (status.get("load_average") or [None, None, None])[2],
+        value_fn=lambda s: (s.load_average or [None, None, None])[2] if s else None,
     ),
     SystemStatusEntityDescription(
         key="memory_use",
@@ -90,13 +91,10 @@ SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         native_unit_of_measurement=PERCENTAGE,
-        value_fn=lambda status: _calc_usage_percent(
-            status.get("memory_total"),
-            status.get("memory_free"),
-        ),
-        extra_attributes_fn=lambda status: {
-            "memory_total": status.get("memory_total"),
-            "memory_free": status.get("memory_free"),
+        value_fn=lambda s: _calc_usage_percent(s.memory_total, s.memory_free) if s else None,
+        extra_attributes_fn=lambda s: {
+            "memory_total": s.memory_total if s else None,
+            "memory_free": s.memory_free if s else None,
         },
     ),
     SystemStatusEntityDescription(
@@ -108,13 +106,10 @@ SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         native_unit_of_measurement=PERCENTAGE,
-        value_fn=lambda status: _calc_usage_percent(
-            status.get("flash_total"),
-            status.get("flash_free"),
-        ),
-        extra_attributes_fn=lambda status: {
-            "flash_total": status.get("flash_total"),
-            "flash_free": status.get("flash_free"),
+        value_fn=lambda s: _calc_usage_percent(s.flash_total, s.flash_free) if s else None,
+        extra_attributes_fn=lambda s: {
+            "flash_total": s.flash_total if s else None,
+            "flash_free": s.flash_free if s else None,
         },
     ),
 )
@@ -566,7 +561,8 @@ class SystemUptimeSensor(GLinetSensorBase):
 
     @property
     def native_value(self) -> datetime | None:
-        uptime = self.hub.router_status.get("uptime")
+        status = self.hub.router_status
+        uptime = status.uptime if status else None
         if not isinstance(uptime, (int, float)):
             return None
         self._current_value = _resolve_uptime(float(uptime), self._current_value)

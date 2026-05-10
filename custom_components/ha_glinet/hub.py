@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, TypeVar
@@ -287,7 +286,8 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._saved_networks = []
             self._last_wifi_scan = None
 
-        await asyncio.gather(*tasks)
+        for task in tasks:
+            await task
 
         if self.feature_enabled(FEATURE_SMS):
             await self.fetch_sms_messages()
@@ -351,8 +351,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
     async def fetch_system_status(self) -> None:
         response = await self._invoke_api(self.router_api.system.get_status)
         if response:
-            status = dict(response)
-            self._system_status = status | dict(status.get("system", {}))
+            self._system_status = response
 
     async def reboot(self, delay: int = 0) -> None:
         await self._invoke_api(lambda: self.router_api.system.reboot(delay))
@@ -398,11 +397,11 @@ class GLinetHub(DataUpdateCoordinator[None]):
         for name, iface in response.items():
             self._wifi_ifaces[name] = WifiInterface(
                 name=name,
-                enabled=bool(iface.get("enabled", False)),
-                ssid=str(iface.get("ssid", "")),
-                guest=bool(iface.get("guest", False)),
-                hidden=bool(iface.get("hidden", False)),
-                encryption=str(iface.get("encryption", "UNKNOWN")),
+                enabled=iface.enabled,
+                ssid=iface.ssid,
+                guest=iface.guest,
+                hidden=iface.hidden,
+                encryption=iface.encryption or "UNKNOWN",
             )
 
     async def set_wifi_interface_enabled(self, iface_name: str, enabled: bool) -> None:
@@ -722,7 +721,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         return self._wireguard_connections
 
     @property
-    def router_status(self) -> dict[str, Any]:
+    def router_status(self) -> RouterStatus | None:
         return self._system_status
 
 
