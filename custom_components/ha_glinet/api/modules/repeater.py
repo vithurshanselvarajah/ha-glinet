@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from typing import Any
-from .base import BaseModule
+
 from ..const import LONG_TIMEOUT, SCAN_TIMEOUT
+from .base import BaseModule
+
 
 class RepeaterModule(BaseModule):
     async def get_status(self) -> dict[str, Any]:
@@ -18,12 +20,16 @@ class RepeaterModule(BaseModule):
         return dict(response) if response else {}
 
     async def scan(self, params: dict[str, Any]) -> list[dict[str, Any]]:
-        payload = self._client._build_sid_payload("call", ["repeater", "scan", params], self._client.sid)
+        payload = self._client._build_sid_payload(
+            "call", ["repeater", "scan", params], self._client.sid
+        )
         response = await self._client._send_request(payload, timeout_seconds=SCAN_TIMEOUT)
         return list(dict(response).get("res", []))
 
     async def connect(self, params: dict[str, Any]) -> dict[str, Any]:
-        payload = self._client._build_sid_payload("call", ["repeater", "connect", params], self._client.sid)
+        payload = self._client._build_sid_payload(
+            "call", ["repeater", "connect", params], self._client.sid
+        )
         response = await self._client._send_request(payload, timeout_seconds=LONG_TIMEOUT)
         return dict(response) if response else {}
 

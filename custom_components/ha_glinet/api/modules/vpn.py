@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
-from .base import BaseModule
+
 from ..const import NEW_VPN_CLIENT_VERSION
+from .base import BaseModule
 
 if TYPE_CHECKING:
     from ..client import GLinetApiClient
@@ -17,7 +18,9 @@ class WireGuardModule(BaseModule):
         return dict(response)
 
     async def start(self, group_id: int, peer_id: int) -> dict[str, Any]:
-        response = await self._call("wg-client", "start", {"group_id": group_id, "peer_id": peer_id})
+        response = await self._call(
+            "wg-client", "start", {"group_id": group_id, "peer_id": peer_id}
+        )
         return dict(response)
 
     async def stop(self) -> dict[str, Any]:
@@ -30,7 +33,9 @@ class VpnClientModule(BaseModule):
         return dict(response)
 
     async def set_tunnel(self, tunnel_id: int, enabled: bool) -> dict[str, Any]:
-        response = await self._call("vpn-client", "set_tunnel", {"enabled": enabled, "tunnel_id": tunnel_id})
+        response = await self._call(
+            "vpn-client", "set_tunnel", {"enabled": enabled, "tunnel_id": tunnel_id}
+        )
         return dict(response)
 
 class VpnModule(BaseModule):
@@ -63,7 +68,8 @@ class VpnModule(BaseModule):
         if self._client._firmware_version is None:
             await self._client.system.get_info()
 
-        if self._client._firmware_version is not None and self._client._firmware_version >= NEW_VPN_CLIENT_VERSION:
+        fw_ver = self._client._firmware_version
+        if fw_ver is not None and fw_ver >= NEW_VPN_CLIENT_VERSION:
             response = await self.vpn_client.get_status()
             return [dict(item) for item in dict(response).get("status_list", [])]
 
@@ -82,7 +88,8 @@ class VpnModule(BaseModule):
         if self._client._firmware_version is None:
             await self._client.system.get_info()
 
-        if self._client._firmware_version is not None and self._client._firmware_version >= NEW_VPN_CLIENT_VERSION:
+        fw_ver = self._client._firmware_version
+        if fw_ver is not None and fw_ver >= NEW_VPN_CLIENT_VERSION:
             return await self.vpn_client.set_tunnel(peer_or_tunnel_id, enabled)
 
         if enabled:

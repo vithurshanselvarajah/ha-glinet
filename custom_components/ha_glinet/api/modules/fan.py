@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from typing import Any
+
 from .base import BaseModule
+
 
 class FanModule(BaseModule):
     async def get_status(self) -> dict[str, Any]:

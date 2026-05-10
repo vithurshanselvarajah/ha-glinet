@@ -1,27 +1,27 @@
-from .system import SystemModule
-from .modem import ModemModule
-from .wifi import WifiModule
 from .clients import ClientsModule
-from .vpn import WireGuardModule, VpnClientModule, VpnModule
-from .tailscale import TailscaleModule
-from .repeater import RepeaterModule
+from .diag import DiagModule
 from .fan import FanModule
 from .led import LedModule
 from .macclone import MacCloneModule
-from .diag import DiagModule
+from .modem import ModemModule
+from .repeater import RepeaterModule
+from .system import SystemModule
+from .tailscale import TailscaleModule
+from .vpn import VpnClientModule, VpnModule, WireGuardModule
+from .wifi import WifiModule
 
 __all__ = [
-    "SystemModule",
-    "ModemModule",
-    "WifiModule",
     "ClientsModule",
-    "WireGuardModule",
-    "VpnClientModule",
-    "VpnModule",
-    "TailscaleModule",
-    "RepeaterModule",
+    "DiagModule",
     "FanModule",
     "LedModule",
     "MacCloneModule",
-    "DiagModule",
+    "ModemModule",
+    "RepeaterModule",
+    "SystemModule",
+    "TailscaleModule",
+    "VpnClientModule",
+    "VpnModule",
+    "WifiModule",
+    "WireGuardModule",
 ]

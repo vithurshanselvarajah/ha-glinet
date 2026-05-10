@@ -10,9 +10,6 @@ from passlib.hash import md5_crypt, sha256_crypt, sha512_crypt
 
 from .const import (
     DEFAULT_TIMEOUT,
-    LONG_TIMEOUT,
-    SCAN_TIMEOUT,
-    NEW_VPN_CLIENT_VERSION,
 )
 from .exceptions import (
     APIClientError,
@@ -21,7 +18,6 @@ from .exceptions import (
     TokenError,
     UnsuccessfulRequest,
 )
-from .models import TailscaleConnection
 from .modules import (
     ClientsModule,
     DiagModule,
@@ -198,6 +194,4 @@ class GLinetApiClient:
         return self._logged_in
 
 
-    @property
-    def logged_in(self) -> bool:
-        return self._logged_in
+

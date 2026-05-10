@@ -1,25 +1,42 @@
 from __future__ import annotations
 
 from typing import Any
-from .base import BaseModule
+
+from ..models import RouterStatus, SystemInfo
 from ..utils import decode_firmware_version
+from .base import BaseModule
+
 
 class SystemModule(BaseModule):
-    async def get_info(self) -> dict[str, Any]:
+    async def get_info(self) -> SystemInfo:
         response = await self._call("system", "get_info")
         info = dict(response)
-        firmware_version = info.get("firmware_version")
+        firmware_version = info.get("firmware_version", "")
         if firmware_version:
             self._client._firmware_version = decode_firmware_version(str(firmware_version))
-        return info
+        return SystemInfo(
+            model=info.get("model", ""),
+            firmware_version=str(firmware_version),
+            mac=info.get("mac", ""),
+            sn=info.get("sn", ""),
+            device_id=info.get("device_id", ""),
+        )
 
-    async def get_status(self) -> dict[str, Any]:
+    async def get_status(self) -> RouterStatus:
         response = await self._call("system", "get_status")
         status = dict(response)
-        if "wifi" in status:
-            for wifi in status["wifi"]:
-                wifi["passwd"] = None
-        return status
+        sys_info = status.get("system", {})
+        return RouterStatus(
+            uptime=status.get("uptime", 0),
+            load_average=status.get("load_average", []),
+            memory_total=sys_info.get("memory_total", 0),
+            memory_free=sys_info.get("memory_free", 0),
+            memory_shared=sys_info.get("memory_shared", 0),
+            memory_buffered=sys_info.get("memory_buffered", 0),
+            temperature=status.get("cpu", {}).get("temperature"),
+            flash_total=sys_info.get("flash_total", 0),
+            flash_free=sys_info.get("flash_free", 0),
+        )
 
     async def get_load(self) -> dict[str, Any]:
         response = await self._call("system", "get_load")

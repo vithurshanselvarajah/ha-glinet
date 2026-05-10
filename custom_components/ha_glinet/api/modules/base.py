@@ -19,5 +19,7 @@ class BaseModule:
         """Make a call to the router."""
         if params is None:
             params = {}
-        payload = self._client._build_sid_payload("call", [module, method, params], self._client.sid)
+        payload = self._client._build_sid_payload(
+            "call", [module, method, params], self._client.sid
+        )
         return await self._client._send_request(payload)

@@ -22,7 +22,7 @@ def _hub_with_devices() -> GLinetHub:
     hub._devices = {"aa:bb:cc:dd:ee:ff": ClientDeviceInfo("aa:bb:cc:dd:ee:ff")}
     hub._devices["aa:bb:cc:dd:ee:ff"].apply_update({"online": True})
     hub._invoke_api = _invoke_api_empty_clients
-    hub._api = types.SimpleNamespace(get_online_clients=object())
+    hub._api = types.SimpleNamespace(clients=types.SimpleNamespace(get_online=object()))
     hub._entry = types.SimpleNamespace(entry_id="test_entry")
     hub.hass = object()
     return hub
@@ -60,7 +60,7 @@ async def test_fetch_tailscale_state_treats_timeout_as_optional() -> None:
         return None
 
     hub._invoke_optional_api = invoke_optional_api
-    hub._api = types.SimpleNamespace(get_tailscale_details=object())
+    hub._api = types.SimpleNamespace(tailscale=types.SimpleNamespace(get_details=object()))
 
     await hub.fetch_tailscale_state()
 
@@ -82,7 +82,9 @@ async def test_fetch_cellular_status_merges_modem_info_and_status() -> None:
         return responses.pop(0)
 
     hub._invoke_optional_api = invoke_optional_api
-    hub._api = types.SimpleNamespace(get_modem_info=object(), get_cellular_status=object())
+    hub._api = types.SimpleNamespace(
+        modem=types.SimpleNamespace(get_info=object(), get_status=object())
+    )
 
     await hub.fetch_cellular_status()
 
@@ -103,10 +105,13 @@ async def test_send_sms_uses_default_modem_bus() -> None:
     hub.fetch_sms_messages = _noop
     sent: list[tuple[str, str, str]] = []
 
-    class RouterApi:
+    class ModemModule:
         async def send_sms(self, bus: str, recipient: str, text: str) -> dict[str, Any]:
             sent.append((bus, recipient, text))
             return {"response": "ok"}
+            
+    class RouterApi:
+        modem = ModemModule()
 
     async def invoke_optional_api(api_callable: Any) -> dict[str, Any]:
         return await api_callable()
@@ -273,7 +278,7 @@ async def test_scan_wifi_networks_stores_results(monkeypatch) -> None:
     hub._last_wifi_scan = None
 
     async def fake_scan_wifi_networks(
-        *, all_band: bool = False, dfs: bool = False
+        params: dict[str, Any]
     ) -> list[dict[str, Any]]:
         return [
             {
@@ -287,7 +292,7 @@ async def test_scan_wifi_networks_stores_results(monkeypatch) -> None:
             }
         ]
 
-    hub._api.scan_wifi_networks = fake_scan_wifi_networks
+    hub._api.repeater = types.SimpleNamespace(scan=fake_scan_wifi_networks)
 
     calls: list[str] = []
 
@@ -311,16 +316,23 @@ async def test_connect_to_wifi_calls_router_api_and_refreshes_status(monkeypatch
     hub = GLinetHub.__new__(GLinetHub)
     called: list[Any] = []
 
-    class RouterApi:
-        async def connect_repeater(
+    class RepeaterModule:
+        async def connect(
             self,
-            ssid: str,
-            key: str | None = None,
-            remember: bool = True,
-            bssid: str | None = None,
+            params: dict[str, Any],
         ) -> dict[str, Any]:
-            called.append((ssid, key, remember, bssid))
+            called.append(
+                (
+                    params.get("ssid"),
+                    params.get("key"),
+                    params.get("remember", True),
+                    params.get("bssid"),
+                )
+            )
             return {}
+            
+    class RouterApi:
+        repeater = RepeaterModule()
 
     async def fake_fetch_repeater_status() -> None:
         called.append("fetch_status")
@@ -338,10 +350,13 @@ async def test_disconnect_wifi_calls_router_api_and_refreshes_status(monkeypatch
     hub = GLinetHub.__new__(GLinetHub)
     called: list[str] = []
 
-    class RouterApi:
-        async def disconnect_repeater(self) -> dict[str, Any]:
+    class RepeaterModule:
+        async def disconnect(self) -> dict[str, Any]:
             called.append("disconnect")
             return {}
+            
+    class RouterApi:
+        repeater = RepeaterModule()
 
     async def fake_fetch_repeater_status() -> None:
         called.append("fetch_status")
@@ -359,12 +374,15 @@ async def test_set_repeater_band_updates_config(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
     called: list[Any] = []
 
-    class RouterApi:
-        async def set_repeater_config(
-            self, lock_band: str | None = None, **kwargs: Any
+    class RepeaterModule:
+        async def set_config(
+            self, params: dict[str, Any]
         ) -> dict[str, Any]:
-            called.append(lock_band)
+            called.append(params.get("lock_band"))
             return {}
+            
+    class RouterApi:
+        repeater = RepeaterModule()
 
     async def fake_fetch_repeater_config() -> None:
         called.append("fetch_config")
@@ -381,7 +399,7 @@ async def test_set_repeater_band_updates_config(monkeypatch) -> None:
 async def test_fetch_repeater_status_returns_none_when_unavailable() -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._invoke_optional_api = AsyncMock(return_value=None)
-    hub._api = SimpleNamespace(get_repeater_status=object())
+    hub._api = SimpleNamespace(repeater=SimpleNamespace(get_status=object()))
     hub._repeater_status = RepeaterStatus(RepeaterState.CONNECTED)
 
     await hub.fetch_repeater_status()
@@ -392,7 +410,7 @@ async def test_fetch_repeater_status_returns_none_when_unavailable() -> None:
 async def test_fetch_repeater_config_stores_response() -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._invoke_optional_api = AsyncMock(return_value={"lock_band": "2g"})
-    hub._api = SimpleNamespace(get_repeater_config=object())
+    hub._api = SimpleNamespace(repeater=SimpleNamespace(get_config=object()))
 
     await hub.fetch_repeater_config()
 
@@ -403,7 +421,7 @@ async def test_get_saved_wifi_networks_and_remove_saved_wifi_network(monkeypatch
     hub = GLinetHub.__new__(GLinetHub)
     api_calls: list[str] = []
 
-    class RouterApi:
+    class RepeaterModule:
         async def get_saved_ap_list(self) -> list[dict[str, Any]]:
             api_calls.append("get_saved")
             return [{"ssid": "TestNet", "bssid": "aa:bb"}]
@@ -411,6 +429,9 @@ async def test_get_saved_wifi_networks_and_remove_saved_wifi_network(monkeypatch
         async def remove_saved_ap(self, ssid: str) -> dict[str, Any]:
             api_calls.append(f"remove:{ssid}")
             return {}
+            
+    class RouterApi:
+        repeater = RepeaterModule()
 
     async def invoke_api(callable: Any) -> Any:
         return await callable()

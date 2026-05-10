@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from typing import Any
+
 from .base import BaseModule
+
 
 class LedModule(BaseModule):
     async def get_config(self) -> dict[str, Any]:

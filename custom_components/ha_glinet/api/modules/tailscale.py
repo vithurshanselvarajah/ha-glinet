@@ -1,7 +1,10 @@
 import asyncio
 from typing import Any
-from .base import BaseModule
+
+from ..exceptions import APIClientError
 from ..models import TailscaleConnection
+from .base import BaseModule
+
 
 class TailscaleModule(BaseModule):
     async def get_config(self) -> dict[str, Any]:
@@ -27,14 +30,14 @@ class TailscaleModule(BaseModule):
     async def is_configured(self) -> bool:
         try:
             status = await self.get_status()
-        except Exception:
+        except APIClientError:
             return False
         if status != []:
             return True
         try:
             config = await self.get_config()
             return config is not False
-        except Exception:
+        except APIClientError:
             return False
 
     async def get_details(self) -> dict[str, Any] | None:

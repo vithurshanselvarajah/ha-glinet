@@ -37,6 +37,7 @@ from .api import (
     TokenError,
 )
 from .api.exceptions import AuthenticationError
+from .api.models import RouterStatus
 from .const import (
     API_PATH,
     CONF_ENABLED_FEATURES,
@@ -54,7 +55,6 @@ from .models import (
     FanStatus,
     RepeaterState,
     RepeaterStatus,
-    RouterStatus,
     ScannedNetwork,
     SmsMessage,
     WifiInterface,
@@ -649,7 +649,9 @@ class GLinetHub(DataUpdateCoordinator[None]):
         if bus is None:
             raise RuntimeError("No GL-INet modem bus is available for SMS removal")
 
-        await self._invoke_optional_api(lambda: self.router_api.modem.remove_sms(bus, scope, message_id))
+        await self._invoke_optional_api(
+            lambda: self.router_api.modem.remove_sms(bus, scope, message_id)
+        )
         if scope == 10 and message_id:
             self._sms_messages.pop(message_id, None)
         else:

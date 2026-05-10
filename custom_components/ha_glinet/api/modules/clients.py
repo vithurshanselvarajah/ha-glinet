@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from typing import Any
+
 from .base import BaseModule
+
 
 class ClientsModule(BaseModule):
     async def get_list(self) -> dict[str, Any]:

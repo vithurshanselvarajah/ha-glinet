@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from typing import Any
-from .base import BaseModule
+
 from ..const import LONG_TIMEOUT
+from ..models import ModemInfo
+from .base import BaseModule
+
 
 class ModemModule(BaseModule):
     async def get_status(self) -> dict[str, Any]:
@@ -12,6 +15,33 @@ class ModemModule(BaseModule):
     async def get_info(self) -> dict[str, Any]:
         response = await self._call("modem", "get_info")
         return dict(response)
+
+    async def get_modem_info(self) -> list[ModemInfo]:
+        info_response = await self.get_info()
+        status_response = await self.get_status()
+        
+        info_modems = info_response.get("modems", [])
+        status_modems = status_response.get("modems", [])
+        
+        merged: dict[str, dict[str, Any]] = {}
+        for modem in [*info_modems, *status_modems]:
+            if not isinstance(modem, dict) or not modem.get("bus"):
+                continue
+            bus = str(modem["bus"])
+            merged[bus] = merged.get(bus, {}) | dict(modem)
+            
+        return [
+            ModemInfo(
+                bus=str(modem.get("bus", "")),
+                model=str(modem.get("model", "")),
+                imei=str(modem.get("imei", "")),
+                iccid=str(modem.get("iccid", "")),
+                status=str(modem.get("status", "")),
+                signal=modem.get("signal"),
+                network_type=str(modem.get("network_type", "")),
+            )
+            for modem in merged.values()
+        ]
 
     async def get_sms_list(self) -> list[dict[str, Any]]:
         response = await self._call("modem", "get_sms_list")
