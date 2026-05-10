@@ -95,6 +95,8 @@ CI runs those checks automatically for pushes and pull requests.
 
 ## Support
 
+If you are using this project, please consider leaving a **star** ⭐. It helps me gauge interest in the project and decide how much of my own resources I should allocate to its continued development.
+
 For support, questions, or community discussion, join our Discord channel:
 
 [![Discord](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Metvr5hC3m)
