@@ -10,6 +10,8 @@ Sends an SMS message.
 - **`text`**: The message content.
 - **`mac`** (Optional): Target a specific router by MAC address.
 
+> Note: Messages longer than 160 characters are automatically split into multiple SMS messages and sent sequentially.
+
 ### `get_sms`
 Retrieves the list of SMS messages currently stored on the router. This service supports response data.
 - **`mac`** (Optional): Target a specific router by MAC address.
