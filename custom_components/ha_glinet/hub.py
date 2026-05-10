@@ -627,11 +627,15 @@ class GLinetHub(DataUpdateCoordinator[None]):
             bus = self._default_modem_bus
         if bus is None:
             raise RuntimeError("No SMS-capable GL-INet modem was found")
-        response = await self._invoke_optional_api(
-            lambda: self.router_api.modem.send_sms(bus, recipient, text)
-        )
-        if response is None:
-            raise RuntimeError("The router did not accept the SMS send request")
+
+        chunks = [text[i : i + 160] for i in range(0, len(text), 160)]
+        for chunk in chunks:
+            response = await self._invoke_optional_api(
+                lambda: self.router_api.modem.send_sms(bus, recipient, chunk)
+            )
+            if response is None:
+                raise RuntimeError("The router did not accept the SMS send request")
+
         await self.fetch_sms_messages()
 
     async def remove_sms(
