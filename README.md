@@ -25,6 +25,8 @@ Included features:
 - Optional SMS services for sending, viewing and managing text messages in the inbox.
 - Optional repeater mode support for WiFi scan, connect/disconnect, saved networks, and repeater state.
 - Fan support (status, RPM, and temperature threshold control).
+- **Downloadable Diagnostics**: Provides a sanitized JSON snapshot for easier troubleshooting.
+
 
 During integration setup you can choose which optional GL.iNet features to enable, including WireGuard, cellular, repeater, SMS, and Tailscale. Unsupported choices are skipped gracefully.
 

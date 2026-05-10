@@ -28,21 +28,26 @@ All complex data returned from the router should be parsed into strongly-typed `
 ### The Hub (`hub.py`)
 The `GLinetHub` is the heart of the integration. It inherits from `DataUpdateCoordinator` and manages:
 - **Session state:** Handing token expiration and renewal.
-- **Polling Loop:** Executing API requests sequentially every scan interval (default 30s) to prevent overwhelming the router's lighttpd server.
+- **Polling Loop:** Executing API requests sequentially every scan interval (user-configurable, default 30s) to prevent overwhelming the router's lighttpd server.
 - **Caching:** Storing the latest fetched values from the API models so Home Assistant entities can read them instantly without making network calls.
+
+### Diagnostics (`diagnostics.py`)
+The integration implements the Home Assistant `diagnostics` platform. This allows users to download a sanitized JSON snapshot of the router's state for debugging. 
+When adding new data points to the hub, ensure they are also captured in `async_get_config_entry_diagnostics` and properly redacted if they contain PII (SSIDs, MACs, IPs, etc.).
 
 ### Entities (`entities/`)
 Entities are split by Home Assistant domain (e.g., `sensor.py`, `switch.py`, `button.py`). 
-Entities should **never** make direct network calls in their `_async_update_data` properties. Instead, they should return properties directly from the cached `GLinetHub` state. Network calls are strictly reserved for state-mutating actions (e.g., toggling a switch or pressing a button).
+All entities inherit from `CoordinatorEntity[GLinetHub]`. Entities should **never** make direct network calls in their property methods. Instead, they should return values directly from the cached `GLinetHub` state. Network calls (like toggling a switch) must be performed via the hub's methods.
 
 ## Development Guidelines
 
 ### Adding a New Sensor
 To add a new sensor for an existing API endpoint:
 1. **Models:** Update `api/models.py` if the new field isn't captured in the dataclass.
-2. **Hub:** Ensure `hub.py` fetches and exposes the data you need.
-3. **Entities:** Add your sensor to `entities/sensor.py` by inheriting from `GLinetCoordinatorEntity`.
-4. **Tests:** Update your mock tests to ensure the new sensor state works correctly.
+2. **Hub:** Update `hub.py` to fetch, store, and expose the new data point.
+3. **Entities:** Add your sensor to `entities/sensor.py`.
+4. **Diagnostics:** Update `diagnostics.py` to include the new data point in the export.
+5. **Tests:** Update your mock tests in `tests/` to ensure the new sensor state works correctly.
 
 ### Tooling
 The project relies on standard Python development tools:
