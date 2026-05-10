@@ -20,6 +20,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hub = GLinetHub(hass, entry)
     await hub.async_initialize_hub()
+    await hub.async_config_entry_first_refresh()
     entry.runtime_data = hub
     entry.async_on_unload(entry.add_update_listener(handle_options_update))
     from .services import async_register_services

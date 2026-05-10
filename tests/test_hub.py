@@ -459,8 +459,6 @@ async def test_async_initialize_hub_cleans_up_orphaned_entities(monkeypatch) -> 
     hub.refresh_session_token = _noop
     hub.fetch_all_data = _noop
     
-    import custom_components.ha_glinet.hub as hub_module
-    monkeypatch.setattr(hub_module, "async_track_time_interval", lambda *args: None)
 
     await hub.async_initialize_hub()
 

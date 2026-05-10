@@ -21,6 +21,6 @@
 
 ## Polling
 
-The integration uses a 30-second polling interval defined by `SCAN_INTERVAL`. 
+The integration uses a 30-second polling interval managed by a `DataUpdateCoordinator`. This ensures efficient data fetching and automatic entity updates across all platforms.
 
-Optional modules (Cellular, SMS, VPNs) are handled defensively. If a router does not support an optional API (e.g., no modem present), the hub logs a debug message and skips that data point, ensuring the core integration remains functional.
+Optional modules (Cellular, SMS, VPNs) are handled defensively. If a router does not support an optional API (e.g., no modem present), the coordinator logs a debug message and skips that data point, ensuring the core integration remains functional.

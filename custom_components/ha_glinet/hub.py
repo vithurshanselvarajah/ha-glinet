@@ -27,7 +27,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import (
     APIClientError,
@@ -73,9 +73,14 @@ SCAN_INTERVAL = timedelta(seconds=30)
 T = TypeVar("T")
 
 
-class GLinetHub:
+class GLinetHub(DataUpdateCoordinator[None]):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
-        self.hass = hass
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=DOMAIN,
+            update_interval=SCAN_INTERVAL,
+        )
         self._entry = entry
         self._options = dict(entry.options)
         self._settings = dict(entry.data) | dict(entry.options)
@@ -108,6 +113,15 @@ class GLinetHub:
         self._late_init_complete = False
         self._connect_error = False
         self._token_error = False
+
+    async def _async_update_data(self) -> None:
+        """Fetch data from GL-INet router."""
+        try:
+            await self.fetch_all_data()
+        except ConfigEntryAuthFailed:
+            raise
+        except Exception as err:
+            raise UpdateFailed(f"Error communicating with API: {err}") from err
 
     @property
     def enabled_features(self) -> set[str]:
@@ -165,7 +179,6 @@ class GLinetHub:
                     entry.original_name,
                 )
         await self.fetch_all_data()
-        async_track_time_interval(self.hass, self._async_poll_update, SCAN_INTERVAL)
 
     def _create_api_client(self) -> GLinetApiClient:
         session = async_get_clientsession(self.hass)
@@ -283,7 +296,7 @@ class GLinetHub:
             self._sms_messages = {}
 
     async def _async_poll_update(self, _: datetime | None = None) -> None:
-        await self.fetch_all_data()
+        await self.async_refresh()
 
     async def _invoke_api(self, api_callable: Callable[[], Awaitable[T]]) -> T | None:
         try:

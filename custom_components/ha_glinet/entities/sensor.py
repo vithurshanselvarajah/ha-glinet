@@ -15,6 +15,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.dt import utcnow
 
 from ..const import DOMAIN, FEATURE_CELLULAR, FEATURE_REPEATER, FEATURE_SMS
@@ -501,8 +502,9 @@ async def async_setup_entry(
     )
 
 
-class GLinetSensorBase(SensorEntity):
+class GLinetSensorBase(CoordinatorEntity[GLinetHub], SensorEntity):
     def __init__(self, hub: GLinetHub, entity_description: SystemStatusEntityDescription) -> None:
+        super().__init__(hub)
         self.hub = hub
         self.entity_description = entity_description
         self._attr_device_info = hub.device_info
@@ -524,8 +526,9 @@ class SystemStatusSensor(GLinetSensorBase):
         return self.entity_description.value_fn(self.hub.router_status)
 
 
-class HubStatusSensor(SensorEntity):
+class HubStatusSensor(CoordinatorEntity[GLinetHub], SensorEntity):
     def __init__(self, hub: GLinetHub, entity_description: HubSensorEntityDescription) -> None:
+        super().__init__(hub)
         self.hub = hub
         self.entity_description = entity_description
         self._attr_device_info = hub.device_info
@@ -557,7 +560,7 @@ class SystemUptimeSensor(GLinetSensorBase):
         return self._current_value
 
 
-class ClientBandwidthSensor(SensorEntity):
+class ClientBandwidthSensor(CoordinatorEntity[GLinetHub], SensorEntity):
     _attr_has_entity_name = True
 
     def __init__(
@@ -566,6 +569,7 @@ class ClientBandwidthSensor(SensorEntity):
         device: ClientDeviceInfo,
         entity_description: ClientBandwidthEntityDescription,
     ) -> None:
+        super().__init__(hub)
         self._hub = hub
         self._device = device
         self.entity_description = entity_description
@@ -585,7 +589,7 @@ class ClientBandwidthSensor(SensorEntity):
         return self.entity_description.value_fn(self._device)
 
 
-class RepeaterChannelSensor(SensorEntity):
+class RepeaterChannelSensor(CoordinatorEntity[GLinetHub], SensorEntity):
     """Sensor for repeater WiFi channel showing band and channel."""
 
     _attr_has_entity_name = True
@@ -594,6 +598,7 @@ class RepeaterChannelSensor(SensorEntity):
     _attr_translation_key = "repeater_channel"
 
     def __init__(self, hub: GLinetHub) -> None:
+        super().__init__(hub)
         self._hub = hub
         self._attr_device_info = hub.device_info
         self._attr_options = ["2_4ghz", "5ghz"]

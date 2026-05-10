@@ -1,12 +1,11 @@
-# Hub Logic (`hub.py`)
-
-The `GLinetHub` class coordinates communication between Home Assistant and the router. It manages the session lifecycle, error handling, and periodic polling (30s).
+The `GLinetHub` class inherits from `DataUpdateCoordinator` and manages communication between Home Assistant and the router. It handles the session lifecycle, error handling, and periodic polling (30s).
 
 ## Core Functions
 
 | Function | Purpose |
 | --- | --- |
-| `async_initialize_hub` | Performs late initialization (fetching model/MAC) and starts the polling interval. |
+| `_async_update_data` | The entry point for the coordinator update. Triggers `fetch_all_data`. |
+| `async_initialize_hub` | Performs late initialization (fetching model/MAC). |
 | `refresh_session_token` | Authenticates with the router RPC and updates the active session ID. |
 | `fetch_all_data` | Concurrently triggers all data update functions listed below. |
 | `_invoke_api` | Internal wrapper for API calls; handles timeouts, token renewal, and error logging. |
