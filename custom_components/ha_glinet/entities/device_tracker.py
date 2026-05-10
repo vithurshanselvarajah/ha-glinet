@@ -8,12 +8,12 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from ..hub import GLinetHub
+from ..models import ClientDeviceInfo
+
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-
-    from ..hub import GLinetHub
-    from ..models import ClientDeviceInfo
 
 DEFAULT_DEVICE_NAME = "Unknown device"
 

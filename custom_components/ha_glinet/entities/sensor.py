@@ -20,7 +20,8 @@ from homeassistant.util.dt import utcnow
 
 from ..api.models import RouterStatus
 from ..const import DOMAIN, FEATURE_CELLULAR, FEATURE_REPEATER, FEATURE_SMS
-from ..models import RepeaterState
+from ..hub import GLinetHub
+from ..models import ClientDeviceInfo, RepeaterState
 from ..utils import channel_to_band, get_first_int, get_first_value
 
 if TYPE_CHECKING:
@@ -28,9 +29,6 @@ if TYPE_CHECKING:
 
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
-
-    from ..hub import GLinetHub
-    from ..models import ClientDeviceInfo
 
 
 @dataclass(frozen=True, kw_only=True)
