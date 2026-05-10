@@ -26,16 +26,38 @@ class SystemModule(BaseModule):
         response = await self._call("system", "get_status")
         status = dict(response)
         sys_info = status.get("system", {})
+        
+        def _get(key, default=None):
+            val = status.get(key)
+            if val is None:
+                val = sys_info.get(key)
+            return val if val is not None else default
+
+        load_average = (
+            _get("load_average") 
+            or _get("loadavg") 
+            or []
+        )
+        
+        cpu = status.get("cpu") or sys_info.get("cpu") or {}
+        temperature = cpu.get("temperature")
+        if temperature is None:
+            temperature = cpu.get("temp")
+        if temperature is None:
+            temperature = _get("temperature")
+        if temperature is None:
+            temperature = _get("temp")
+
         return RouterStatus(
-            uptime=status.get("uptime", 0),
-            load_average=status.get("load_average", []),
-            memory_total=sys_info.get("memory_total", 0),
-            memory_free=sys_info.get("memory_free", 0),
-            memory_shared=sys_info.get("memory_shared", 0),
-            memory_buffered=sys_info.get("memory_buffered", 0),
-            temperature=status.get("cpu", {}).get("temperature"),
-            flash_total=sys_info.get("flash_total", 0),
-            flash_free=sys_info.get("flash_free", 0),
+            uptime=_get("uptime", 0),
+            load_average=load_average,
+            memory_total=_get("memory_total", 0),
+            memory_free=_get("memory_free", 0),
+            memory_shared=_get("memory_shared", 0),
+            memory_buffered=_get("memory_buffered") or _get("memory_buff_cache") or 0,
+            temperature=temperature,
+            flash_total=_get("flash_total", 0),
+            flash_free=_get("flash_free", 0),
         )
 
     async def get_load(self) -> dict[str, Any]:
