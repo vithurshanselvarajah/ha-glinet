@@ -8,12 +8,14 @@
           "host": "Router Address",
           "password": "Admin Password",
           "consider_home": "Away Delay",
+          "scan_interval": "Update Interval",
           "enabled_features": "Enabled Features"
         },
         "data_description": {
           "host": "Use the router URL or IP address (for example: http://192.168.8.1).",
           "password": "Provide the same password you use for the router admin interface.",
-          "consider_home": "Set how many seconds a client can be offline before it is marked away."
+          "consider_home": "Set how many seconds a client can be offline before it is marked away.",
+          "scan_interval": "Number of seconds between polling the router for updates."
         }
       }
     },
@@ -33,12 +35,14 @@
           "host": "Router Address",
           "password": "Admin Password",
           "consider_home": "Away Delay",
+          "scan_interval": "Update Interval",
           "enabled_features": "Enabled Features"
         },
         "data_description": {
           "host": "Use the router URL or IP address (for example: http://192.168.8.1).",
           "password": "Provide the same password you use for the router admin interface.",
-          "consider_home": "Set how many seconds a client can be offline before it is marked away."
+          "consider_home": "Set how many seconds a client can be offline before it is marked away.",
+          "scan_interval": "Number of seconds between polling the router for updates."
         }
       }
     }
