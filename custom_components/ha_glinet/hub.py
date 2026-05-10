@@ -668,7 +668,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 (CONNECTION_NETWORK_MAC, format_mac(self.device_mac)),
                 (CONNECTION_NETWORK_MAC, compute_mac_offset(self.device_mac, 1)),
             },
-            name=self.name,
+            name=self.hub_name,
             model=self.router_model or "GL-INet Router",
             manufacturer="GL-INet",
             configuration_url=self._host,
@@ -698,7 +698,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         return self._model.upper()
 
     @property
-    def name(self) -> str:
+    def hub_name(self) -> str:
         return f"GL-INet {self._model.upper()}"
 
     @property
