@@ -202,9 +202,9 @@ class GLinetHub(DataUpdateCoordinator[None]):
         if not router_info:
             raise ConfigEntryNotReady("Unable to retrieve router info during setup")
 
-        self._model = str(router_info.get(CONF_MODEL, "UNKNOWN"))
-        self._sw_version = str(router_info.get("firmware_version", "UNKNOWN"))
-        self._factory_mac = str(router_info.get(CONF_MAC, "UNKNOWN"))
+        self._model = str(router_info.model or "UNKNOWN")
+        self._sw_version = str(router_info.firmware_version or "UNKNOWN")
+        self._factory_mac = str(router_info.mac or "UNKNOWN")
         self._late_init_complete = True
 
     async def refresh_session_token(self) -> None:

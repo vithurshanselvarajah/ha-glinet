@@ -110,8 +110,8 @@ class SetupHub:
             _LOGGER.info("Failed to authenticate with GL-INet router during validation")
             return False
 
-        self.router_mac = str(info[CONF_MAC])
-        self.router_model = str(info["model"])
+        self.router_mac = str(info.mac)
+        self.router_model = str(info.model)
         return self.router.logged_in
 
 
