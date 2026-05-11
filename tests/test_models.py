@@ -85,7 +85,7 @@ def test_sms_message_direction_unknown() -> None:
     msg = SmsMessage(message_id="1", phone_number="123", text="hi", status=None)
     assert msg.direction == SmsDirection.UNKNOWN
 
-    msg.status = 999  # Unknown status
+    msg.status = 999
     assert msg.direction == SmsDirection.UNKNOWN
 
 

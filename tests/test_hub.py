@@ -89,7 +89,7 @@ async def test_fetch_cellular_status_merges_modem_info_and_status() -> None:
     )
 
     await hub.fetch_cellular_status()
-    
+
     assert hub.default_modem_bus == "1-1"
 
     assert hub.cellular_status["modems"] == [
@@ -134,7 +134,7 @@ async def test_send_sms_uses_default_modem_bus() -> None:
         async def send_sms(self, bus: str, recipient: str, text: str) -> dict[str, Any]:
             sent.append((bus, recipient, text))
             return {"response": "ok"}
-            
+
     class RouterApi:
         modem = ModemModule()
 
@@ -364,7 +364,7 @@ async def test_connect_to_wifi_calls_router_api_and_refreshes_status(monkeypatch
                 )
             )
             return {}
-            
+
     class RouterApi:
         repeater = RepeaterModule()
 
@@ -388,7 +388,7 @@ async def test_disconnect_wifi_calls_router_api_and_refreshes_status(monkeypatch
         async def disconnect(self) -> dict[str, Any]:
             called.append("disconnect")
             return {}
-            
+
     class RouterApi:
         repeater = RepeaterModule()
 
@@ -414,7 +414,7 @@ async def test_set_repeater_band_updates_config(monkeypatch) -> None:
         ) -> dict[str, Any]:
             called.append(params.get("lock_band"))
             return {}
-            
+
     class RouterApi:
         repeater = RepeaterModule()
 
@@ -463,7 +463,7 @@ async def test_get_saved_wifi_networks_and_remove_saved_wifi_network(monkeypatch
         async def remove_saved_ap(self, ssid: str) -> dict[str, Any]:
             api_calls.append(f"remove:{ssid}")
             return {}
-            
+
     class RouterApi:
         repeater = RepeaterModule()
 
@@ -482,13 +482,13 @@ async def test_get_saved_wifi_networks_and_remove_saved_wifi_network(monkeypatch
 
 async def test_async_initialize_hub_cleans_up_orphaned_entities(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
-    hub._settings = {CONF_ENABLED_FEATURES: []} # All optional features disabled
+    hub._settings = {CONF_ENABLED_FEATURES: []}
     hub._entry = types.SimpleNamespace(entry_id="test_entry")
     hub.hass = MagicMock()
     hub._late_init_complete = True
     hub._factory_mac = "00:11:22:33:44:55"
 
-    # Mock registry entries
+
     orphan_entry = types.SimpleNamespace(
         entity_id="sensor.glinet_cellular_signal",
         unique_id="glinet_sensor/00:11:22:33:44:55/cellular_signal",
@@ -502,7 +502,7 @@ async def test_async_initialize_hub_cleans_up_orphaned_entities(monkeypatch) -> 
 
     mock_er = MagicMock()
     mock_er.async_remove = MagicMock()
-    
+
     import homeassistant.helpers.entity_registry as er
     monkeypatch.setattr(er, "async_get", lambda _: mock_er)
     monkeypatch.setattr(
@@ -513,11 +513,11 @@ async def test_async_initialize_hub_cleans_up_orphaned_entities(monkeypatch) -> 
 
     hub.refresh_session_token = _noop
     hub.fetch_all_data = _noop
-    
+
 
     await hub.async_initialize_hub()
 
-    # Verify cellular sensor (orphan) was removed but uptime (core) was not
+
     mock_er.async_remove.assert_called_once_with("sensor.glinet_cellular_signal")
 
 
@@ -533,13 +533,13 @@ async def test_fetch_connected_devices_respects_add_all_devices_option(monkeypat
     hub._entry = types.SimpleNamespace(entry_id="test_entry", unique_id="unique_id")
     hub.hass = MagicMock()
 
-    # Mock dev reg to return no existing devices
+
     mock_dr = MagicMock()
     mock_dr.async_get_device.return_value = None
     import homeassistant.helpers.device_registry as dr
     monkeypatch.setattr(dr, "async_get", lambda _: mock_dr)
 
-    # API returns one online client
+
     hub._api = types.SimpleNamespace(clients=types.SimpleNamespace(get_online=AsyncMock()))
     hub._invoke_api = AsyncMock(
         return_value={"11:22:33:44:55:66": {"online": True, "ip": "1.1.1.1"}}
@@ -547,7 +547,7 @@ async def test_fetch_connected_devices_respects_add_all_devices_option(monkeypat
 
     await hub.fetch_connected_devices()
 
-    # Should be added even if not known to HA because add_all_devices=True
+
     assert "11:22:33:44:55:66" in hub._devices
     assert hub._devices["11:22:33:44:55:66"].is_known is False
 
@@ -560,7 +560,7 @@ async def test_async_initialize_hub_cleans_up_unknown_devices(monkeypatch) -> No
     hub._late_init_complete = True
     hub._factory_mac = "00:11:22:33:44:55"
 
-    # Mock registry entries
+
     unknown_tracker = types.SimpleNamespace(
         entity_id="device_tracker.unknown",
         unique_id="aa:bb:cc:dd:ee:ff",
@@ -574,7 +574,7 @@ async def test_async_initialize_hub_cleans_up_unknown_devices(monkeypatch) -> No
 
     mock_er = MagicMock()
     mock_er.async_remove = MagicMock()
-    
+
     import homeassistant.helpers.device_registry as dr
     import homeassistant.helpers.entity_registry as er
     monkeypatch.setattr(er, "async_get", lambda _: mock_er)
@@ -584,77 +584,77 @@ async def test_async_initialize_hub_cleans_up_unknown_devices(monkeypatch) -> No
         MagicMock(return_value=[unknown_tracker, unknown_sensor]),
     )
 
-    # Mock device registry to show no other config entries for this MAC
+
     mock_dr = MagicMock()
     mock_dr.async_get_device.return_value = types.SimpleNamespace(
         id="device_id",
         name="Test Device",
-        config_entries={"test_entry"} # Only our entry
+        config_entries={"test_entry"}
     )
     mock_dr.async_remove_device = MagicMock()
     monkeypatch.setattr(dr, "async_get", lambda _: mock_dr)
 
     hub.refresh_session_token = _noop
     hub.fetch_all_data = _noop
-    
+
     await hub.async_initialize_hub()
 
-    # Verify both entities were removed
+
     assert mock_er.async_remove.call_count == 2
     mock_er.async_remove.assert_any_call("device_tracker.unknown")
     mock_er.async_remove.assert_any_call("sensor.unknown_bandwidth")
-    
-    # Verify device was removed
+
+
     assert mock_dr.async_remove_device.call_count >= 1
     mock_dr.async_remove_device.assert_any_call("device_id")
 
 
 async def test_fetch_wg_server_status(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
-    
+
     class WgServerModule:
         async def get_status(self) -> dict[str, Any]:
             return {"server": {"status": 1}, "peers": [{"status": 1}, {"status": 0}]}
-            
+
     hub._api = types.SimpleNamespace(wg_server=WgServerModule())
     hub._invoke_api = lambda api_callable: api_callable()
-    
+
     await hub.fetch_wg_server_status()
-    
+
     assert hub.wg_server_status.enabled is True
     assert hub.wg_server_connected_users == 1
 
 async def test_start_wg_server(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
     called = []
-    
+
     class WgServerModule:
         async def start(self) -> dict[str, Any]:
             called.append("start")
             return {"ok": True}
         async def get_status(self) -> dict[str, Any]:
             return {"server": {"status": 1}}
-            
+
     hub._api = types.SimpleNamespace(wg_server=WgServerModule())
     hub._invoke_api = lambda api_callable: api_callable()
-    
+
     await hub.start_wg_server()
     assert "start" in called
 
 async def test_stop_wg_server(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
     called = []
-    
+
     class WgServerModule:
         async def stop(self) -> dict[str, Any]:
             called.append("stop")
             return {"ok": True}
         async def get_status(self) -> dict[str, Any]:
             return {"server": {"status": 0}}
-            
+
     hub._api = types.SimpleNamespace(wg_server=WgServerModule())
     hub._invoke_api = lambda api_callable: api_callable()
-    
+
     await hub.stop_wg_server()
     assert "stop" in called
 

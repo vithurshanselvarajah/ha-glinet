@@ -4,6 +4,8 @@ import sys
 import types
 from dataclasses import dataclass
 
+from custom_components.ha_glinet.utils import get_first_int, get_first_value
+
 
 def _install_sensor_dependency_stubs() -> None:
     @dataclass(frozen=True, kw_only=True)
@@ -51,8 +53,6 @@ def _install_sensor_dependency_stubs() -> None:
 
 
 _install_sensor_dependency_stubs()
-
-from custom_components.ha_glinet.utils import get_first_int, get_first_value  # noqa: E402
 
 
 def test_first_int_searches_nested_payloads() -> None:

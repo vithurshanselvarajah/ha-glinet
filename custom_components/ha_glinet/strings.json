@@ -149,6 +149,9 @@
       },
       "wg_server_users": {
         "name": "WireGuard server users"
+      },
+      "ovpn_server_users": {
+        "name": "OpenVPN server users"
       }
     },
     "binary_sensor": {
@@ -190,6 +193,9 @@
       },
       "wg_server": {
         "name": "WG Server"
+      },
+      "ovpn_server": {
+        "name": "OpenVPN Server"
       }
     },
     "number": {}

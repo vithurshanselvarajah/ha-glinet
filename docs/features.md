@@ -8,8 +8,8 @@
 - Connected device trackers.
 - CPU temperature, load average, memory usage, flash usage, and uptime sensors.
 - WiFi interface switches.
-- WireGuard client switches.
-- WireGuard server switch.
+- WireGuard client and server switches.
+- OpenVPN client and server switches.
 - Tailscale switch.
 
 ## Added Operational Features
@@ -22,13 +22,16 @@
 - Repeater mode scanning, connect/disconnect, saved network management, and repeater state support.
 - Fan status monitoring, RPM speed, and threshold temperature control.
 - WireGuard server connected users count.
+- OpenVPN server connected users count.
+- OpenVPN client location selection (when available).
 
 ## Supported Actions
 
 - Reboot router.
 - Enable or disable WiFi interfaces.
-- Enable or disable WireGuard client profiles.
-- Enable or disable WireGuard server.
+- Enable or disable WireGuard client profiles or server.
+- Enable or disable OpenVPN client profiles or server.
+- Select OpenVPN server location from a dropdown (if supported by config).
 - Enable or disable Tailscale when configured.
 - Send text messages when the router exposes SMS support.
 - Remove text messages when the router exposes SMS support.
@@ -55,7 +58,7 @@ When adding the GL.iNet integration or modifying it via the **Configure** menu, 
     - **Cellular**: Enables signal and network monitoring for routers with internal or USB modems.
     - **Repeater**: Enables WiFi station mode management, scanning, and saved network control.
     - **SMS**: Enables the text message inbox sensor and SMS sending/management actions.
-    - **Tailscale / WireGuard Client / WireGuard Server**: Enables monitoring and toggling of VPN connections.
+    - **Tailscale / WireGuard / OpenVPN**: Enables monitoring and toggling of VPN connections and servers.
 
 ## Optional Router Support
 

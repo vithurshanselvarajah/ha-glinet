@@ -8,9 +8,16 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from ..const import FEATURE_REPEATER, FEATURE_TAILSCALE, FEATURE_WG_CLIENT, FEATURE_WG_SERVER
+from ..const import (
+    FEATURE_OVPN_CLIENT,
+    FEATURE_OVPN_SERVER,
+    FEATURE_REPEATER,
+    FEATURE_TAILSCALE,
+    FEATURE_WG_CLIENT,
+    FEATURE_WG_SERVER,
+)
 from ..hub import GLinetHub
-from ..models import WifiInterface, WireGuardClient
+from ..models import OpenVpnClient, WifiInterface, WireGuardClient
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -29,6 +36,10 @@ async def async_setup_entry(
         entities.extend(WireGuardSwitch(hub, client) for client in hub.vpn_clients.values())
     if hub.feature_enabled(FEATURE_WG_SERVER):
         entities.append(WireGuardServerSwitch(hub))
+    if hub.feature_enabled(FEATURE_OVPN_CLIENT):
+        entities.extend(OpenVpnClientSwitch(hub, client) for client in hub.ovpn_clients.values())
+    if hub.feature_enabled(FEATURE_OVPN_SERVER):
+        entities.append(OpenVpnServerSwitch(hub))
     if hub.has_tailscale and hub.feature_enabled(FEATURE_TAILSCALE):
         entities.append(TailscaleSwitch(hub))
     entities.extend(WifiApSwitch(hub, name, iface) for name, iface in hub.wifi_interfaces.items())
@@ -252,4 +263,94 @@ class RepeaterAutoSwitchSwitch(GLinetSwitchBase):
         except OSError:
             _LOGGER.exception("Unable to disable repeater auto-switch")
             return
+        await self._hub.async_request_refresh()
+
+
+class OpenVpnClientSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:vpn"
+
+    def __init__(self, hub: GLinetHub, client: OpenVpnClient) -> None:
+        super().__init__(hub)
+        self._client = client
+
+    @property
+    def unique_id(self) -> str:
+        key = f"{self._client.group_id}_{self._client.client_id}"
+        return f"glinet_switch/{self._hub.device_mac}/{key}/ovpn_client"
+
+    @property
+    def name(self) -> str:
+        name = f"OpenVPN {self._client.name}"
+        if self._client.group_name:
+             name = f"OpenVPN {self._client.group_name} {self._client.name}"
+        return name
+
+    @property
+    def is_on(self) -> bool | None:
+        key = f"{self._client.group_id}_{self._client.client_id}"
+        current = self._hub.ovpn_clients.get(key)
+        if current is not None:
+            self._client = current
+        return self._client.connected
+
+    async def async_turn_on(self, **_: Any) -> None:
+        try:
+            if (
+                self._hub.connected_ovpn_clients
+                and self._client not in self._hub.connected_ovpn_clients
+            ):
+                await self._hub.stop_ovpn_client()
+
+            await self._hub.start_ovpn_client(
+                self._client.group_id,
+                self._client.client_id,
+            )
+        except OSError:
+            _LOGGER.exception("Unable to enable OpenVPN client")
+            return
+        await asyncio.sleep(10)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        try:
+            await self._hub.stop_ovpn_client()
+        except OSError:
+            _LOGGER.exception("Unable to stop OpenVPN client")
+            return
+        await asyncio.sleep(10)
+        await self._hub.async_request_refresh()
+
+
+class OpenVpnServerSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:vpn"
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/ovpn_server"
+
+    @property
+    def name(self) -> str:
+        return "OpenVPN Server"
+
+    @property
+    def is_on(self) -> bool | None:
+        status = self._hub.ovpn_server_status
+        return status.enabled if status else None
+
+    async def async_turn_on(self, **_: Any) -> None:
+        try:
+            await self._hub.start_ovpn_server()
+        except OSError:
+            _LOGGER.exception("Unable to start OpenVPN server")
+            return
+        await asyncio.sleep(10)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        try:
+            await self._hub.stop_ovpn_server()
+        except OSError:
+            _LOGGER.exception("Unable to stop OpenVPN server")
+            return
+        await asyncio.sleep(10)
         await self._hub.async_request_refresh()

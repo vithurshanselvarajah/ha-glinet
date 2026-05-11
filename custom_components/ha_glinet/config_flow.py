@@ -26,6 +26,8 @@ from .const import (
     DEFAULT_USERNAME,
     DOMAIN,
     FEATURE_CELLULAR,
+    FEATURE_OVPN_CLIENT,
+    FEATURE_OVPN_SERVER,
     FEATURE_REPEATER,
     FEATURE_SMS,
     FEATURE_TAILSCALE,
@@ -48,6 +50,8 @@ FEATURE_OPTIONS = [
     {"label": "Tailscale", "value": FEATURE_TAILSCALE},
     {"label": "WireGuard Client", "value": FEATURE_WG_CLIENT},
     {"label": "WireGuard Server", "value": FEATURE_WG_SERVER},
+    {"label": "OpenVPN Client", "value": FEATURE_OVPN_CLIENT},
+    {"label": "OpenVPN Server", "value": FEATURE_OVPN_SERVER},
 ]
 DEFAULT_ENABLED_FEATURES = [
     FEATURE_CELLULAR,
@@ -56,6 +60,8 @@ DEFAULT_ENABLED_FEATURES = [
     FEATURE_TAILSCALE,
     FEATURE_WG_CLIENT,
     FEATURE_WG_SERVER,
+    FEATURE_OVPN_CLIENT,
+    FEATURE_OVPN_SERVER,
 ]
 
 STEP_USER_DATA_SCHEMA = vol.Schema(

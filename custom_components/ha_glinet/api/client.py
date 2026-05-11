@@ -25,6 +25,8 @@ from .modules import (
     LedModule,
     MacCloneModule,
     ModemModule,
+    OvpnClientModule,
+    OvpnServerModule,
     RepeaterModule,
     SystemModule,
     TailscaleModule,
@@ -86,13 +88,15 @@ class GLinetApiClient:
         self.sid = sid
         self._logged_in = sid is not None
 
-        # API Modules
+
         self.system = SystemModule(self)
         self.modem = ModemModule(self)
         self.wifi = WifiModule(self)
         self.clients = ClientsModule(self)
         self.wg_client = WgClientModule(self)
         self.wg_server = WgServerModule(self)
+        self.ovpn_client = OvpnClientModule(self)
+        self.ovpn_server = OvpnServerModule(self)
         self.tailscale = TailscaleModule(self)
         self.repeater = RepeaterModule(self)
         self.fan = FanModule(self)
@@ -194,6 +198,5 @@ class GLinetApiClient:
     @property
     def logged_in(self) -> bool:
         return self._logged_in
-
 
 

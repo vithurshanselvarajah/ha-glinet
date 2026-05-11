@@ -139,6 +139,42 @@ class WireGuardServerStatus:
             rx_bytes=server.get("rx_bytes", 0),
             tx_bytes=server.get("tx_bytes", 0),
         )
+    
+
+@dataclass(slots=True)
+class OpenVpnClient:
+    name: str
+    connected: bool = field(compare=False)
+    group_id: int = 0
+    client_id: int = 0
+    group_name: str | None = None
+    location: str | None = None
+    locations: list[str] = field(default_factory=list)
+    remotes: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class OpenVpnServerStatus:
+    enabled: bool
+    initialization: bool
+    tunnel_ip: str | None = None
+    connected_users: int = 0
+    total_users: int = 0
+    rx_bytes: int = 0
+    tx_bytes: int = 0
+
+    @classmethod
+    def from_api_response(cls, data: dict, users: list[dict]) -> OpenVpnServerStatus:
+        status = data.get("status")
+        return cls(
+            enabled=status == 1,
+            initialization=data.get("initialization", False),
+            tunnel_ip=data.get("tunnel_ip"),
+            connected_users=len(users),
+            total_users=len(users),
+            rx_bytes=data.get("rx_bytes", 0),
+            tx_bytes=data.get("tx_bytes", 0),
+        )
 
 
 @dataclass(slots=True)

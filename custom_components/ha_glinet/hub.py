@@ -43,6 +43,8 @@ from .const import (
     DOMAIN,
     FEATURE_CELLULAR,
     FEATURE_OPTIONS,
+    FEATURE_OVPN_CLIENT,
+    FEATURE_OVPN_SERVER,
     FEATURE_REPEATER,
     FEATURE_SMS,
     FEATURE_TAILSCALE,
@@ -52,6 +54,8 @@ from .const import (
 from .models import (
     ClientDeviceInfo,
     FanStatus,
+    OpenVpnClient,
+    OpenVpnServerStatus,
     RepeaterState,
     RepeaterStatus,
     ScannedNetwork,
@@ -110,8 +114,13 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._last_wifi_scan: datetime | None = None
         self._saved_networks: list[dict[str, Any]] = []
         self._fan_status: FanStatus | None = None
-        self._wg_server_status: dict[str, Any] = {}
         self._wg_server_peers: list[dict[str, Any]] = []
+        self._ovpn_clients: dict[str, OpenVpnClient] = {}
+        self._ovpn_connections: list[OpenVpnClient] | None = None
+        self._ovpn_server_status: dict[str, Any] = {}
+        self._ovpn_server_users: list[dict[str, Any]] = []
+        self._ovpn_raw_clients: dict[str, dict[str, Any]] = {}
+        self._ovpn_client_status: dict[str, Any] = {}
 
         self._late_init_complete = False
         self._connect_error = False
@@ -159,6 +168,12 @@ class GLinetHub(DataUpdateCoordinator[None]):
             ],
             FEATURE_WG_SERVER: [
                 "wg_server",
+            ],
+            FEATURE_OVPN_CLIENT: [
+                "ovpn_client",
+            ],
+            FEATURE_OVPN_SERVER: [
+                "ovpn_server",
             ],
         }
 
@@ -298,6 +313,18 @@ class GLinetHub(DataUpdateCoordinator[None]):
         else:
             self._wg_server_status = {}
             self._wg_server_peers = []
+
+        if self.feature_enabled(FEATURE_OVPN_CLIENT):
+            tasks.append(self.fetch_ovpn_clients())
+        else:
+            self._ovpn_clients = {}
+            self._ovpn_connections = None
+
+        if self.feature_enabled(FEATURE_OVPN_SERVER):
+            tasks.append(self.fetch_ovpn_server_status())
+        else:
+            self._ovpn_server_status = {}
+            self._ovpn_server_users = []
 
         if self.feature_enabled(FEATURE_TAILSCALE):
             tasks.append(self.fetch_tailscale_state())
@@ -524,6 +551,119 @@ class GLinetHub(DataUpdateCoordinator[None]):
     async def stop_wg_server(self) -> None:
         await self._invoke_api(self.router_api.wg_server.stop)
         await self.fetch_wg_server_status()
+
+    async def fetch_ovpn_clients(self) -> None:
+        response = await self._invoke_api(self.router_api.ovpn_client.get_ovpn_clients)
+        if response is None:
+            return
+
+        self._ovpn_clients = {}
+        self._ovpn_raw_clients = {}
+        for config in response:
+            key = f"{config['group_id']}_{config['client_id']}"
+            locations = []
+            if config.get("location"):
+                locations = [loc.strip() for loc in config["location"].split(";")]
+            
+            remotes = []
+            remote_val = config.get("remote")
+            if isinstance(remote_val, list):
+                remotes = remote_val
+            elif isinstance(remote_val, str):
+                remotes = [remote_val]
+
+            self._ovpn_clients[key] = OpenVpnClient(
+                name=str(config["name"]),
+                connected=False,
+                group_id=int(config["group_id"]),
+                client_id=int(config["client_id"]),
+                group_name=config.get("group_name"),
+                location=config.get("location"),
+                locations=locations,
+                remotes=remotes,
+            )
+            self._ovpn_raw_clients[key] = config["raw_data"]
+
+        if not self._ovpn_clients:
+            self._ovpn_connections = []
+            return
+
+        state_response = await self._invoke_api(self.router_api.ovpn_client.get_status)
+        if state_response is None:
+            self._ovpn_client_status = {}
+            return
+
+        self._ovpn_client_status = state_response
+        self._ovpn_connections = []
+        status = state_response.get("status", 0)
+        if status != 0:
+            gid = state_response.get("group_id")
+            cid = state_response.get("client_id")
+            key = f"{gid}_{cid}"
+            if key in self._ovpn_clients:
+                client = self._ovpn_clients[key]
+                client.connected = True
+                self._ovpn_connections.append(client)
+
+    async def set_ovpn_client_location(
+        self, group_id: int, client_id: int, location_index: int
+    ) -> None:
+        key = f"{group_id}_{client_id}"
+        if key not in self._ovpn_raw_clients:
+            return
+        
+        client = self._ovpn_clients[key]
+        if location_index >= len(client.remotes):
+            return
+        
+        selected_remote = client.remotes[location_index]
+        
+        params = dict(self._ovpn_raw_clients[key])
+        params["group_id"] = group_id
+        params["client_id"] = client_id
+        params["remote"] = selected_remote
+        
+        params.pop("location", None)
+        
+        await self._invoke_api(lambda: self.router_api.ovpn_client.set_config(params))
+        
+        if client.connected:
+            await self.stop_ovpn_client()
+            await self.start_ovpn_client(group_id, client_id)
+        else:
+            await self.fetch_ovpn_clients()
+
+    @property
+    def ovpn_client_status(self) -> dict[str, Any]:
+        return self._ovpn_client_status
+
+    async def start_ovpn_client(self, group_id: int, client_id: int) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.ovpn_client.start(group_id, client_id)
+        )
+        await self.fetch_ovpn_clients()
+
+    async def stop_ovpn_client(self) -> None:
+        await self._invoke_api(self.router_api.ovpn_client.stop)
+        await self.fetch_ovpn_clients()
+
+    async def fetch_ovpn_server_status(self) -> None:
+        status_response = await self._invoke_api(self.router_api.ovpn_server.get_status)
+        if status_response is None:
+            self._ovpn_server_status = {}
+            return
+        self._ovpn_server_status = status_response
+        
+        users_response = await self._invoke_api(self.router_api.ovpn_server.get_user_list)
+        self._ovpn_server_users = users_response or []
+
+    async def start_ovpn_server(self) -> None:
+        await self._invoke_api(self.router_api.ovpn_server.start)
+        await self.fetch_ovpn_server_status()
+
+    async def stop_ovpn_server(self) -> None:
+        await self._invoke_api(self.router_api.ovpn_server.stop)
+        await self.fetch_ovpn_server_status()
 
     async def fetch_tailscale_state(self) -> None:
         details = await self._invoke_optional_api(self.router_api.tailscale.get_details)
@@ -794,6 +934,26 @@ class GLinetHub(DataUpdateCoordinator[None]):
         if not self._wg_server_peers:
             return 0
         return sum(1 for p in self._wg_server_peers if p.get("status") == 1)
+
+    @property
+    def ovpn_clients(self) -> dict[str, OpenVpnClient]:
+        return self._ovpn_clients
+
+    @property
+    def connected_ovpn_clients(self) -> list[OpenVpnClient] | None:
+        return self._ovpn_connections
+
+    @property
+    def ovpn_server_status(self) -> OpenVpnServerStatus | None:
+        if not self._ovpn_server_status:
+            return None
+        return OpenVpnServerStatus.from_api_response(
+            self._ovpn_server_status, self._ovpn_server_users
+        )
+
+    @property
+    def ovpn_server_connected_users(self) -> int:
+        return len(self._ovpn_server_users)
 
     @property
     def router_status(self) -> RouterStatus | None:

@@ -19,7 +19,14 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.dt import utcnow
 
 from ..api.models import RouterStatus
-from ..const import DOMAIN, FEATURE_CELLULAR, FEATURE_REPEATER, FEATURE_SMS, FEATURE_WG_SERVER
+from ..const import (
+    DOMAIN,
+    FEATURE_CELLULAR,
+    FEATURE_OVPN_SERVER,
+    FEATURE_REPEATER,
+    FEATURE_SMS,
+    FEATURE_WG_SERVER,
+)
 from ..hub import GLinetHub
 from ..models import ClientDeviceInfo, RepeaterState
 from ..utils import channel_to_band, get_first_int, get_first_value
@@ -379,6 +386,14 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda hub: hub.wg_server_connected_users,
     ),
+    HubSensorEntityDescription(
+        key="ovpn_server_users",
+        name="OpenVPN server users",
+        has_entity_name=True,
+        icon="mdi:account-group",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda hub: hub.ovpn_server_connected_users,
+    ),
 )
 
 FEATURE_SENSOR_MAP: dict[str, str] = {
@@ -399,6 +414,7 @@ FEATURE_SENSOR_MAP: dict[str, str] = {
     "repeater_dns": FEATURE_REPEATER,
     "repeater_bssid": FEATURE_REPEATER,
     "wg_server_users": FEATURE_WG_SERVER,
+    "ovpn_server_users": FEATURE_OVPN_SERVER,
 }
 
 
