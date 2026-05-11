@@ -140,7 +140,6 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="WAN IP",
         has_entity_name=True,
         icon="mdi:ip-network",
-        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda hub: get_first_value(
             hub.cellular_status,
             ("ip",),
