@@ -48,6 +48,7 @@ async def async_setup_entry(
     entities.extend(WifiApSwitch(hub, name, iface) for name, iface in hub.wifi_interfaces.items())
     if hub.feature_enabled(FEATURE_REPEATER):
         entities.append(RepeaterAutoSwitchSwitch(hub))
+    entities.append(LedSwitch(hub))
     async_add_entities(entities, True)
 
 
@@ -407,3 +408,27 @@ class ZeroTierSwitch(GLinetSwitchBase):
                 attrs["note"] = "Add ZeroTier Network ID in router settings"
             return attrs
         return {}
+
+
+class LedSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:led-on"
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/led"
+
+    @property
+    def name(self) -> str:
+        return "System LED"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._hub.led_enabled
+
+    async def async_turn_on(self, **_: Any) -> None:
+        await self._hub.set_led_enabled(True)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        await self._hub.set_led_enabled(False)
+        await self._hub.async_request_refresh()

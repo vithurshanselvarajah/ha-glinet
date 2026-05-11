@@ -8,6 +8,7 @@
 - Connected device trackers.
 - CPU temperature, load average, memory usage, flash usage, and uptime sensors.
 - WiFi interface switches.
+- System LED switch.
 - WireGuard client and server switches.
 - OpenVPN client and server switches.
 - Tailscale switch.
@@ -30,6 +31,7 @@
 
 - Reboot router.
 - Enable or disable WiFi interfaces.
+- Enable or disable the System LED.
 - Enable or disable WireGuard client profiles or server.
 - Enable or disable OpenVPN client profiles or server.
 - Select OpenVPN server location from a dropdown (if supported by config).

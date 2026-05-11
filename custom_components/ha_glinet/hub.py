@@ -124,6 +124,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._ovpn_raw_clients: dict[str, dict[str, Any]] = {}
         self._ovpn_client_status: dict[str, Any] = {}
         self._zerotier_status: ZeroTierStatus | None = None
+        self._led_enabled: bool | None = None
 
         self._late_init_complete = False
         self._connect_error = False
@@ -303,6 +304,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self.fetch_connected_devices(),
             self.fetch_wifi_interfaces(),
             self.fetch_fan_status(),
+            self.fetch_led_status(),
         ]
 
         if self.feature_enabled(FEATURE_WG_CLIENT):
@@ -720,6 +722,21 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 )
             )
             await self.fetch_zerotier_status()
+
+    @property
+    def led_enabled(self) -> bool | None:
+        return self._led_enabled
+
+    async def fetch_led_status(self) -> None:
+        response = await self._invoke_optional_api(self.router_api.led.get_config)
+        if response:
+            self._led_enabled = response.get("led_enable")
+
+    async def set_led_enabled(self, enabled: bool) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.led.set_config({"led_enable": enabled})
+        )
+        await self.fetch_led_status()
 
     async def fetch_cellular_status(self) -> None:
         if self._cached_modem_info is None:

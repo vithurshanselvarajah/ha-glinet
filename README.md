@@ -19,6 +19,7 @@ Included features:
 - Per-client real-time bandwidth (upload/download) sensors.
 - System sensors for CPU temperature, load, memory, flash use, and uptime.
 - WiFi interface switches.
+- System LED switch.
 - WireGuard client and server support.
 - OpenVPN client and server support (with location selection).
 - Tailscale switch.

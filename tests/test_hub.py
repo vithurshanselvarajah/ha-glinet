@@ -190,6 +190,9 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
     async def fake_fetch_fan_status() -> None:
         called.append("fan")
 
+    async def fake_fetch_led_status() -> None:
+        called.append("led")
+
     hub.fetch_system_status = fake_fetch_system_status
     hub.fetch_connected_devices = fake_fetch_connected_devices
     hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
@@ -201,6 +204,7 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
     hub.fetch_fan_status = fake_fetch_fan_status
     hub.refresh_session_token = _noop
 
+    hub.fetch_led_status = fake_fetch_led_status
     await hub.fetch_all_data()
 
     assert called == [
@@ -208,6 +212,7 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
         "clients",
         "wifi",
         "fan",
+        "led",
         "repeater_status",
         "repeater_config",
         "saved_networks",
@@ -241,15 +246,20 @@ async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
     async def fake_fetch_fan_status() -> None:
         called.append("fan")
 
+    async def fake_fetch_led_status() -> None:
+        called.append("led")
+
     hub.fetch_system_status = fake_fetch_system_status
     hub.fetch_connected_devices = fake_fetch_connected_devices
     hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
     hub.fetch_fan_status = fake_fetch_fan_status
+    hub.fetch_led_status = fake_fetch_led_status
     hub.refresh_session_token = _noop
 
+    hub.fetch_led_status = fake_fetch_led_status
     await hub.fetch_all_data()
 
-    assert called == ["system", "clients", "wifi", "fan"]
+    assert called == ["system", "clients", "wifi", "fan", "led"]
     assert hub._wireguard_clients == {}
     assert hub._wireguard_connections is None
     assert hub._tailscale_config == {}
@@ -288,6 +298,9 @@ async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> No
     async def fake_fetch_fan_status() -> None:
         called.append("fan")
 
+    async def fake_fetch_led_status() -> None:
+        called.append("led")
+
     hub.fetch_system_status = fake_fetch_system_status
     hub.fetch_connected_devices = fake_fetch_connected_devices
     hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
@@ -296,6 +309,7 @@ async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> No
     hub.fetch_fan_status = fake_fetch_fan_status
     hub.refresh_session_token = _noop
 
+    hub.fetch_led_status = fake_fetch_led_status
     await hub.fetch_all_data()
 
     assert "wg_client" in called

@@ -199,6 +199,9 @@
       },
       "zerotier": {
         "name": "ZeroTier"
+      },
+      "led": {
+        "name": "System LED"
       }
     },
     "number": {}
