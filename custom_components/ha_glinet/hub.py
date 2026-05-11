@@ -185,6 +185,9 @@ class GLinetHub(DataUpdateCoordinator[None]):
             FEATURE_ADGUARD: [
                 "adguard",
             ],
+            FEATURE_ZEROTIER: [
+                "zerotier",
+            ],
         }
 
         for entry in track_entries:
