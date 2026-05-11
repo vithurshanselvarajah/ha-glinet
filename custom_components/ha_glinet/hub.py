@@ -50,6 +50,7 @@ from .const import (
     FEATURE_TAILSCALE,
     FEATURE_WG_CLIENT,
     FEATURE_WG_SERVER,
+    FEATURE_ZEROTIER,
 )
 from .models import (
     ClientDeviceInfo,
@@ -63,6 +64,7 @@ from .models import (
     WifiInterface,
     WireGuardClient,
     WireGuardServerStatus,
+    ZeroTierStatus,
 )
 from .utils import compute_mac_offset, get_first_int
 
@@ -121,6 +123,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._ovpn_server_users: list[dict[str, Any]] = []
         self._ovpn_raw_clients: dict[str, dict[str, Any]] = {}
         self._ovpn_client_status: dict[str, Any] = {}
+        self._zerotier_status: ZeroTierStatus | None = None
 
         self._late_init_complete = False
         self._connect_error = False
@@ -331,6 +334,11 @@ class GLinetHub(DataUpdateCoordinator[None]):
         else:
             self._tailscale_config = {}
             self._tailscale_connection = None
+
+        if self.feature_enabled(FEATURE_ZEROTIER):
+            tasks.append(self.fetch_zerotier_status())
+        else:
+            self._zerotier_status = None
 
         if self.feature_enabled(FEATURE_CELLULAR):
             tasks.append(self.fetch_cellular_status())
@@ -683,6 +691,36 @@ class GLinetHub(DataUpdateCoordinator[None]):
         await self._invoke_api(self.router_api.tailscale.disconnect)
         await self.fetch_tailscale_state()
 
+    @property
+    def zerotier_status(self) -> ZeroTierStatus | None:
+        return self._zerotier_status
+
+    async def fetch_zerotier_status(self) -> None:
+        config = await self._invoke_optional_api(self.router_api.zerotier.get_config)
+        status = await self._invoke_optional_api(self.router_api.zerotier.get_status)
+        if config is None or status is None:
+            self._zerotier_status = None
+            return
+        self._zerotier_status = ZeroTierStatus.from_api_response(config, status)
+
+    async def start_zerotier(self) -> None:
+        if self._zerotier_status and self._zerotier_status.network_id:
+            await self._invoke_api(
+                lambda: self.router_api.zerotier.set_config(
+                    {"enabled": True, "id": self._zerotier_status.network_id}
+                )
+            )
+            await self.fetch_zerotier_status()
+
+    async def stop_zerotier(self) -> None:
+        if self._zerotier_status and self._zerotier_status.network_id:
+            await self._invoke_api(
+                lambda: self.router_api.zerotier.set_config(
+                    {"enabled": False, "id": self._zerotier_status.network_id}
+                )
+            )
+            await self.fetch_zerotier_status()
+
     async def fetch_cellular_status(self) -> None:
         if self._cached_modem_info is None:
             info_response = await self._invoke_optional_api(self.router_api.modem.get_info)
@@ -979,6 +1017,16 @@ class GLinetHub(DataUpdateCoordinator[None]):
     @property
     def tailscale_connected(self) -> bool | None:
         return self._tailscale_connection
+
+    @property
+    def has_zerotier(self) -> bool:
+        return self._zerotier_status is not None
+
+    @property
+    def zerotier_connected(self) -> bool | None:
+        if self._zerotier_status is None:
+            return None
+        return self._zerotier_status.connected
 
     @property
     def sms_messages(self) -> dict[str, SmsMessage]:

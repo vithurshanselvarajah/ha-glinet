@@ -33,6 +33,7 @@ from .modules import (
     WgClientModule,
     WgServerModule,
     WifiModule,
+    ZeroTierModule,
 )
 
 
@@ -92,6 +93,7 @@ class GLinetApiClient:
         self.system = SystemModule(self)
         self.modem = ModemModule(self)
         self.wifi = WifiModule(self)
+        self.zerotier = ZeroTierModule(self)
         self.clients = ClientsModule(self)
         self.wg_client = WgClientModule(self)
         self.wg_server = WgServerModule(self)

@@ -33,6 +33,7 @@ from .const import (
     FEATURE_TAILSCALE,
     FEATURE_WG_CLIENT,
     FEATURE_WG_SERVER,
+    FEATURE_ZEROTIER,
     INTEGRATION_NAME,
 )
 from .utils import compute_mac_offset
@@ -52,6 +53,7 @@ FEATURE_OPTIONS = [
     {"label": "WireGuard Server", "value": FEATURE_WG_SERVER},
     {"label": "OpenVPN Client", "value": FEATURE_OVPN_CLIENT},
     {"label": "OpenVPN Server", "value": FEATURE_OVPN_SERVER},
+    {"label": "ZeroTier (Requires Network ID setup on router)", "value": FEATURE_ZEROTIER},
 ]
 DEFAULT_ENABLED_FEATURES = [
     FEATURE_CELLULAR,

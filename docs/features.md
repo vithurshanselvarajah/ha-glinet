@@ -11,6 +11,7 @@
 - WireGuard client and server switches.
 - OpenVPN client and server switches.
 - Tailscale switch.
+- ZeroTier switch (Requires Network ID setup on router).
 
 ## Added Operational Features
 
@@ -58,11 +59,11 @@ When adding the GL.iNet integration or modifying it via the **Configure** menu, 
     - **Cellular**: Enables signal and network monitoring for routers with internal or USB modems.
     - **Repeater**: Enables WiFi station mode management, scanning, and saved network control.
     - **SMS**: Enables the text message inbox sensor and SMS sending/management actions.
-    - **Tailscale / WireGuard / OpenVPN**: Enables monitoring and toggling of VPN connections and servers.
+    - **Tailscale / WireGuard / OpenVPN / ZeroTier**: Enables monitoring and toggling of VPN connections and servers.
 
 ## Optional Router Support
 
-GL.iNet firmware varies by model and firmware generation. The integration treats WireGuard, cellular, repeater, SMS, and Tailscale as optional modules. During setup you can choose which of these optional features to enable, and unsupported or unavailable APIs are skipped without failing setup.
+GL.iNet firmware varies by model and firmware generation. The integration treats WireGuard, cellular, repeater, SMS, Tailscale, and ZeroTier as optional modules. During setup you can choose which of these optional features to enable, and unsupported or unavailable APIs are skipped without failing setup.
 
 If you disable all optional features, the integration still registers core router status sensors and entities. 
 

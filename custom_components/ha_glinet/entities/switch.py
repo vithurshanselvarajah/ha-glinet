@@ -15,6 +15,7 @@ from ..const import (
     FEATURE_TAILSCALE,
     FEATURE_WG_CLIENT,
     FEATURE_WG_SERVER,
+    FEATURE_ZEROTIER,
 )
 from ..hub import GLinetHub
 from ..models import OpenVpnClient, WifiInterface, WireGuardClient
@@ -42,6 +43,8 @@ async def async_setup_entry(
         entities.append(OpenVpnServerSwitch(hub))
     if hub.has_tailscale and hub.feature_enabled(FEATURE_TAILSCALE):
         entities.append(TailscaleSwitch(hub))
+    if hub.has_zerotier and hub.feature_enabled(FEATURE_ZEROTIER):
+        entities.append(ZeroTierSwitch(hub))
     entities.extend(WifiApSwitch(hub, name, iface) for name, iface in hub.wifi_interfaces.items())
     if hub.feature_enabled(FEATURE_REPEATER):
         entities.append(RepeaterAutoSwitchSwitch(hub))
@@ -354,3 +357,53 @@ class OpenVpnServerSwitch(GLinetSwitchBase):
             return
         await asyncio.sleep(10)
         await self._hub.async_request_refresh()
+
+
+class ZeroTierSwitch(GLinetSwitchBase):
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/zerotier"
+
+    @property
+    def name(self) -> str:
+        return "ZeroTier"
+
+    @property
+    def icon(self) -> str:
+        return "mdi:lan-connect"
+
+    @property
+    def is_on(self) -> bool | None:
+        if self._hub.zerotier_status is None:
+            return None
+        return self._hub.zerotier_status.enabled
+
+    async def async_turn_on(self, **_: Any) -> None:
+        await self._hub.start_zerotier()
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        await self._hub.stop_zerotier()
+        await self._hub.async_request_refresh()
+
+    @property
+    def available(self) -> bool:
+        if not super().available:
+            return False
+        status = self._hub.zerotier_status
+        return bool(status and status.network_id)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        if status := self._hub.zerotier_status:
+            attrs = {
+                "network_id": status.network_id,
+                "connected": status.connected,
+                "zerotier_ip": status.zerotier_ip,
+                "lan_ip": status.lan_ip,
+                "wan_ip": status.wan_ip,
+            }
+            if not status.network_id:
+                attrs["note"] = "Add ZeroTier Network ID in router settings"
+            return attrs
+        return {}

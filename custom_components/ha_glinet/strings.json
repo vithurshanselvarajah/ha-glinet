@@ -196,6 +196,9 @@
       },
       "ovpn_server": {
         "name": "OpenVPN Server"
+      },
+      "zerotier": {
+        "name": "ZeroTier"
       }
     },
     "number": {}

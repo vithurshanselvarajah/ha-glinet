@@ -178,6 +178,27 @@ class OpenVpnServerStatus:
 
 
 @dataclass(slots=True)
+class ZeroTierStatus:
+    enabled: bool
+    network_id: str | None
+    connected: bool
+    zerotier_ip: str | None
+    lan_ip: str | None
+    wan_ip: str | None
+
+    @classmethod
+    def from_api_response(cls, config: dict, status: dict) -> ZeroTierStatus:
+        return cls(
+            enabled=config.get("enable", False),
+            network_id=config.get("id"),
+            connected=status.get("status") == 0,
+            zerotier_ip=status.get("zerotier_ip"),
+            lan_ip=status.get("lan_ip"),
+            wan_ip=status.get("wan_ip"),
+        )
+
+
+@dataclass(slots=True)
 class WifiInterface:
     name: str
     enabled: bool

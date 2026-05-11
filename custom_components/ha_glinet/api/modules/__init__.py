@@ -12,6 +12,7 @@ from .tailscale import TailscaleModule
 from .wg_client import VpnClientModule, WgClientModule, WireGuardModule
 from .wg_server import WgServerModule
 from .wifi import WifiModule
+from .zerotier import ZeroTierModule
 
 __all__ = [
     "ClientsModule",
@@ -30,4 +31,5 @@ __all__ = [
     "WgServerModule",
     "WifiModule",
     "WireGuardModule",
+    "ZeroTierModule",
 ]
