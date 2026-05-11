@@ -7,16 +7,13 @@ if TYPE_CHECKING:
 
 
 class BaseModule:
-    """Base class for GL-INet API modules."""
 
     def __init__(self, client: GLinetApiClient) -> None:
-        """Initialize the module."""
         self._client = client
 
     async def _call(
         self, module: str, method: str, params: dict[str, Any] | list[Any] | None = None
     ) -> dict[str, Any] | list[Any]:
-        """Make a call to the router."""
         if params is None:
             params = {}
         payload = self._client._build_sid_payload(

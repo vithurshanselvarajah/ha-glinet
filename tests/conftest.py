@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import sys
 import types
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -81,6 +82,9 @@ def pytest_configure() -> None:
         const.CONF_MODEL = "model"
         const.CONF_PASSWORD = "password"
         const.CONF_USERNAME = "username"
+        const.PERCENTAGE = "%"
+        const.EntityCategory = types.SimpleNamespace(DIAGNOSTIC="diagnostic", CONFIG="config")
+        const.UnitOfTemperature = types.SimpleNamespace(CELSIUS="C")
 
         exceptions = types.ModuleType("homeassistant.exceptions")
         exceptions.HomeAssistantError = type("HomeAssistantError", (Exception,), {})
@@ -179,7 +183,37 @@ def pytest_configure() -> None:
         helpers.event = event
         helpers.update_coordinator = update_coordinator
         util.dt = dt
+
+        @dataclass(frozen=True, kw_only=True)
+        class SensorEntityDescription:
+            key: str
+            name: str | None = None
+            has_entity_name: bool | None = None
+            icon: str | None = None
+            entity_category: str | None = None
+            translation_key: str | None = None
+            device_class: str | None = None
+            native_unit_of_measurement: str | None = None
+            state_class: str | None = None
+            suggested_display_precision: int | None = None
+            options: list[str] | None = None
+
+        sensor = types.ModuleType("homeassistant.components.sensor")
+        sensor.SensorDeviceClass = types.SimpleNamespace(
+            DATA_RATE="data_rate",
+            DATA_SIZE="data_size",
+            ENUM="enum",
+            TEMPERATURE="temperature",
+            TIMESTAMP="timestamp",
+        )
+        sensor.SensorEntity = object
+        sensor.SensorEntityDescription = SensorEntityDescription
+        sensor.SensorStateClass = types.SimpleNamespace(
+            MEASUREMENT="measurement",
+            TOTAL_INCREASING="total_increasing",
+        )
         homeassistant.components = components
+        homeassistant.components.sensor = sensor
         homeassistant.config_entries = config_entries
         homeassistant.core = core
         homeassistant.const = const
@@ -208,6 +242,7 @@ def pytest_configure() -> None:
         sys.modules["homeassistant.helpers.update_coordinator"] = update_coordinator
         sys.modules["homeassistant.util"] = util
         sys.modules["homeassistant.util.dt"] = dt
+        sys.modules["homeassistant.components.sensor"] = sensor
 
 
 def pytest_pyfunc_call(pyfuncitem: Any) -> bool:

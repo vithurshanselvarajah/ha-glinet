@@ -5,9 +5,12 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.device_tracker import SourceType
 from homeassistant.components.device_tracker.config_entry import ScannerEntity
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from ..const import DOMAIN
 from ..hub import GLinetHub
 from ..models import ClientDeviceInfo
 
@@ -58,6 +61,11 @@ class GLinetDevice(CoordinatorEntity[GLinetHub], ScannerEntity):
         self._attr_name = self._attr_hostname
         self._attr_ip_address = device.ip_address
         self._attr_mac_address = device.mac
+        self._attr_device_info = DeviceInfo(
+            connections={(CONNECTION_NETWORK_MAC, format_mac(device.mac))},
+            name=device.name or device.mac,
+            via_device=(DOMAIN, self._hub.router_id),
+        )
 
     @property
     def is_connected(self) -> bool:
@@ -74,7 +82,6 @@ class GLinetDevice(CoordinatorEntity[GLinetHub], ScannerEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
         self._device = self._hub.tracked_devices[self._device.mac]
         self._attr_hostname = self._device.name or DEFAULT_DEVICE_NAME
         self._attr_name = self._attr_hostname

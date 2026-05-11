@@ -35,10 +35,15 @@ class ModemModule(BaseModule):
                 bus=str(modem.get("bus", "")),
                 model=str(modem.get("model", "")),
                 imei=str(modem.get("imei", "")),
-                iccid=str(modem.get("iccid", "")),
+                iccid=str(modem.get("iccid") or modem.get("simcard", {}).get("iccid", "")),
                 status=str(modem.get("status", "")),
                 signal=modem.get("signal"),
-                network_type=str(modem.get("network_type", "")),
+                network_type=str(
+                    modem.get("network_type")
+                    or modem.get("simcard", {}).get("network_type")
+                    or modem.get("simcard", {}).get("signal", {}).get("network_type", "")
+                ),
+                apn=str(modem.get("apn") or modem.get("simcard", {}).get("apn", "")),
             )
             for modem in merged.values()
         ]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -7,9 +8,18 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from ..const import FEATURE_REPEATER, FEATURE_TAILSCALE, FEATURE_WIREGUARD
+from ..const import (
+    FEATURE_ADGUARD,
+    FEATURE_OVPN_CLIENT,
+    FEATURE_OVPN_SERVER,
+    FEATURE_REPEATER,
+    FEATURE_TAILSCALE,
+    FEATURE_WG_CLIENT,
+    FEATURE_WG_SERVER,
+    FEATURE_ZEROTIER,
+)
 from ..hub import GLinetHub
-from ..models import WifiInterface, WireGuardClient
+from ..models import OpenVpnClient, WifiInterface, WireGuardClient
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -24,13 +34,25 @@ async def async_setup_entry(
 ) -> None:
     hub: GLinetHub = entry.runtime_data
     entities: list[SwitchEntity] = []
-    if hub.feature_enabled(FEATURE_WIREGUARD):
+    if hub.feature_enabled(FEATURE_WG_CLIENT):
         entities.extend(WireGuardSwitch(hub, client) for client in hub.vpn_clients.values())
+    if hub.feature_enabled(FEATURE_WG_SERVER):
+        entities.append(WireGuardServerSwitch(hub))
+    if hub.feature_enabled(FEATURE_OVPN_CLIENT):
+        entities.extend(OpenVpnClientSwitch(hub, client) for client in hub.ovpn_clients.values())
+    if hub.feature_enabled(FEATURE_OVPN_SERVER):
+        entities.append(OpenVpnServerSwitch(hub))
     if hub.has_tailscale and hub.feature_enabled(FEATURE_TAILSCALE):
         entities.append(TailscaleSwitch(hub))
+    if hub.has_zerotier and hub.feature_enabled(FEATURE_ZEROTIER):
+        entities.append(ZeroTierSwitch(hub))
     entities.extend(WifiApSwitch(hub, name, iface) for name, iface in hub.wifi_interfaces.items())
     if hub.feature_enabled(FEATURE_REPEATER):
         entities.append(RepeaterAutoSwitchSwitch(hub))
+    if hub.feature_enabled(FEATURE_ADGUARD):
+        entities.append(AdGuardEnabledSwitch(hub))
+        entities.append(AdGuardDnsEnabledSwitch(hub))
+    entities.append(LedSwitch(hub))
     async_add_entities(entities, True)
 
 
@@ -152,7 +174,7 @@ class WireGuardSwitch(GLinetSwitchBase):
         current = self._hub.vpn_clients.get(self._client.peer_id)
         if current is not None:
             self._client = current
-        return self._client in (self._hub.active_vpn_connections or [])
+        return self._client.connected
 
     async def async_turn_on(self, **_: Any) -> None:
         try:
@@ -181,6 +203,41 @@ class WireGuardSwitch(GLinetSwitchBase):
         except OSError:
             _LOGGER.exception("Unable to stop WireGuard client")
             return
+        await self._hub.async_request_refresh()
+
+
+class WireGuardServerSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:vpn"
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/wg_server"
+
+    @property
+    def name(self) -> str:
+        return "WG Server"
+
+    @property
+    def is_on(self) -> bool | None:
+        status = self._hub.wg_server_status
+        return status.enabled if status else None
+
+    async def async_turn_on(self, **_: Any) -> None:
+        try:
+            await self._hub.start_wg_server()
+        except OSError:
+            _LOGGER.exception("Unable to start WireGuard server")
+            return
+        await asyncio.sleep(10)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        try:
+            await self._hub.stop_wg_server()
+        except OSError:
+            _LOGGER.exception("Unable to stop WireGuard server")
+            return
+        await asyncio.sleep(10)
         await self._hub.async_request_refresh()
 
 
@@ -214,4 +271,222 @@ class RepeaterAutoSwitchSwitch(GLinetSwitchBase):
         except OSError:
             _LOGGER.exception("Unable to disable repeater auto-switch")
             return
+        await self._hub.async_request_refresh()
+
+
+class OpenVpnClientSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:vpn"
+
+    def __init__(self, hub: GLinetHub, client: OpenVpnClient) -> None:
+        super().__init__(hub)
+        self._client = client
+
+    @property
+    def unique_id(self) -> str:
+        key = f"{self._client.group_id}_{self._client.client_id}"
+        return f"glinet_switch/{self._hub.device_mac}/{key}/ovpn_client"
+
+    @property
+    def name(self) -> str:
+        name = f"OpenVPN {self._client.name}"
+        if self._client.group_name:
+             name = f"OpenVPN {self._client.group_name} {self._client.name}"
+        return name
+
+    @property
+    def is_on(self) -> bool | None:
+        key = f"{self._client.group_id}_{self._client.client_id}"
+        current = self._hub.ovpn_clients.get(key)
+        if current is not None:
+            self._client = current
+        return self._client.connected
+
+    async def async_turn_on(self, **_: Any) -> None:
+        try:
+            if (
+                self._hub.connected_ovpn_clients
+                and self._client not in self._hub.connected_ovpn_clients
+            ):
+                await self._hub.stop_ovpn_client()
+
+            await self._hub.start_ovpn_client(
+                self._client.group_id,
+                self._client.client_id,
+            )
+        except OSError:
+            _LOGGER.exception("Unable to enable OpenVPN client")
+            return
+        await asyncio.sleep(10)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        try:
+            await self._hub.stop_ovpn_client()
+        except OSError:
+            _LOGGER.exception("Unable to stop OpenVPN client")
+            return
+        await asyncio.sleep(10)
+        await self._hub.async_request_refresh()
+
+
+class OpenVpnServerSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:vpn"
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/ovpn_server"
+
+    @property
+    def name(self) -> str:
+        return "OpenVPN Server"
+
+    @property
+    def is_on(self) -> bool | None:
+        status = self._hub.ovpn_server_status
+        return status.enabled if status else None
+
+    async def async_turn_on(self, **_: Any) -> None:
+        try:
+            await self._hub.start_ovpn_server()
+        except OSError:
+            _LOGGER.exception("Unable to start OpenVPN server")
+            return
+        await asyncio.sleep(10)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        try:
+            await self._hub.stop_ovpn_server()
+        except OSError:
+            _LOGGER.exception("Unable to stop OpenVPN server")
+            return
+        await asyncio.sleep(10)
+        await self._hub.async_request_refresh()
+
+
+class ZeroTierSwitch(GLinetSwitchBase):
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/zerotier"
+
+    @property
+    def name(self) -> str:
+        return "ZeroTier"
+
+    @property
+    def icon(self) -> str:
+        return "mdi:lan-connect"
+
+    @property
+    def is_on(self) -> bool | None:
+        if self._hub.zerotier_status is None:
+            return None
+        return self._hub.zerotier_status.enabled
+
+    async def async_turn_on(self, **_: Any) -> None:
+        await self._hub.start_zerotier()
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        await self._hub.stop_zerotier()
+        await self._hub.async_request_refresh()
+
+    @property
+    def available(self) -> bool:
+        if not super().available:
+            return False
+        status = self._hub.zerotier_status
+        return bool(status and status.network_id)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        if status := self._hub.zerotier_status:
+            attrs = {
+                "network_id": status.network_id,
+                "connected": status.connected,
+                "zerotier_ip": status.zerotier_ip,
+                "lan_ip": status.lan_ip,
+                "wan_ip": status.wan_ip,
+            }
+            if not status.network_id:
+                attrs["note"] = "Add ZeroTier Network ID in router settings"
+            return attrs
+        return {}
+
+
+class LedSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:led-on"
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/led"
+
+    @property
+    def name(self) -> str:
+        return "System LED"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._hub.led_enabled
+
+    async def async_turn_on(self, **_: Any) -> None:
+        await self._hub.set_led_enabled(True)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        await self._hub.set_led_enabled(False)
+        await self._hub.async_request_refresh()
+
+
+class AdGuardEnabledSwitch(GLinetSwitchBase):
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/adguard_enabled"
+
+    @property
+    def translation_key(self) -> str:
+        return "adguard_enabled"
+
+    @property
+    def icon(self) -> str:
+        return "mdi:shield-check"
+
+    @property
+    def is_on(self) -> bool | None:
+        status = self._hub.adguard_status
+        return status.enabled if status else None
+
+    async def async_turn_on(self, **_: Any) -> None:
+        await self._hub.set_adguard_enabled(True)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        await self._hub.set_adguard_enabled(False)
+        await self._hub.async_request_refresh()
+
+
+class AdGuardDnsEnabledSwitch(GLinetSwitchBase):
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/adguard_dns_enabled"
+
+    @property
+    def translation_key(self) -> str:
+        return "adguard_dns_enabled"
+
+    @property
+    def icon(self) -> str:
+        return "mdi:dns"
+
+    @property
+    def is_on(self) -> bool | None:
+        status = self._hub.adguard_status
+        return status.dns_enabled if status else None
+
+    async def async_turn_on(self, **_: Any) -> None:
+        await self._hub.set_adguard_dns_enabled(True)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        await self._hub.set_adguard_dns_enabled(False)
         await self._hub.async_request_refresh()

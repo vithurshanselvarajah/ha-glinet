@@ -37,25 +37,36 @@ from .api.exceptions import AuthenticationError
 from .api.models import RouterStatus
 from .const import (
     API_PATH,
+    CONF_ADD_ALL_DEVICES,
     CONF_ENABLED_FEATURES,
     DEFAULT_USERNAME,
     DOMAIN,
+    FEATURE_ADGUARD,
     FEATURE_CELLULAR,
     FEATURE_OPTIONS,
+    FEATURE_OVPN_CLIENT,
+    FEATURE_OVPN_SERVER,
     FEATURE_REPEATER,
     FEATURE_SMS,
     FEATURE_TAILSCALE,
-    FEATURE_WIREGUARD,
+    FEATURE_WG_CLIENT,
+    FEATURE_WG_SERVER,
+    FEATURE_ZEROTIER,
 )
 from .models import (
+    AdGuardStatus,
     ClientDeviceInfo,
     FanStatus,
+    OpenVpnClient,
+    OpenVpnServerStatus,
     RepeaterState,
     RepeaterStatus,
     ScannedNetwork,
     SmsMessage,
     WifiInterface,
     WireGuardClient,
+    WireGuardServerStatus,
+    ZeroTierStatus,
 )
 from .utils import compute_mac_offset, get_first_int
 
@@ -107,6 +118,16 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._last_wifi_scan: datetime | None = None
         self._saved_networks: list[dict[str, Any]] = []
         self._fan_status: FanStatus | None = None
+        self._wg_server_peers: list[dict[str, Any]] = []
+        self._ovpn_clients: dict[str, OpenVpnClient] = {}
+        self._ovpn_connections: list[OpenVpnClient] | None = None
+        self._ovpn_server_status: dict[str, Any] = {}
+        self._ovpn_server_users: list[dict[str, Any]] = []
+        self._ovpn_raw_clients: dict[str, dict[str, Any]] = {}
+        self._ovpn_client_status: dict[str, Any] = {}
+        self._zerotier_status: ZeroTierStatus | None = None
+        self._led_enabled: bool | None = None
+        self._adguard_status: AdGuardStatus | None = None
 
         self._late_init_complete = False
         self._connect_error = False
@@ -147,10 +168,22 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 "disconnect_repeater",
             ],
             FEATURE_TAILSCALE: ["tailscale"],
-            FEATURE_WIREGUARD: [
+            FEATURE_WG_CLIENT: [
                 "wireguard_client",
                 "vpn_client",
                 "wg_client",
+            ],
+            FEATURE_WG_SERVER: [
+                "wg_server",
+            ],
+            FEATURE_OVPN_CLIENT: [
+                "ovpn_client",
+            ],
+            FEATURE_OVPN_SERVER: [
+                "ovpn_server",
+            ],
+            FEATURE_ADGUARD: [
+                "adguard",
             ],
         }
 
@@ -167,6 +200,34 @@ class GLinetHub(DataUpdateCoordinator[None]):
                         entity_registry.async_remove(entry.entity_id)
                         removed = True
                         break
+
+            if not removed and not self._settings.get(CONF_ADD_ALL_DEVICES):
+                mac = None
+                if entry.domain == TRACKER_DOMAIN:
+                    mac = entry.unique_id
+                elif entry.unique_id.startswith("glinet_client_sensor/"):
+                    mac = entry.unique_id.split("/")[1]
+
+                if mac:
+                    dev_reg = dr.async_get(self.hass)
+                    device = dev_reg.async_get_device(
+                        connections={(CONNECTION_NETWORK_MAC, format_mac(mac))}
+                    )
+                    if not device or not any(
+                        eid != self._entry.entry_id for eid in device.config_entries
+                    ):
+                        _LOGGER.debug(
+                            "Removing unknown device entity %s (discovery disabled)",
+                            entry.entity_id,
+                        )
+                        entity_registry.async_remove(entry.entity_id)
+                        if device:
+                            _LOGGER.debug(
+                                "Removing unknown device %s (discovery disabled)",
+                                device.name or mac,
+                            )
+                            dev_reg.async_remove_device(device.id)
+                        removed = True
 
             if removed:
                 continue
@@ -249,19 +310,43 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self.fetch_connected_devices(),
             self.fetch_wifi_interfaces(),
             self.fetch_fan_status(),
+            self.fetch_led_status(),
         ]
 
-        if self.feature_enabled(FEATURE_WIREGUARD):
+        if self.feature_enabled(FEATURE_WG_CLIENT):
             tasks.append(self.fetch_wireguard_clients())
         else:
             self._wireguard_clients = {}
             self._wireguard_connections = None
+
+        if self.feature_enabled(FEATURE_WG_SERVER):
+            tasks.append(self.fetch_wg_server_status())
+        else:
+            self._wg_server_status = {}
+            self._wg_server_peers = []
+
+        if self.feature_enabled(FEATURE_OVPN_CLIENT):
+            tasks.append(self.fetch_ovpn_clients())
+        else:
+            self._ovpn_clients = {}
+            self._ovpn_connections = None
+
+        if self.feature_enabled(FEATURE_OVPN_SERVER):
+            tasks.append(self.fetch_ovpn_server_status())
+        else:
+            self._ovpn_server_status = {}
+            self._ovpn_server_users = []
 
         if self.feature_enabled(FEATURE_TAILSCALE):
             tasks.append(self.fetch_tailscale_state())
         else:
             self._tailscale_config = {}
             self._tailscale_connection = None
+
+        if self.feature_enabled(FEATURE_ZEROTIER):
+            tasks.append(self.fetch_zerotier_status())
+        else:
+            self._zerotier_status = None
 
         if self.feature_enabled(FEATURE_CELLULAR):
             tasks.append(self.fetch_cellular_status())
@@ -285,6 +370,11 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._scanned_networks = []
             self._saved_networks = []
             self._last_wifi_scan = None
+
+        if self.feature_enabled(FEATURE_ADGUARD):
+            tasks.append(self.fetch_adguard_status())
+        else:
+            self._adguard_status = None
 
         for task in tasks:
             await task
@@ -379,10 +469,15 @@ class GLinetHub(DataUpdateCoordinator[None]):
             if not existing_device or not any(
                 entry_id != self._entry.entry_id for entry_id in existing_device.config_entries
             ):
-                continue
+                if not self._settings.get(CONF_ADD_ALL_DEVICES):
+                    continue
+                device_is_known = False
+            else:
+                device_is_known = True
 
             new_device = True
             device = ClientDeviceInfo(device_mac)
+            device.is_known = device_is_known
             device.apply_update(dev_info)
             self._devices[device_mac] = device
 
@@ -411,7 +506,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         await self.fetch_wifi_interfaces()
 
     async def fetch_wireguard_clients(self) -> None:
-        response = await self._invoke_api(self.router_api.vpn.get_wireguard_clients)
+        response = await self._invoke_api(self.router_api.wg_client.get_wireguard_clients)
         if response is None:
             return
 
@@ -433,7 +528,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._wireguard_connections = []
             return
 
-        state_response = await self._invoke_api(self.router_api.vpn.get_wireguard_state)
+        state_response = await self._invoke_api(self.router_api.wg_client.get_wireguard_state)
         if state_response is None:
             return
 
@@ -452,15 +547,144 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
     async def start_vpn_client(self, group_id: int, peer_id: int) -> None:
         await self._invoke_api(
-            lambda: self.router_api.vpn.start_wireguard_client(group_id, peer_id)
+            lambda: self.router_api.wg_client.start_wireguard_client(group_id, peer_id)
         )
         await self.fetch_wireguard_clients()
 
     async def stop_vpn_client(self, peer_id: int) -> None:
         await self._invoke_api(
-            lambda: self.router_api.vpn.stop_wireguard_client(peer_id)
+            lambda: self.router_api.wg_client.stop_wireguard_client(peer_id)
         )
         await self.fetch_wireguard_clients()
+
+    async def fetch_wg_server_status(self) -> None:
+        response = await self._invoke_api(self.router_api.wg_server.get_status)
+        if response is None:
+            self._wg_server_status = {}
+            return
+        self._wg_server_status = response
+        self._wg_server_peers = response.get("peers") or []
+
+    async def start_wg_server(self) -> None:
+        await self._invoke_api(self.router_api.wg_server.start)
+        await self.fetch_wg_server_status()
+
+    async def stop_wg_server(self) -> None:
+        await self._invoke_api(self.router_api.wg_server.stop)
+        await self.fetch_wg_server_status()
+
+    async def fetch_ovpn_clients(self) -> None:
+        response = await self._invoke_api(self.router_api.ovpn_client.get_ovpn_clients)
+        if response is None:
+            return
+
+        self._ovpn_clients = {}
+        self._ovpn_raw_clients = {}
+        for config in response:
+            key = f"{config['group_id']}_{config['client_id']}"
+            locations = []
+            if config.get("location"):
+                locations = [loc.strip() for loc in config["location"].split(";")]
+            
+            remotes = []
+            remote_val = config.get("remote")
+            if isinstance(remote_val, list):
+                remotes = remote_val
+            elif isinstance(remote_val, str):
+                remotes = [remote_val]
+
+            self._ovpn_clients[key] = OpenVpnClient(
+                name=str(config["name"]),
+                connected=False,
+                group_id=int(config["group_id"]),
+                client_id=int(config["client_id"]),
+                group_name=config.get("group_name"),
+                location=config.get("location"),
+                locations=locations,
+                remotes=remotes,
+            )
+            self._ovpn_raw_clients[key] = config["raw_data"]
+
+        if not self._ovpn_clients:
+            self._ovpn_connections = []
+            return
+
+        state_response = await self._invoke_api(self.router_api.ovpn_client.get_status)
+        if state_response is None:
+            self._ovpn_client_status = {}
+            return
+
+        self._ovpn_client_status = state_response
+        self._ovpn_connections = []
+        status = state_response.get("status", 0)
+        if status != 0:
+            gid = state_response.get("group_id")
+            cid = state_response.get("client_id")
+            key = f"{gid}_{cid}"
+            if key in self._ovpn_clients:
+                client = self._ovpn_clients[key]
+                client.connected = True
+                self._ovpn_connections.append(client)
+
+    async def set_ovpn_client_location(
+        self, group_id: int, client_id: int, location_index: int
+    ) -> None:
+        key = f"{group_id}_{client_id}"
+        if key not in self._ovpn_raw_clients:
+            return
+        
+        client = self._ovpn_clients[key]
+        if location_index >= len(client.remotes):
+            return
+        
+        selected_remote = client.remotes[location_index]
+        
+        params = dict(self._ovpn_raw_clients[key])
+        params["group_id"] = group_id
+        params["client_id"] = client_id
+        params["remote"] = selected_remote
+        
+        params.pop("location", None)
+        
+        await self._invoke_api(lambda: self.router_api.ovpn_client.set_config(params))
+        
+        if client.connected:
+            await self.stop_ovpn_client()
+            await self.start_ovpn_client(group_id, client_id)
+        else:
+            await self.fetch_ovpn_clients()
+
+    @property
+    def ovpn_client_status(self) -> dict[str, Any]:
+        return self._ovpn_client_status
+
+    async def start_ovpn_client(self, group_id: int, client_id: int) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.ovpn_client.start(group_id, client_id)
+        )
+        await self.fetch_ovpn_clients()
+
+    async def stop_ovpn_client(self) -> None:
+        await self._invoke_api(self.router_api.ovpn_client.stop)
+        await self.fetch_ovpn_clients()
+
+    async def fetch_ovpn_server_status(self) -> None:
+        status_response = await self._invoke_api(self.router_api.ovpn_server.get_status)
+        if status_response is None:
+            self._ovpn_server_status = {}
+            return
+        self._ovpn_server_status = status_response
+        
+        users_response = await self._invoke_api(self.router_api.ovpn_server.get_user_list)
+        self._ovpn_server_users = users_response or []
+
+    async def start_ovpn_server(self) -> None:
+        await self._invoke_api(self.router_api.ovpn_server.start)
+        await self.fetch_ovpn_server_status()
+
+    async def stop_ovpn_server(self) -> None:
+        await self._invoke_api(self.router_api.ovpn_server.stop)
+        await self.fetch_ovpn_server_status()
 
     async def fetch_tailscale_state(self) -> None:
         details = await self._invoke_optional_api(self.router_api.tailscale.get_details)
@@ -479,6 +703,72 @@ class GLinetHub(DataUpdateCoordinator[None]):
     async def disconnect_tailscale(self) -> None:
         await self._invoke_api(self.router_api.tailscale.disconnect)
         await self.fetch_tailscale_state()
+
+    @property
+    def zerotier_status(self) -> ZeroTierStatus | None:
+        return self._zerotier_status
+
+    async def fetch_zerotier_status(self) -> None:
+        config = await self._invoke_optional_api(self.router_api.zerotier.get_config)
+        status = await self._invoke_optional_api(self.router_api.zerotier.get_status)
+        if config is None or status is None:
+            self._zerotier_status = None
+            return
+        self._zerotier_status = ZeroTierStatus.from_api_response(config, status)
+
+    async def start_zerotier(self) -> None:
+        if self._zerotier_status and self._zerotier_status.network_id:
+            await self._invoke_api(
+                lambda: self.router_api.zerotier.set_config(
+                    {"enabled": True, "id": self._zerotier_status.network_id}
+                )
+            )
+            await self.fetch_zerotier_status()
+
+    async def stop_zerotier(self) -> None:
+        if self._zerotier_status and self._zerotier_status.network_id:
+            await self._invoke_api(
+                lambda: self.router_api.zerotier.set_config(
+                    {"enabled": False, "id": self._zerotier_status.network_id}
+                )
+            )
+            await self.fetch_zerotier_status()
+
+    @property
+    def led_enabled(self) -> bool | None:
+        return self._led_enabled
+
+    async def fetch_led_status(self) -> None:
+        response = await self._invoke_optional_api(self.router_api.led.get_config)
+        if response:
+            self._led_enabled = response.get("led_enable")
+
+    async def set_led_enabled(self, enabled: bool) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.led.set_config({"led_enable": enabled})
+        )
+        await self.fetch_led_status()
+
+    async def fetch_adguard_status(self) -> None:
+        data = await self._invoke_optional_api(self._api.adguard.get_config)
+        if data is not None:
+            self._adguard_status = AdGuardStatus.from_api_response(data)
+
+    @property
+    def adguard_status(self) -> AdGuardStatus | None:
+        return self._adguard_status
+
+    async def set_adguard_enabled(self, enabled: bool) -> None:
+        current = self._adguard_status
+        dns_enabled = current.dns_enabled if current else False
+        await self._invoke_api(lambda: self._api.adguard.set_config(enabled, dns_enabled))
+        await self.fetch_adguard_status()
+
+    async def set_adguard_dns_enabled(self, dns_enabled: bool) -> None:
+        current = self._adguard_status
+        enabled = current.enabled if current else False
+        await self._invoke_api(lambda: self._api.adguard.set_config(enabled, dns_enabled))
+        await self.fetch_adguard_status()
 
     async def fetch_cellular_status(self) -> None:
         if self._cached_modem_info is None:
@@ -705,6 +995,10 @@ class GLinetHub(DataUpdateCoordinator[None]):
         return f"GL-INet {self._model.upper()}"
 
     @property
+    def firmware_version(self) -> str:
+        return self._sw_version
+
+    @property
     def tracked_devices(self) -> dict[str, ClientDeviceInfo]:
         return self._devices
 
@@ -717,12 +1011,49 @@ class GLinetHub(DataUpdateCoordinator[None]):
         return self._wireguard_clients
 
     @property
-    def active_vpn_connections(self) -> list[WireGuardClient] | None:
+    def connected_vpn_clients(self) -> list[WireGuardClient] | None:
         return self._wireguard_connections
 
     @property
-    def connected_vpn_clients(self) -> list[WireGuardClient] | None:
-        return self._wireguard_connections
+    def wg_server_status(self) -> WireGuardServerStatus | None:
+        if not self._wg_server_status:
+            return None
+        return WireGuardServerStatus.from_api_response(self._wg_server_status)
+
+    @property
+    def wg_server_connected_users(self) -> int:
+        if not self._wg_server_peers:
+            return 0
+        return sum(1 for p in self._wg_server_peers if p.get("status") == 1)
+
+    @property
+    def ovpn_clients(self) -> dict[str, OpenVpnClient]:
+        return self._ovpn_clients
+
+    @property
+    def connected_ovpn_clients(self) -> list[OpenVpnClient] | None:
+        return self._ovpn_connections
+
+    @property
+    def ovpn_server_status(self) -> OpenVpnServerStatus | None:
+        if not self._ovpn_server_status:
+            return None
+        return OpenVpnServerStatus.from_api_response(
+            self._ovpn_server_status, self._ovpn_server_users
+        )
+
+    @property
+    def ovpn_server_connected_users(self) -> int:
+        return len(self._ovpn_server_users)
+
+    @property
+    def active_vpn_connections(self) -> list[Any]:
+        connections = []
+        if self._wireguard_connections:
+            connections.extend(self._wireguard_connections)
+        if self._ovpn_connections:
+            connections.extend(self._ovpn_connections)
+        return connections
 
     @property
     def router_status(self) -> RouterStatus | None:
@@ -750,12 +1081,23 @@ class GLinetHub(DataUpdateCoordinator[None]):
         return self._tailscale_connection
 
     @property
+    def has_zerotier(self) -> bool:
+        return self._zerotier_status is not None
+
+    @property
+    def zerotier_connected(self) -> bool | None:
+        if self._zerotier_status is None:
+            return None
+        return self._zerotier_status.connected
+
+    @property
     def sms_messages(self) -> dict[str, SmsMessage]:
         return self._sms_messages
 
     @property
     def default_modem_bus(self) -> str | None:
         return self._default_modem_bus
+
 
     @property
     def repeater_status(self) -> RepeaterStatus | None:
@@ -856,3 +1198,5 @@ def _sms_status_is_read(status: Any) -> bool | None:
     if isinstance(status, int):
         return status in {1, 2, 3, 4, 5}
     return None
+
+

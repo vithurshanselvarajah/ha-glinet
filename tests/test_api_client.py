@@ -208,12 +208,43 @@ async def test_get_modem_info_uses_documented_modem_endpoint() -> None:
     assert session.requests[0]["json"]["params"] == ["sid-1", "modem", "get_info", {}]
 
 
+async def test_get_modem_info_extracts_nested_fields() -> None:
+    session = FakeSession(
+        [
+            {"result": {"modems": [{"bus": "1-1", "model": "test-modem"}]}},
+            {
+                "result": {
+                    "modems": [
+                        {
+                            "bus": "1-1",
+                            "simcard": {
+                                "iccid": "iccid-123",
+                                "apn": "test.apn",
+                                "signal": {"network_type": "5G"},
+                            },
+                        }
+                    ]
+                }
+            },
+        ]
+    )
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    info = await client.modem.get_modem_info()
+    assert len(info) == 1
+    assert info[0].bus == "1-1"
+    assert info[0].model == "test-modem"
+    assert info[0].iccid == "iccid-123"
+    assert info[0].network_type == "5G"
+    assert info[0].apn == "test.apn"
+
+
 async def test_wireguard_state_uses_new_vpn_client_module_for_new_firmware() -> None:
     session = FakeSession([{"result": {"status_list": [{"type": "wireguard", "peer_id": 7}]}}])
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
     client._firmware_version = (4, 8, 0, 0)
 
-    assert await client.vpn.get_wireguard_state() == [{"type": "wireguard", "peer_id": 7}]
+    assert await client.wg_client.get_wireguard_state() == [{"type": "wireguard", "peer_id": 7}]
     assert session.requests[0]["json"]["params"] == ["sid-1", "vpn-client", "get_status", {}]
 
 
@@ -222,5 +253,5 @@ async def test_wireguard_state_uses_legacy_module_for_old_firmware() -> None:
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
     client._firmware_version = (4, 7, 9, 0)
 
-    assert await client.vpn.get_wireguard_state() == [{"status": 1, "peer_id": 7}]
+    assert await client.wg_client.get_wireguard_state() == [{"status": 1, "peer_id": 7}]
     assert session.requests[0]["json"]["params"] == ["sid-1", "wg-client", "get_status", {}]

@@ -17,6 +17,7 @@ from homeassistant.helpers.device_registry import format_mac
 from .api import GLinetApiClient, NonZeroResponse
 from .const import (
     API_PATH,
+    CONF_ADD_ALL_DEVICES,
     CONF_ENABLED_FEATURES,
     CONF_SCAN_INTERVAL,
     CONF_TITLE,
@@ -24,11 +25,16 @@ from .const import (
     DEFAULT_URL,
     DEFAULT_USERNAME,
     DOMAIN,
+    FEATURE_ADGUARD,
     FEATURE_CELLULAR,
+    FEATURE_OVPN_CLIENT,
+    FEATURE_OVPN_SERVER,
     FEATURE_REPEATER,
     FEATURE_SMS,
     FEATURE_TAILSCALE,
-    FEATURE_WIREGUARD,
+    FEATURE_WG_CLIENT,
+    FEATURE_WG_SERVER,
+    FEATURE_ZEROTIER,
     INTEGRATION_NAME,
 )
 from .utils import compute_mac_offset
@@ -44,14 +50,23 @@ FEATURE_OPTIONS = [
     {"label": "Repeater", "value": FEATURE_REPEATER},
     {"label": "SMS", "value": FEATURE_SMS},
     {"label": "Tailscale", "value": FEATURE_TAILSCALE},
-    {"label": "WireGuard", "value": FEATURE_WIREGUARD},
+    {"label": "WireGuard Client", "value": FEATURE_WG_CLIENT},
+    {"label": "WireGuard Server", "value": FEATURE_WG_SERVER},
+    {"label": "OpenVPN Client", "value": FEATURE_OVPN_CLIENT},
+    {"label": "OpenVPN Server", "value": FEATURE_OVPN_SERVER},
+    {"label": "ZeroTier (Requires Network ID setup on router)", "value": FEATURE_ZEROTIER},
+    {"label": "AdGuard Home", "value": FEATURE_ADGUARD},
 ]
 DEFAULT_ENABLED_FEATURES = [
     FEATURE_CELLULAR,
     FEATURE_REPEATER,
     FEATURE_SMS,
     FEATURE_TAILSCALE,
-    FEATURE_WIREGUARD,
+    FEATURE_WG_CLIENT,
+    FEATURE_WG_SERVER,
+    FEATURE_OVPN_CLIENT,
+    FEATURE_OVPN_SERVER,
+    FEATURE_ADGUARD,
 ]
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
@@ -79,6 +94,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
             CONF_SCAN_INTERVAL,
             default=30,
         ): vol.All(vol.Coerce(int), vol.Clamp(min=10, max=300)),
+        vol.Optional(CONF_ADD_ALL_DEVICES, default=False): bool,
     }
 )
 
@@ -145,6 +161,7 @@ async def process_user_input(
                 CONF_SCAN_INTERVAL,
                 30,
             ),
+            CONF_ADD_ALL_DEVICES: data.get(CONF_ADD_ALL_DEVICES, False),
         },
     }
 
@@ -231,6 +248,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry, data=self.config_entry.data | info["data"]
+                )
                 return self.async_create_entry(
                     title="",
                     data=self.config_entry.options | info["data"],

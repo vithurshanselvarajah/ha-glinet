@@ -9,13 +9,15 @@
           "password": "Admin Password",
           "consider_home": "Away Delay",
           "scan_interval": "Update Interval",
-          "enabled_features": "Enabled Features"
+          "enabled_features": "Enabled Features",
+          "add_all_devices": "Discover unknown devices"
         },
         "data_description": {
           "host": "Use the router URL or IP address (for example: http://192.168.8.1).",
           "password": "Provide the same password you use for the router admin interface.",
           "consider_home": "Set how many seconds a client can be offline before it is marked away.",
-          "scan_interval": "Number of seconds between polling the router for updates."
+          "scan_interval": "Number of seconds between polling the router for updates.",
+          "add_all_devices": "Automatically track and create entities for every device connected to the router, including those not yet integrated into Home Assistant."
         }
       }
     },
@@ -36,13 +38,15 @@
           "password": "Admin Password",
           "consider_home": "Away Delay",
           "scan_interval": "Update Interval",
-          "enabled_features": "Enabled Features"
+          "enabled_features": "Enabled Features",
+          "add_all_devices": "Discovery unknown devices"
         },
         "data_description": {
           "host": "Use the router URL or IP address (for example: http://192.168.8.1).",
           "password": "Provide the same password you use for the router admin interface.",
           "consider_home": "Set how many seconds a client can be offline before it is marked away.",
-          "scan_interval": "Number of seconds between polling the router for updates."
+          "scan_interval": "Number of seconds between polling the router for updates.",
+          "add_all_devices": "Automatically track and create entities for every device connected to the router, including those not yet integrated into Home Assistant."
         }
       }
     }
@@ -94,6 +98,9 @@
       "cellular_network": {
         "name": "Cellular network"
       },
+      "cellular_apn": {
+        "name": "Cellular APN"
+      },
       "sms_messages": {
         "name": "Text messages"
       },
@@ -139,6 +146,12 @@
       },
       "wan_ip": {
         "name": "WAN IP"
+      },
+      "wg_server_users": {
+        "name": "WireGuard server users"
+      },
+      "ovpn_server_users": {
+        "name": "OpenVPN server users"
       }
     },
     "binary_sensor": {
@@ -177,6 +190,24 @@
       },
       "repeater_auto_switch": {
         "name": "Repeater auto-switch networks"
+      },
+      "wg_server": {
+        "name": "WG Server"
+      },
+      "ovpn_server": {
+        "name": "OpenVPN Server"
+      },
+      "zerotier": {
+        "name": "ZeroTier"
+      },
+      "led": {
+        "name": "System LED"
+      },
+      "adguard_enabled": {
+        "name": "AdGuard Home"
+      },
+      "adguard_dns_enabled": {
+        "name": "AdGuard Home DNS"
       }
     },
     "number": {}

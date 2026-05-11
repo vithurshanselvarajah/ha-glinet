@@ -16,11 +16,15 @@ Included features:
 - Connected device trackers.
 - WAN IP address sensor.
 - Connected client count sensor.
-- Per-client real-time bandwidth (upload/download) sensors.
+- Per-client real-time bandwidth (upload/download) and IP address sensors.
 - System sensors for CPU temperature, load, memory, flash use, and uptime.
 - WiFi interface switches.
-- WireGuard client switches.
+- System LED switch.
+- WireGuard client and server support.
+- OpenVPN client and server support (with location selection).
 - Tailscale switch.
+- ZeroTier switch (Requires Network ID setup on router).
+- AdGuard Home switches (Optional).
 - Optional cellular signal/network sensors.
 - Optional SMS services for sending, viewing and managing text messages in the inbox.
 - Optional repeater mode support for WiFi scan, connect/disconnect, saved networks, and repeater state.
@@ -28,7 +32,7 @@ Included features:
 - **Downloadable Diagnostics**: Provides a sanitized JSON snapshot for easier troubleshooting.
 
 
-During integration setup you can choose which optional GL.iNet features to enable, including WireGuard, cellular, repeater, SMS, and Tailscale. Unsupported choices are skipped gracefully.
+During integration setup you can choose which optional GL.iNet features to enable, including WireGuard, cellular, repeater, SMS, Tailscale, and ZeroTier. Unsupported choices are skipped gracefully.
 
 If no optional features are selected, the integration still exposes basic router sensors and device trackers; only optional modules are disabled.
 

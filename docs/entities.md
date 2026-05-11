@@ -15,7 +15,7 @@ Device trackers are created from online devices returned by the router API **onl
 
 This behavior prevents the integration from automatically adding every guest device, transient client, or unknown IoT device on your network as a new tracker entity.
 
-If you want to track a specific device that is not yet known to Home Assistant, you must first ensure it is added to the Home Assistant device registry by another means.
+However, you can enable the **Discovery unknown devices** option during integration setup or in the options flow. When enabled, the integration will track every device seen by the router, regardless of its status in the Home Assistant device registry. This is useful for monitoring all network activity, but may result in many entities being created.
 
 The tracker monitors:
 
@@ -57,6 +57,8 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 | --- | --- | --- |
 | WAN IP | Optional `modem/get_status` | The IP address assigned to the internet interface (modem). |
 | Connected clients | `clients/get_list` | Count of currently online tracked clients. |
+| WireGuard server users | `wg-server/get_status` | Count of currently online WireGuard server peers. |
+| OpenVPN server users | `ovpn-server/get_status` | Count of currently online OpenVPN server users. |
 
 ### Cellular and SMS
 
@@ -69,6 +71,7 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 | Cellular SINR | Optional `modem/get_status` | Signal-to-Interference-plus-Noise Ratio in dB. |
 | Cellular band | Optional `modem/get_status` | The active frequency band/service type. |
 | Cellular network | Optional `modem/get_status` | Operator/network/mode when available. |
+| Cellular APN | Optional `modem/get_status` | The Access Point Name used for the cellular connection. |
 | Text messages | Optional `sms/get_list` | Count of messages. Attributes include `message_count`, `incoming_count`, `outgoing_count`, and a `messages` list with details like `id`, `phone_number`, `direction`, `status`, `text`, and `timestamp`. |
 
 ### Repeater (WiFi Station)
@@ -97,10 +100,11 @@ The raw channel number and band key are also exposed as `channel` and `band` ext
 
 ### Client Bandwidth
 
-Each tracked client includes real-time bandwidth sensors attached to the client device:
+Each tracked client includes real-time sensors attached to the client device (listed under the **Diagnostic** category):
 
 - Download rate
 - Upload rate
+- IP address
 
 These sensors are created only when the router reports bandwidth fields in the client list. Rates are calculated based on delta changes between polls if explicit rate fields are missing.
 
@@ -118,6 +122,7 @@ These sensors are created only when the router reports bandwidth fields in the c
 | --- | --- | --- |
 | WiFi network | `hub.scanned_networks` | Choose a saved or available WiFi SSID for repeater mode. Groups options by "Known" and "Available". |
 | Repeater band | Optional `repeater/get_config` | Controls the locked wireless band used for repeater scanning and connection. |
+| OpenVPN location | `ovpn-client/get_config` | Choose the server location for an active OpenVPN client profile. |
 
 ## Switches
 
@@ -125,5 +130,12 @@ These sensors are created only when the router reports bandwidth fields in the c
 | --- | --- | --- |
 | WiFi interface switches | `wifi/get_config`, `wifi/set_config` | One switch per WiFi interface reported by the router. |
 | WireGuard client switches | `wg-client` and `vpn-client` APIs | One switch per WireGuard client config returned by the router. Newer firmware uses `vpn-client`; older firmware uses `wg-client`. |
+| WG Server | `wg-server/start`, `wg-server/stop` | Toggle the WireGuard server on or off. |
 | Tailscale | `tailscale/get_status`, `tailscale/set_config` | Created when Tailscale is configured. |
+| ZeroTier | `zerotier/get_status`, `zerotier/set_config` | Created when ZeroTier is configured. Requires Network ID setup on router. |
+| AdGuard Home | `adguardhome/get_config`, `adguardhome/set_config` | Toggle AdGuard Home on or off. |
+| AdGuard Home DNS | `adguardhome/get_config`, `adguardhome/set_config` | Toggle AdGuard Home DNS redirection. |
+| System LED | `led/get_config`, `led/set_config` | Toggle the system status LED. |
 | Repeater auto-switch | `repeater/get_config` | Toggle whether the router automatically switches between saved networks. |
+| OpenVPN client switches | `ovpn-client` API | One switch per OpenVPN client config returned by the router. |
+| OpenVPN Server | `ovpn-server` API | Toggle the OpenVPN server on or off. |

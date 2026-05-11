@@ -38,8 +38,7 @@ class VpnClientModule(BaseModule):
         )
         return dict(response)
 
-class VpnModule(BaseModule):
-    """Unified VPN module handling different types and firmware versions."""
+class WgClientModule(BaseModule):
 
     def __init__(self, client: GLinetApiClient) -> None:
         super().__init__(client)

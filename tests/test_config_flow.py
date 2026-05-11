@@ -9,7 +9,7 @@ from custom_components.ha_glinet.config_flow import (
     SetupHub,
     process_user_input,
 )
-from custom_components.ha_glinet.const import DEFAULT_USERNAME, FEATURE_REPEATER, FEATURE_WIREGUARD
+from custom_components.ha_glinet.const import DEFAULT_USERNAME, FEATURE_REPEATER, FEATURE_WG_CLIENT
 
 
 async def test_process_user_input_stores_enabled_features(monkeypatch) -> None:
@@ -64,4 +64,4 @@ async def test_process_user_input_defaults_enabled_features_when_missing(monkeyp
     )
 
     assert result["data"][CONF_ENABLED_FEATURES] == DEFAULT_ENABLED_FEATURES
-    assert FEATURE_WIREGUARD in result["data"][CONF_ENABLED_FEATURES]
+    assert FEATURE_WG_CLIENT in result["data"][CONF_ENABLED_FEATURES]

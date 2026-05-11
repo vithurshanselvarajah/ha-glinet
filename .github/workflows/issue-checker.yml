@@ -18,7 +18,7 @@ jobs:
         run: |
           # The YAML template produces markdown headers for each ID
           # We check if '### Router model' exists in the issue body
-          if [[ "${{ github.event.issue.body }}" == *"### Router model"* ]]; then
+          if [[ "${{ github.event.issue.body }}" == *"### Router model"* ]] || [[ "${{ github.event.issue.body }}" == *"### Feature description"* ]]; then
             echo "valid=true" >> $GITHUB_OUTPUT
           else
             echo "valid=false" >> $GITHUB_OUTPUT

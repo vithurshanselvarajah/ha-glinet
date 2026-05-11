@@ -8,24 +8,35 @@
 - Connected device trackers.
 - CPU temperature, load average, memory usage, flash usage, and uptime sensors.
 - WiFi interface switches.
-- WireGuard client switches.
+- System LED switch.
+- AdGuard Home switches (Optional).
+- WireGuard client and server switches.
+- OpenVPN client and server switches.
 - Tailscale switch.
+- ZeroTier switch (Requires Network ID setup on router).
 
 ## Added Operational Features
 
 - Connected clients count sensor from online tracked clients.
-- Per-client bandwidth rate sensors attached to client MAC devices.
+- Per-client bandwidth rate and IP address sensors attached to client MAC devices.
 - Cellular signal and network sensors using the optional `modem` module.
 - Text message count sensor with message details as attributes.
 - `send_sms`, `get_sms`, `remove_saved_network`, and `refresh_sms` services.
 - Repeater mode scanning, connect/disconnect, saved network management, and repeater state support.
 - Fan status monitoring, RPM speed, and threshold temperature control.
+- WireGuard server connected users count.
+- OpenVPN server connected users count.
+- OpenVPN client location selection (when available).
+- AdGuard Home management (Enable/Disable, DNS control).
 
 ## Supported Actions
 
 - Reboot router.
 - Enable or disable WiFi interfaces.
-- Enable or disable WireGuard client profiles.
+- Enable or disable the System LED.
+- Enable or disable WireGuard client profiles or server.
+- Enable or disable OpenVPN client profiles or server.
+- Select OpenVPN server location from a dropdown (if supported by config).
 - Enable or disable Tailscale when configured.
 - Send text messages when the router exposes SMS support.
 - Remove text messages when the router exposes SMS support.
@@ -48,15 +59,16 @@ When adding the GL.iNet integration or modifying it via the **Configure** menu, 
 - **Admin Password**: The password for the `root` account used to access the GL.iNet admin panel.
 - **Update Interval**: The polling frequency (in seconds) between 10s and 300s (default 30s). Increase this if you experience router slowdowns.
 - **Consider Home**: Defines the grace period (in seconds) before a device is marked as "Away" in Home Assistant. This helps prevent devices from flickering when they briefly drop off the network.
+- **Discover unknown devices**: A toggle to choose whether to add *all* newly discovered devices to the Home Assistant device registry or only keep tracked/known devices. Toggling this off will automatically clean up any untracked devices.
 - **Enabled Features**: A selection of optional modules to activate for this router instance:
     - **Cellular**: Enables signal and network monitoring for routers with internal or USB modems.
     - **Repeater**: Enables WiFi station mode management, scanning, and saved network control.
     - **SMS**: Enables the text message inbox sensor and SMS sending/management actions.
-    - **Tailscale / WireGuard**: Enables monitoring and toggling of VPN connections.
+    - **Tailscale / WireGuard / OpenVPN / ZeroTier**: Enables monitoring and toggling of VPN connections and servers.
 
 ## Optional Router Support
 
-GL.iNet firmware varies by model and firmware generation. The integration treats WireGuard, cellular, repeater, SMS, and Tailscale as optional modules. During setup you can choose which of these optional features to enable, and unsupported or unavailable APIs are skipped without failing setup.
+GL.iNet firmware varies by model and firmware generation. The integration treats WireGuard, cellular, repeater, SMS, Tailscale, and ZeroTier as optional modules. During setup you can choose which of these optional features to enable, and unsupported or unavailable APIs are skipped without failing setup.
 
 If you disable all optional features, the integration still registers core router status sensors and entities. 
 

@@ -47,3 +47,4 @@ class ModemInfo:
     status: str = ""
     signal: int | None = None
     network_type: str = ""
+    apn: str = ""

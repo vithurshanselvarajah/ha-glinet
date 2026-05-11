@@ -1,0 +1,36 @@
+name: Feature Request
+description: Suggest a new feature or improvement for the integration.
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for proposing a new feature! Please provide as much detail as possible.
+  - type: input
+    id: title
+    attributes:
+      label: Feature title
+      placeholder: Short summary of the feature
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature description
+      description: Explain what the feature does and why it would be useful.
+    validations:
+      required: true
+  - type: textarea
+    id: benefit
+    attributes:
+      label: Benefit
+      description: Describe the benefit to users or the integration.
+    validations:
+      required: false
+  - type: input
+    id: integration_version
+    attributes:
+      label: Integration version (if applicable)
+      placeholder: e.g. 1.2.0
+    validations:
+      required: false

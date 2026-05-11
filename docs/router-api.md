@@ -34,10 +34,14 @@ sid, module-name, function-name, optional parameters
 - `clients`: client list and optional cache clear.
 - `wifi`: interface config and enable/disable.
 - `wg-client` / `vpn-client`: Optional WireGuard client support across older and newer firmware.
+- `wg-server`: Optional WireGuard server status and control.
 - `tailscale`: Tailscale config and state.
 - `modem`: optional cellular status.
 - `repeater`: optional repeater mode status, configuration, WiFi scan, connect/disconnect, and saved AP management.
 - `sms`: optional text message list, send, and delete.
+- `zerotier`: ZeroTier config and state.
+- `adguardhome`: AdGuard Home config and state.
+- `led`: System LED control.
 
 ## Firmware Variation
 
@@ -55,6 +59,6 @@ Core APIs:
 
 Optional APIs:
 
-- LED, cellular, SMS, and client cache clear calls are optional.
+- LED, cellular, SMS, AdGuard Home, and client cache clear calls are optional.
 - Unsupported optional APIs are logged at debug level and do not fail setup.
-- Entities for optional features are created only when useful data is available.
+- Entities for optional features are created only when useful data is available or the feature is enabled in options.

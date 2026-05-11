@@ -17,7 +17,7 @@
 
 1. The config flow validates the router URL and password.
 2. `GLinetHub` authenticates and stores router metadata.
-3. The hub sequentially fetches system, internet, client, WiFi, WireGuard, Tailscale, cellular, and SMS state. Using a sequential loop instead of concurrent task execution acts as a native rate-limiter, ensuring the router's lighttpd/nginx server is not overwhelmed with JSON-RPC payloads.
+3. The hub sequentially fetches system, internet, client, WiFi, WireGuard, OpenVPN, Tailscale, ZeroTier, AdGuard Home, cellular, and SMS state. Using a sequential loop instead of concurrent task execution acts as a native rate-limiter, ensuring the router's lighttpd/nginx server is not overwhelmed with JSON-RPC payloads.
 4. Home Assistant entities read their values from the strongly-typed dataclasses in the hub.
 5. Mutating entities and services call the bundled API client, then refresh affected hub state.
 
@@ -25,4 +25,4 @@
 
 The integration uses a user-configurable polling interval (defaulting to 30 seconds) managed by a `DataUpdateCoordinator`. This ensures efficient data fetching and automatic entity updates across all platforms without flooding the router.
 
-Optional modules (Cellular, SMS, VPNs) are handled defensively. If a router does not support an optional API (e.g., no modem present) or if it is disabled in the options flow, the coordinator logs a debug message and skips that data point, ensuring the core integration remains functional.
+Optional modules (Cellular, SMS, VPNs, AdGuard Home) are handled defensively. If a router does not support an optional API (e.g., no modem present) or if it is disabled in the options flow, the coordinator logs a debug message and skips that data point, ensuring the core integration remains functional.

@@ -19,17 +19,22 @@ from .exceptions import (
     UnsuccessfulRequest,
 )
 from .modules import (
+    AdGuardModule,
     ClientsModule,
     DiagModule,
     FanModule,
     LedModule,
     MacCloneModule,
     ModemModule,
+    OvpnClientModule,
+    OvpnServerModule,
     RepeaterModule,
     SystemModule,
     TailscaleModule,
-    VpnModule,
+    WgClientModule,
+    WgServerModule,
     WifiModule,
+    ZeroTierModule,
 )
 
 
@@ -85,18 +90,23 @@ class GLinetApiClient:
         self.sid = sid
         self._logged_in = sid is not None
 
-        # API Modules
+
         self.system = SystemModule(self)
         self.modem = ModemModule(self)
         self.wifi = WifiModule(self)
+        self.zerotier = ZeroTierModule(self)
         self.clients = ClientsModule(self)
-        self.vpn = VpnModule(self)
+        self.wg_client = WgClientModule(self)
+        self.wg_server = WgServerModule(self)
+        self.ovpn_client = OvpnClientModule(self)
+        self.ovpn_server = OvpnServerModule(self)
         self.tailscale = TailscaleModule(self)
         self.repeater = RepeaterModule(self)
         self.fan = FanModule(self)
         self.led = LedModule(self)
         self.macclone = MacCloneModule(self)
         self.diag = DiagModule(self)
+        self.adguard = AdGuardModule(self)
 
     @staticmethod
     def _build_sid_payload(method: str, params: list[Any], sid: str | None) -> dict[str, Any]:
@@ -192,6 +202,5 @@ class GLinetApiClient:
     @property
     def logged_in(self) -> bool:
         return self._logged_in
-
 
 

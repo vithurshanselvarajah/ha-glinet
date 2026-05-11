@@ -116,6 +116,102 @@ class WireGuardClient:
 
 
 @dataclass(slots=True)
+class WireGuardServerStatus:
+    enabled: bool
+    initialization: bool
+    tunnel_ip: str | None = None
+    connected_peers: int = 0
+    total_peers: int = 0
+    rx_bytes: int = 0
+    tx_bytes: int = 0
+
+    @classmethod
+    def from_api_response(cls, data: dict) -> WireGuardServerStatus:
+        server = data.get("server") or {}
+        peers = data.get("peers") or []
+        connected_count = sum(1 for p in peers if p.get("status") == 1)
+        return cls(
+            enabled=server.get("status") == 1,
+            initialization=server.get("initialization", False),
+            tunnel_ip=server.get("tunnel_ip"),
+            connected_peers=connected_count,
+            total_peers=len(peers),
+            rx_bytes=server.get("rx_bytes", 0),
+            tx_bytes=server.get("tx_bytes", 0),
+        )
+    
+
+@dataclass(slots=True)
+class OpenVpnClient:
+    name: str
+    connected: bool = field(compare=False)
+    group_id: int = 0
+    client_id: int = 0
+    group_name: str | None = None
+    location: str | None = None
+    locations: list[str] = field(default_factory=list)
+    remotes: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class OpenVpnServerStatus:
+    enabled: bool
+    initialization: bool
+    tunnel_ip: str | None = None
+    connected_users: int = 0
+    total_users: int = 0
+    rx_bytes: int = 0
+    tx_bytes: int = 0
+
+    @classmethod
+    def from_api_response(cls, data: dict, users: list[dict]) -> OpenVpnServerStatus:
+        status = data.get("status")
+        return cls(
+            enabled=status == 1,
+            initialization=data.get("initialization", False),
+            tunnel_ip=data.get("tunnel_ip"),
+            connected_users=len(users),
+            total_users=len(users),
+            rx_bytes=data.get("rx_bytes", 0),
+            tx_bytes=data.get("tx_bytes", 0),
+        )
+
+
+@dataclass(slots=True)
+class ZeroTierStatus:
+    enabled: bool
+    network_id: str | None
+    connected: bool
+    zerotier_ip: str | None
+    lan_ip: str | None
+    wan_ip: str | None
+
+    @classmethod
+    def from_api_response(cls, config: dict, status: dict) -> ZeroTierStatus:
+        return cls(
+            enabled=config.get("enable", False),
+            network_id=config.get("id"),
+            connected=status.get("status") == 0,
+            zerotier_ip=status.get("zerotier_ip"),
+            lan_ip=status.get("lan_ip"),
+            wan_ip=status.get("wan_ip"),
+        )
+
+
+@dataclass(slots=True)
+class AdGuardStatus:
+    enabled: bool
+    dns_enabled: bool
+
+    @classmethod
+    def from_api_response(cls, data: dict) -> AdGuardStatus:
+        return cls(
+            enabled=data.get("enabled", False),
+            dns_enabled=data.get("dns_enabled", False),
+        )
+
+
+@dataclass(slots=True)
 class WifiInterface:
     name: str
     enabled: bool
@@ -188,6 +284,7 @@ class ClientDeviceInfo:
         self._rx_rate: int | None = None
         self._tx_rate: int | None = None
         self._last_traffic_update: datetime | None = None
+        self._is_known = True
 
     def apply_update(self, dev_info: dict | None = None, consider_home: int = 0) -> None:
         now = dt_util.utcnow()
@@ -279,3 +376,11 @@ class ClientDeviceInfo:
     @property
     def tx_rate(self) -> int | None:
         return self._tx_rate
+
+    @property
+    def is_known(self) -> bool:
+        return self._is_known
+
+    @is_known.setter
+    def is_known(self, value: bool) -> None:
+        self._is_known = value
