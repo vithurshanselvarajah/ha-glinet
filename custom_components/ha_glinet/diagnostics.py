@@ -35,6 +35,7 @@ TO_REDACT = {
     "iccid",
     "phone_number",
     "body",
+    "apn",
 }
 
 
@@ -90,6 +91,7 @@ async def async_get_config_entry_diagnostics(
                         "status": modem.get("status"),
                         "signal": modem.get("signal"),
                         "network_type": modem.get("network_type"),
+                        "apn": modem.get("apn") or modem.get("simcard", {}).get("apn"),
                     }
                     for modem in hub.cellular_status.get("modems", [])
                 ],

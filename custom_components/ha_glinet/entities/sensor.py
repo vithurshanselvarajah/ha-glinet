@@ -156,6 +156,18 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         extra_attributes_fn=lambda hub: hub.cellular_status,
     ),
     HubSensorEntityDescription(
+        key="cellular_apn",
+        name="Cellular APN",
+        has_entity_name=True,
+        icon="mdi:access-point-network",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda hub: get_first_value(
+            hub.cellular_status,
+            ("apn",),
+            nested=("modem", "cellular", "sim", "simcard"),
+        ),
+    ),
+    HubSensorEntityDescription(
         key="cellular_rssi",
         name="Cellular RSSI",
         has_entity_name=True,
@@ -369,6 +381,7 @@ FEATURE_SENSOR_MAP: dict[str, str] = {
     "cellular_sinr": FEATURE_CELLULAR,
     "cellular_band": FEATURE_CELLULAR,
     "cellular_network": FEATURE_CELLULAR,
+    "cellular_apn": FEATURE_CELLULAR,
     "sms_messages": FEATURE_SMS,
     "repeater_state": FEATURE_REPEATER,
     "repeater_ssid": FEATURE_REPEATER,

@@ -94,6 +94,9 @@
       "cellular_network": {
         "name": "Cellular network"
       },
+      "cellular_apn": {
+        "name": "Cellular APN"
+      },
       "sms_messages": {
         "name": "Text messages"
       },

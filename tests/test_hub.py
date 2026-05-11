@@ -87,8 +87,9 @@ async def test_fetch_cellular_status_merges_modem_info_and_status() -> None:
     )
 
     await hub.fetch_cellular_status()
-
+    
     assert hub.default_modem_bus == "1-1"
+
     assert hub.cellular_status["modems"] == [
         {
             "bus": "1-1",
@@ -97,6 +98,28 @@ async def test_fetch_cellular_status_merges_modem_info_and_status() -> None:
             "simcard": {"carrier": "CMCC"},
         }
     ]
+
+
+async def test_fetch_cellular_status_extracts_apn() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._cached_modem_info = None
+    hub._cellular_status = {}
+    responses = [
+        {"modems": [{"bus": "1-1"}]},
+        {"modems": [{"bus": "1-1", "simcard": {"apn": "test.apn"}}]},
+    ]
+
+    async def invoke_optional_api(_: Any) -> dict[str, Any]:
+        return responses.pop(0)
+
+    hub._invoke_optional_api = invoke_optional_api
+    hub._api = types.SimpleNamespace(
+        modem=types.SimpleNamespace(get_info=object(), get_status=object())
+    )
+
+    await hub.fetch_cellular_status()
+
+    assert hub.cellular_status["modems"][0]["simcard"]["apn"] == "test.apn"
 
 
 async def test_send_sms_uses_default_modem_bus() -> None:
