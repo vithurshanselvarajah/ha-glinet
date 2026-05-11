@@ -9,6 +9,7 @@
 - CPU temperature, load average, memory usage, flash usage, and uptime sensors.
 - WiFi interface switches.
 - System LED switch.
+- AdGuard Home switches (Optional).
 - WireGuard client and server switches.
 - OpenVPN client and server switches.
 - Tailscale switch.
@@ -26,6 +27,7 @@
 - WireGuard server connected users count.
 - OpenVPN server connected users count.
 - OpenVPN client location selection (when available).
+- AdGuard Home management (Enable/Disable, DNS control).
 
 ## Supported Actions
 

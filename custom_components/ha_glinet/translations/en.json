@@ -178,6 +178,12 @@
       },
       "led": {
         "name": "System LED"
+      },
+      "adguard_enabled": {
+        "name": "AdGuard Home"
+      },
+      "adguard_dns_enabled": {
+        "name": "AdGuard Home DNS"
       }
     }
   },

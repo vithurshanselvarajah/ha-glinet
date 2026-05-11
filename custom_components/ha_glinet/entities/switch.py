@@ -9,6 +9,7 @@ from homeassistant.const import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import (
+    FEATURE_ADGUARD,
     FEATURE_OVPN_CLIENT,
     FEATURE_OVPN_SERVER,
     FEATURE_REPEATER,
@@ -48,6 +49,9 @@ async def async_setup_entry(
     entities.extend(WifiApSwitch(hub, name, iface) for name, iface in hub.wifi_interfaces.items())
     if hub.feature_enabled(FEATURE_REPEATER):
         entities.append(RepeaterAutoSwitchSwitch(hub))
+    if hub.feature_enabled(FEATURE_ADGUARD):
+        entities.append(AdGuardEnabledSwitch(hub))
+        entities.append(AdGuardDnsEnabledSwitch(hub))
     entities.append(LedSwitch(hub))
     async_add_entities(entities, True)
 
@@ -431,4 +435,58 @@ class LedSwitch(GLinetSwitchBase):
 
     async def async_turn_off(self, **_: Any) -> None:
         await self._hub.set_led_enabled(False)
+        await self._hub.async_request_refresh()
+
+
+class AdGuardEnabledSwitch(GLinetSwitchBase):
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/adguard_enabled"
+
+    @property
+    def translation_key(self) -> str:
+        return "adguard_enabled"
+
+    @property
+    def icon(self) -> str:
+        return "mdi:shield-check"
+
+    @property
+    def is_on(self) -> bool | None:
+        status = self._hub.adguard_status
+        return status.enabled if status else None
+
+    async def async_turn_on(self, **_: Any) -> None:
+        await self._hub.set_adguard_enabled(True)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        await self._hub.set_adguard_enabled(False)
+        await self._hub.async_request_refresh()
+
+
+class AdGuardDnsEnabledSwitch(GLinetSwitchBase):
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/adguard_dns_enabled"
+
+    @property
+    def translation_key(self) -> str:
+        return "adguard_dns_enabled"
+
+    @property
+    def icon(self) -> str:
+        return "mdi:dns"
+
+    @property
+    def is_on(self) -> bool | None:
+        status = self._hub.adguard_status
+        return status.dns_enabled if status else None
+
+    async def async_turn_on(self, **_: Any) -> None:
+        await self._hub.set_adguard_dns_enabled(True)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        await self._hub.set_adguard_dns_enabled(False)
         await self._hub.async_request_refresh()

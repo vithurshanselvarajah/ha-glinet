@@ -19,6 +19,7 @@ from .exceptions import (
     UnsuccessfulRequest,
 )
 from .modules import (
+    AdGuardModule,
     ClientsModule,
     DiagModule,
     FanModule,
@@ -105,6 +106,7 @@ class GLinetApiClient:
         self.led = LedModule(self)
         self.macclone = MacCloneModule(self)
         self.diag = DiagModule(self)
+        self.adguard = AdGuardModule(self)
 
     @staticmethod
     def _build_sid_payload(method: str, params: list[Any], sid: str | None) -> dict[str, Any]:

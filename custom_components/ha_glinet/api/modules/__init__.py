@@ -1,3 +1,4 @@
+from .adguard import AdGuardModule
 from .clients import ClientsModule
 from .diag import DiagModule
 from .fan import FanModule
@@ -15,6 +16,7 @@ from .wifi import WifiModule
 from .zerotier import ZeroTierModule
 
 __all__ = [
+    "AdGuardModule",
     "ClientsModule",
     "DiagModule",
     "FanModule",

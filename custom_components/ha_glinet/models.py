@@ -199,6 +199,19 @@ class ZeroTierStatus:
 
 
 @dataclass(slots=True)
+class AdGuardStatus:
+    enabled: bool
+    dns_enabled: bool
+
+    @classmethod
+    def from_api_response(cls, data: dict) -> AdGuardStatus:
+        return cls(
+            enabled=data.get("enabled", False),
+            dns_enabled=data.get("dns_enabled", False),
+        )
+
+
+@dataclass(slots=True)
 class WifiInterface:
     name: str
     enabled: bool

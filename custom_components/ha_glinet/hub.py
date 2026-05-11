@@ -41,6 +41,7 @@ from .const import (
     CONF_ENABLED_FEATURES,
     DEFAULT_USERNAME,
     DOMAIN,
+    FEATURE_ADGUARD,
     FEATURE_CELLULAR,
     FEATURE_OPTIONS,
     FEATURE_OVPN_CLIENT,
@@ -53,6 +54,7 @@ from .const import (
     FEATURE_ZEROTIER,
 )
 from .models import (
+    AdGuardStatus,
     ClientDeviceInfo,
     FanStatus,
     OpenVpnClient,
@@ -125,6 +127,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._ovpn_client_status: dict[str, Any] = {}
         self._zerotier_status: ZeroTierStatus | None = None
         self._led_enabled: bool | None = None
+        self._adguard_status: AdGuardStatus | None = None
 
         self._late_init_complete = False
         self._connect_error = False
@@ -178,6 +181,9 @@ class GLinetHub(DataUpdateCoordinator[None]):
             ],
             FEATURE_OVPN_SERVER: [
                 "ovpn_server",
+            ],
+            FEATURE_ADGUARD: [
+                "adguard",
             ],
         }
 
@@ -364,6 +370,11 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._scanned_networks = []
             self._saved_networks = []
             self._last_wifi_scan = None
+
+        if self.feature_enabled(FEATURE_ADGUARD):
+            tasks.append(self.fetch_adguard_status())
+        else:
+            self._adguard_status = None
 
         for task in tasks:
             await task
@@ -737,6 +748,27 @@ class GLinetHub(DataUpdateCoordinator[None]):
             lambda: self.router_api.led.set_config({"led_enable": enabled})
         )
         await self.fetch_led_status()
+
+    async def fetch_adguard_status(self) -> None:
+        data = await self._invoke_optional_api(self._api.adguard.get_config)
+        if data is not None:
+            self._adguard_status = AdGuardStatus.from_api_response(data)
+
+    @property
+    def adguard_status(self) -> AdGuardStatus | None:
+        return self._adguard_status
+
+    async def set_adguard_enabled(self, enabled: bool) -> None:
+        current = self._adguard_status
+        dns_enabled = current.dns_enabled if current else False
+        await self._invoke_api(lambda: self._api.adguard.set_config(enabled, dns_enabled))
+        await self.fetch_adguard_status()
+
+    async def set_adguard_dns_enabled(self, dns_enabled: bool) -> None:
+        current = self._adguard_status
+        enabled = current.enabled if current else False
+        await self._invoke_api(lambda: self._api.adguard.set_config(enabled, dns_enabled))
+        await self.fetch_adguard_status()
 
     async def fetch_cellular_status(self) -> None:
         if self._cached_modem_info is None:
@@ -1152,3 +1184,5 @@ def _sms_status_is_read(status: Any) -> bool | None:
     if isinstance(status, int):
         return status in {1, 2, 3, 4, 5}
     return None
+
+

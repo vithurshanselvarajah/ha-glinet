@@ -24,6 +24,7 @@ Included features:
 - OpenVPN client and server support (with location selection).
 - Tailscale switch.
 - ZeroTier switch (Requires Network ID setup on router).
+- AdGuard Home switches (Optional).
 - Optional cellular signal/network sensors.
 - Optional SMS services for sending, viewing and managing text messages in the inbox.
 - Optional repeater mode support for WiFi scan, connect/disconnect, saved networks, and repeater state.

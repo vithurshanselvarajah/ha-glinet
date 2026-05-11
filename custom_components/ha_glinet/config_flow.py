@@ -25,6 +25,7 @@ from .const import (
     DEFAULT_URL,
     DEFAULT_USERNAME,
     DOMAIN,
+    FEATURE_ADGUARD,
     FEATURE_CELLULAR,
     FEATURE_OVPN_CLIENT,
     FEATURE_OVPN_SERVER,
@@ -54,6 +55,7 @@ FEATURE_OPTIONS = [
     {"label": "OpenVPN Client", "value": FEATURE_OVPN_CLIENT},
     {"label": "OpenVPN Server", "value": FEATURE_OVPN_SERVER},
     {"label": "ZeroTier (Requires Network ID setup on router)", "value": FEATURE_ZEROTIER},
+    {"label": "AdGuard Home", "value": FEATURE_ADGUARD},
 ]
 DEFAULT_ENABLED_FEATURES = [
     FEATURE_CELLULAR,
@@ -64,6 +66,7 @@ DEFAULT_ENABLED_FEATURES = [
     FEATURE_WG_SERVER,
     FEATURE_OVPN_CLIENT,
     FEATURE_OVPN_SERVER,
+    FEATURE_ADGUARD,
 ]
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
