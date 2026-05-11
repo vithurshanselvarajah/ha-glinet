@@ -995,6 +995,10 @@ class GLinetHub(DataUpdateCoordinator[None]):
         return f"GL-INet {self._model.upper()}"
 
     @property
+    def firmware_version(self) -> str:
+        return self._sw_version
+
+    @property
     def tracked_devices(self) -> dict[str, ClientDeviceInfo]:
         return self._devices
 
@@ -1043,6 +1047,15 @@ class GLinetHub(DataUpdateCoordinator[None]):
         return len(self._ovpn_server_users)
 
     @property
+    def active_vpn_connections(self) -> list[Any]:
+        connections = []
+        if self._wireguard_connections:
+            connections.extend(self._wireguard_connections)
+        if self._ovpn_connections:
+            connections.extend(self._ovpn_connections)
+        return connections
+
+    @property
     def router_status(self) -> RouterStatus | None:
         return self._system_status
 
@@ -1084,6 +1097,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
     @property
     def default_modem_bus(self) -> str | None:
         return self._default_modem_bus
+
 
     @property
     def repeater_status(self) -> RepeaterStatus | None:

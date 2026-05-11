@@ -248,6 +248,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry, data=self.config_entry.data | info["data"]
+                )
                 return self.async_create_entry(
                     title="",
                     data=self.config_entry.options | info["data"],

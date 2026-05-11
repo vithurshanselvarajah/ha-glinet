@@ -50,15 +50,15 @@ async def async_get_config_entry_diagnostics(
         "hub_state": {
             "hub_name": hub.hub_name,
             "device_mac": hub.device_mac,
-            "device_model": hub.device_model,
+            "router_model": hub.router_model,
             "firmware_version": hub.firmware_version,
             "uptime": hub.router_status.uptime if hub.router_status else None,
-            "cpu_temperature": hub.router_status.cpu_temperature if hub.router_status else None,
+            "cpu_temperature": hub.router_status.temperature if hub.router_status else None,
             "load_average": hub.router_status.load_average if hub.router_status else None,
             "memory": (
                 {
                     "total": hub.router_status.memory_total,
-                    "used": hub.router_status.memory_used,
+                    "used": hub.router_status.memory_total - hub.router_status.memory_free,
                     "free": hub.router_status.memory_free,
                 }
                 if hub.router_status
