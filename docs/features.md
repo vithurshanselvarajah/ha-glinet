@@ -59,6 +59,7 @@ When adding the GL.iNet integration or modifying it via the **Configure** menu, 
 - **Admin Password**: The password for the `root` account used to access the GL.iNet admin panel.
 - **Update Interval**: The polling frequency (in seconds) between 10s and 300s (default 30s). Increase this if you experience router slowdowns.
 - **Consider Home**: Defines the grace period (in seconds) before a device is marked as "Away" in Home Assistant. This helps prevent devices from flickering when they briefly drop off the network.
+- **Discover unknown devices**: A toggle to choose whether to add *all* newly discovered devices to the Home Assistant device registry or only keep tracked/known devices. Toggling this off will automatically clean up any untracked devices.
 - **Enabled Features**: A selection of optional modules to activate for this router instance:
     - **Cellular**: Enables signal and network monitoring for routers with internal or USB modems.
     - **Repeater**: Enables WiFi station mode management, scanning, and saved network control.
