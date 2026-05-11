@@ -36,6 +36,7 @@ TO_REDACT = {
     "phone_number",
     "body",
     "apn",
+    "network_id",
 }
 
 
@@ -52,12 +53,21 @@ async def async_get_config_entry_diagnostics(
             "device_model": hub.device_model,
             "firmware_version": hub.firmware_version,
             "uptime": hub.router_status.uptime if hub.router_status else None,
+            "cpu_temperature": hub.router_status.cpu_temperature if hub.router_status else None,
             "load_average": hub.router_status.load_average if hub.router_status else None,
             "memory": (
                 {
                     "total": hub.router_status.memory_total,
                     "used": hub.router_status.memory_used,
                     "free": hub.router_status.memory_free,
+                }
+                if hub.router_status
+                else None
+            ),
+            "flash": (
+                {
+                    "total": hub.router_status.flash_total,
+                    "free": hub.router_status.flash_free,
                 }
                 if hub.router_status
                 else None
@@ -106,6 +116,39 @@ async def async_get_config_entry_diagnostics(
             "tailscale": {
                 "connected": hub.tailscale_connected,
             },
+            "zerotier": {
+                "connected": hub.zerotier_status.connected if hub.zerotier_status else None,
+                "network_id": hub.zerotier_status.network_id if hub.zerotier_status else None,
+            },
+            "adguard": {
+                "enabled": hub.adguard_status.enabled if hub.adguard_status else None,
+                "dns_enabled": hub.adguard_status.dns_enabled if hub.adguard_status else None,
+            },
+            "led_enabled": hub.led_enabled,
+            "fan": {
+                "speed": hub.fan_speed,
+                "running": hub.fan_running,
+                "threshold": hub.fan_temperature_threshold,
+            },
+            "wg_server": {
+                "users_count": hub.wg_server_connected_users,
+            },
+            "ovpn_server": {
+                "users_count": hub.ovpn_server_connected_users,
+            },
+            "sms": {
+                "message_count": len(hub.sms_messages),
+            },
+            "tracked_devices": [
+                {
+                    "mac": mac,
+                    "name": device.name,
+                    "ip": device.ip_address,
+                    "connected": device.is_connected,
+                    "interface": device.interface_type.name,
+                }
+                for mac, device in hub.tracked_devices.items()
+            ],
             "features": list(hub.enabled_features),
         },
     }
