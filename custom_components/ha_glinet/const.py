@@ -7,6 +7,7 @@ DEFAULT_PASSWORD = "ChangeMe!"
 CONF_TITLE = "title"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_ENABLED_FEATURES = "enabled_features"
+CONF_ADD_ALL_DEVICES = "add_all_devices"
 
 FEATURE_CELLULAR = "cellular"
 FEATURE_REPEATER = "repeater"

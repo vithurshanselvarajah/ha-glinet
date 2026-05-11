@@ -37,6 +37,7 @@ from .api.exceptions import AuthenticationError
 from .api.models import RouterStatus
 from .const import (
     API_PATH,
+    CONF_ADD_ALL_DEVICES,
     CONF_ENABLED_FEATURES,
     DEFAULT_USERNAME,
     DOMAIN,
@@ -167,6 +168,34 @@ class GLinetHub(DataUpdateCoordinator[None]):
                         entity_registry.async_remove(entry.entity_id)
                         removed = True
                         break
+
+            if not removed and not self._settings.get(CONF_ADD_ALL_DEVICES):
+                mac = None
+                if entry.domain == TRACKER_DOMAIN:
+                    mac = entry.unique_id
+                elif entry.unique_id.startswith("glinet_client_sensor/"):
+                    mac = entry.unique_id.split("/")[1]
+
+                if mac:
+                    dev_reg = dr.async_get(self.hass)
+                    device = dev_reg.async_get_device(
+                        connections={(CONNECTION_NETWORK_MAC, format_mac(mac))}
+                    )
+                    if not device or not any(
+                        eid != self._entry.entry_id for eid in device.config_entries
+                    ):
+                        _LOGGER.debug(
+                            "Removing unknown device entity %s (discovery disabled)",
+                            entry.entity_id,
+                        )
+                        entity_registry.async_remove(entry.entity_id)
+                        if device:
+                            _LOGGER.debug(
+                                "Removing unknown device %s (discovery disabled)",
+                                device.name or mac,
+                            )
+                            dev_reg.async_remove_device(device.id)
+                        removed = True
 
             if removed:
                 continue
@@ -379,10 +408,15 @@ class GLinetHub(DataUpdateCoordinator[None]):
             if not existing_device or not any(
                 entry_id != self._entry.entry_id for entry_id in existing_device.config_entries
             ):
-                continue
+                if not self._settings.get(CONF_ADD_ALL_DEVICES):
+                    continue
+                device_is_known = False
+            else:
+                device_is_known = True
 
             new_device = True
             device = ClientDeviceInfo(device_mac)
+            device.is_known = device_is_known
             device.apply_update(dev_info)
             self._devices[device_mac] = device
 

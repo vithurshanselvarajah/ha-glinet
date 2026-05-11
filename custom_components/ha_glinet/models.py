@@ -188,6 +188,7 @@ class ClientDeviceInfo:
         self._rx_rate: int | None = None
         self._tx_rate: int | None = None
         self._last_traffic_update: datetime | None = None
+        self._is_known = True
 
     def apply_update(self, dev_info: dict | None = None, consider_home: int = 0) -> None:
         now = dt_util.utcnow()
@@ -279,3 +280,11 @@ class ClientDeviceInfo:
     @property
     def tx_rate(self) -> int | None:
         return self._tx_rate
+
+    @property
+    def is_known(self) -> bool:
+        return self._is_known
+
+    @is_known.setter
+    def is_known(self, value: bool) -> None:
+        self._is_known = value

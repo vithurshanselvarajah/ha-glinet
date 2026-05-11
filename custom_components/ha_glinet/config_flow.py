@@ -17,6 +17,7 @@ from homeassistant.helpers.device_registry import format_mac
 from .api import GLinetApiClient, NonZeroResponse
 from .const import (
     API_PATH,
+    CONF_ADD_ALL_DEVICES,
     CONF_ENABLED_FEATURES,
     CONF_SCAN_INTERVAL,
     CONF_TITLE,
@@ -79,6 +80,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
             CONF_SCAN_INTERVAL,
             default=30,
         ): vol.All(vol.Coerce(int), vol.Clamp(min=10, max=300)),
+        vol.Optional(CONF_ADD_ALL_DEVICES, default=False): bool,
     }
 )
 
@@ -145,6 +147,7 @@ async def process_user_input(
                 CONF_SCAN_INTERVAL,
                 30,
             ),
+            CONF_ADD_ALL_DEVICES: data.get(CONF_ADD_ALL_DEVICES, False),
         },
     }
 

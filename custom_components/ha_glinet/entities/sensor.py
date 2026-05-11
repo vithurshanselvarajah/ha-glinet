@@ -598,6 +598,7 @@ class ClientBandwidthSensor(CoordinatorEntity[GLinetHub], SensorEntity):
             name=device.name or device.mac,
             via_device=(DOMAIN, self._hub.router_id),
         )
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def unique_id(self) -> str:

@@ -15,7 +15,7 @@ Device trackers are created from online devices returned by the router API **onl
 
 This behavior prevents the integration from automatically adding every guest device, transient client, or unknown IoT device on your network as a new tracker entity.
 
-If you want to track a specific device that is not yet known to Home Assistant, you must first ensure it is added to the Home Assistant device registry by another means.
+However, you can enable the **Discovery unknown devices** option during integration setup or in the options flow. When enabled, the integration will track every device seen by the router, regardless of its status in the Home Assistant device registry. This is useful for monitoring all network activity, but may result in many entities being created.
 
 The tracker monitors:
 
@@ -98,7 +98,7 @@ The raw channel number and band key are also exposed as `channel` and `band` ext
 
 ### Client Bandwidth
 
-Each tracked client includes real-time bandwidth sensors attached to the client device:
+Each tracked client includes real-time bandwidth sensors attached to the client device (listed under the **Diagnostic** category):
 
 - Download rate
 - Upload rate

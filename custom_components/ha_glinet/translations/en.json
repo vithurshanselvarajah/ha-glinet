@@ -9,13 +9,15 @@
           "password": "Admin Password",
           "consider_home": "Away Delay",
           "scan_interval": "Update Interval",
-          "enabled_features": "Enabled Features"
+          "enabled_features": "Enabled Features",
+          "add_all_devices": "Discover unknown devices"
         },
         "data_description": {
           "host": "Type the router hostname, URL, or IP address.",
           "password": "Enter the admin password configured on your GL-INet router.",
           "consider_home": "Number of seconds before a disconnected client is treated as away.",
-          "scan_interval": "Number of seconds between polling the router for updates."
+          "scan_interval": "Number of seconds between polling the router for updates.",
+          "add_all_devices": "Automatically track and create entities for every device connected to the router, including those not yet integrated into Home Assistant."
         }
       }
     },
@@ -36,13 +38,15 @@
           "password": "Admin Password",
           "consider_home": "Away Delay",
           "scan_interval": "Update Interval",
-          "enabled_features": "Enabled Features"
+          "enabled_features": "Enabled Features",
+          "add_all_devices": "Discover unknown devices"
         },
         "data_description": {
           "host": "Type the router hostname, URL, or IP address.",
           "password": "Enter the admin password configured on your GL-INet router.",
           "consider_home": "Number of seconds before a disconnected client is treated as away.",
-          "scan_interval": "Number of seconds between polling the router for updates."
+          "scan_interval": "Number of seconds between polling the router for updates.",
+          "add_all_devices": "Automatically track and create entities for every device connected to the router, including those not yet integrated into Home Assistant."
         }
       }
     }
