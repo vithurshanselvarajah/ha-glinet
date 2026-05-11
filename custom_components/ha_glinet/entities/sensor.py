@@ -424,12 +424,12 @@ def _sensor_is_enabled(hub: GLinetHub, description: HubSensorEntityDescription) 
 
 
 @dataclass(frozen=True, kw_only=True)
-class ClientBandwidthEntityDescription(SensorEntityDescription):
-    value_fn: Callable[[ClientDeviceInfo], int | None]
+class ClientSensorEntityDescription(SensorEntityDescription):
+    value_fn: Callable[[ClientDeviceInfo], int | str | None]
 
 
-CLIENT_BANDWIDTH_SENSORS: tuple[ClientBandwidthEntityDescription, ...] = (
-    ClientBandwidthEntityDescription(
+CLIENT_BANDWIDTH_SENSORS: tuple[ClientSensorEntityDescription, ...] = (
+    ClientSensorEntityDescription(
         key="rx_rate",
         name="Download rate",
         icon="mdi:download-network",
@@ -438,7 +438,7 @@ CLIENT_BANDWIDTH_SENSORS: tuple[ClientBandwidthEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda device: device.rx_rate,
     ),
-    ClientBandwidthEntityDescription(
+    ClientSensorEntityDescription(
         key="tx_rate",
         name="Upload rate",
         icon="mdi:upload-network",
@@ -446,6 +446,17 @@ CLIENT_BANDWIDTH_SENSORS: tuple[ClientBandwidthEntityDescription, ...] = (
         native_unit_of_measurement="B/s",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda device: device.tx_rate,
+    ),
+)
+
+
+CLIENT_DIAGNOSTIC_SENSORS: tuple[ClientSensorEntityDescription, ...] = (
+    ClientSensorEntityDescription(
+        key="ip_address",
+        name="IP address",
+        icon="mdi:ip",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda device: device.ip_address,
     ),
 )
 
@@ -524,24 +535,24 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
     @callback
-    def register_client_bandwidth_sensors() -> None:
+    def register_client_sensors() -> None:
         new_entities: list[SensorEntity] = []
         for mac, device in hub.tracked_devices.items():
-            for description in CLIENT_BANDWIDTH_SENSORS:
+            for description in CLIENT_BANDWIDTH_SENSORS + CLIENT_DIAGNOSTIC_SENSORS:
                 unique_id = f"glinet_client_sensor/{mac}/{description.key}"
                 if unique_id in tracked:
                     continue
                 tracked.add(unique_id)
-                new_entities.append(ClientBandwidthSensor(hub, device, description))
+                new_entities.append(ClientSensor(hub, device, description))
         if new_entities:
             async_add_entities(new_entities)
 
-    register_client_bandwidth_sensors()
+    register_client_sensors()
     entry.async_on_unload(
         async_dispatcher_connect(
             hub.hass,
             hub.event_device_added,
-            register_client_bandwidth_sensors,
+            register_client_sensors,
         )
     )
 
@@ -605,14 +616,14 @@ class SystemUptimeSensor(GLinetSensorBase):
         return self._current_value
 
 
-class ClientBandwidthSensor(CoordinatorEntity[GLinetHub], SensorEntity):
+class ClientSensor(CoordinatorEntity[GLinetHub], SensorEntity):
     _attr_has_entity_name = True
 
     def __init__(
         self,
         hub: GLinetHub,
         device: ClientDeviceInfo,
-        entity_description: ClientBandwidthEntityDescription,
+        entity_description: ClientSensorEntityDescription,
     ) -> None:
         super().__init__(hub)
         self._hub = hub
@@ -623,14 +634,17 @@ class ClientBandwidthSensor(CoordinatorEntity[GLinetHub], SensorEntity):
             name=device.name or device.mac,
             via_device=(DOMAIN, self._hub.router_id),
         )
-        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        if entity_description.entity_category:
+            self._attr_entity_category = entity_description.entity_category
+        else:
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def unique_id(self) -> str:
         return f"glinet_client_sensor/{self._device.mac}/{self.entity_description.key}"
 
     @property
-    def native_value(self) -> int | None:
+    def native_value(self) -> int | str | None:
         self._device = self._hub.tracked_devices.get(self._device.mac, self._device)
         return self.entity_description.value_fn(self._device)
 

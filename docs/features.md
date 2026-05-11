@@ -17,7 +17,7 @@
 ## Added Operational Features
 
 - Connected clients count sensor from online tracked clients.
-- Per-client bandwidth rate sensors attached to client MAC devices.
+- Per-client bandwidth rate and IP address sensors attached to client MAC devices.
 - Cellular signal and network sensors using the optional `modem` module.
 - Text message count sensor with message details as attributes.
 - `send_sms`, `get_sms`, `remove_saved_network`, and `refresh_sms` services.

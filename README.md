@@ -16,7 +16,7 @@ Included features:
 - Connected device trackers.
 - WAN IP address sensor.
 - Connected client count sensor.
-- Per-client real-time bandwidth (upload/download) sensors.
+- Per-client real-time bandwidth (upload/download) and IP address sensors.
 - System sensors for CPU temperature, load, memory, flash use, and uptime.
 - WiFi interface switches.
 - System LED switch.
