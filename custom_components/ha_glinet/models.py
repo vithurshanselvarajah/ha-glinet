@@ -116,6 +116,32 @@ class WireGuardClient:
 
 
 @dataclass(slots=True)
+class WireGuardServerStatus:
+    enabled: bool
+    initialization: bool
+    tunnel_ip: str | None = None
+    connected_peers: int = 0
+    total_peers: int = 0
+    rx_bytes: int = 0
+    tx_bytes: int = 0
+
+    @classmethod
+    def from_api_response(cls, data: dict) -> WireGuardServerStatus:
+        server = data.get("server") or {}
+        peers = data.get("peers") or []
+        connected_count = sum(1 for p in peers if p.get("status") == 1)
+        return cls(
+            enabled=server.get("status") == 1,
+            initialization=server.get("initialization", False),
+            tunnel_ip=server.get("tunnel_ip"),
+            connected_peers=connected_count,
+            total_peers=len(peers),
+            rx_bytes=server.get("rx_bytes", 0),
+            tx_bytes=server.get("tx_bytes", 0),
+        )
+
+
+@dataclass(slots=True)
 class WifiInterface:
     name: str
     enabled: bool

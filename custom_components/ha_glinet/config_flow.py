@@ -29,7 +29,8 @@ from .const import (
     FEATURE_REPEATER,
     FEATURE_SMS,
     FEATURE_TAILSCALE,
-    FEATURE_WIREGUARD,
+    FEATURE_WG_CLIENT,
+    FEATURE_WG_SERVER,
     INTEGRATION_NAME,
 )
 from .utils import compute_mac_offset
@@ -45,14 +46,16 @@ FEATURE_OPTIONS = [
     {"label": "Repeater", "value": FEATURE_REPEATER},
     {"label": "SMS", "value": FEATURE_SMS},
     {"label": "Tailscale", "value": FEATURE_TAILSCALE},
-    {"label": "WireGuard", "value": FEATURE_WIREGUARD},
+    {"label": "WireGuard Client", "value": FEATURE_WG_CLIENT},
+    {"label": "WireGuard Server", "value": FEATURE_WG_SERVER},
 ]
 DEFAULT_ENABLED_FEATURES = [
     FEATURE_CELLULAR,
     FEATURE_REPEATER,
     FEATURE_SMS,
     FEATURE_TAILSCALE,
-    FEATURE_WIREGUARD,
+    FEATURE_WG_CLIENT,
+    FEATURE_WG_SERVER,
 ]
 
 STEP_USER_DATA_SCHEMA = vol.Schema(

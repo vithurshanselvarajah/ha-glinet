@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -7,7 +8,7 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from ..const import FEATURE_REPEATER, FEATURE_TAILSCALE, FEATURE_WIREGUARD
+from ..const import FEATURE_REPEATER, FEATURE_TAILSCALE, FEATURE_WG_CLIENT, FEATURE_WG_SERVER
 from ..hub import GLinetHub
 from ..models import WifiInterface, WireGuardClient
 
@@ -24,8 +25,10 @@ async def async_setup_entry(
 ) -> None:
     hub: GLinetHub = entry.runtime_data
     entities: list[SwitchEntity] = []
-    if hub.feature_enabled(FEATURE_WIREGUARD):
+    if hub.feature_enabled(FEATURE_WG_CLIENT):
         entities.extend(WireGuardSwitch(hub, client) for client in hub.vpn_clients.values())
+    if hub.feature_enabled(FEATURE_WG_SERVER):
+        entities.append(WireGuardServerSwitch(hub))
     if hub.has_tailscale and hub.feature_enabled(FEATURE_TAILSCALE):
         entities.append(TailscaleSwitch(hub))
     entities.extend(WifiApSwitch(hub, name, iface) for name, iface in hub.wifi_interfaces.items())
@@ -152,7 +155,7 @@ class WireGuardSwitch(GLinetSwitchBase):
         current = self._hub.vpn_clients.get(self._client.peer_id)
         if current is not None:
             self._client = current
-        return self._client in (self._hub.active_vpn_connections or [])
+        return self._client.connected
 
     async def async_turn_on(self, **_: Any) -> None:
         try:
@@ -181,6 +184,41 @@ class WireGuardSwitch(GLinetSwitchBase):
         except OSError:
             _LOGGER.exception("Unable to stop WireGuard client")
             return
+        await self._hub.async_request_refresh()
+
+
+class WireGuardServerSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:vpn"
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/wg_server"
+
+    @property
+    def name(self) -> str:
+        return "WG Server"
+
+    @property
+    def is_on(self) -> bool | None:
+        status = self._hub.wg_server_status
+        return status.enabled if status else None
+
+    async def async_turn_on(self, **_: Any) -> None:
+        try:
+            await self._hub.start_wg_server()
+        except OSError:
+            _LOGGER.exception("Unable to start WireGuard server")
+            return
+        await asyncio.sleep(10)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        try:
+            await self._hub.stop_wg_server()
+        except OSError:
+            _LOGGER.exception("Unable to stop WireGuard server")
+            return
+        await asyncio.sleep(10)
         await self._hub.async_request_refresh()
 
 

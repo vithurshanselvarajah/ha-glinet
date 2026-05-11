@@ -57,6 +57,7 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 | --- | --- | --- |
 | WAN IP | Optional `modem/get_status` | The IP address assigned to the internet interface (modem). |
 | Connected clients | `clients/get_list` | Count of currently online tracked clients. |
+| WireGuard server users | `wg-server/get_status` | Count of currently online WireGuard server peers. |
 
 ### Cellular and SMS
 
@@ -126,5 +127,6 @@ These sensors are created only when the router reports bandwidth fields in the c
 | --- | --- | --- |
 | WiFi interface switches | `wifi/get_config`, `wifi/set_config` | One switch per WiFi interface reported by the router. |
 | WireGuard client switches | `wg-client` and `vpn-client` APIs | One switch per WireGuard client config returned by the router. Newer firmware uses `vpn-client`; older firmware uses `wg-client`. |
+| WG Server | `wg-server/start`, `wg-server/stop` | Toggle the WireGuard server on or off. |
 | Tailscale | `tailscale/get_status`, `tailscale/set_config` | Created when Tailscale is configured. |
 | Repeater auto-switch | `repeater/get_config` | Toggle whether the router automatically switches between saved networks. |

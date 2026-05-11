@@ -28,7 +28,8 @@ from .modules import (
     RepeaterModule,
     SystemModule,
     TailscaleModule,
-    VpnModule,
+    WgClientModule,
+    WgServerModule,
     WifiModule,
 )
 
@@ -90,7 +91,8 @@ class GLinetApiClient:
         self.modem = ModemModule(self)
         self.wifi = WifiModule(self)
         self.clients = ClientsModule(self)
-        self.vpn = VpnModule(self)
+        self.wg_client = WgClientModule(self)
+        self.wg_server = WgServerModule(self)
         self.tailscale = TailscaleModule(self)
         self.repeater = RepeaterModule(self)
         self.fan = FanModule(self)

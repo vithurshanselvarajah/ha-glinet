@@ -244,7 +244,7 @@ async def test_wireguard_state_uses_new_vpn_client_module_for_new_firmware() -> 
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
     client._firmware_version = (4, 8, 0, 0)
 
-    assert await client.vpn.get_wireguard_state() == [{"type": "wireguard", "peer_id": 7}]
+    assert await client.wg_client.get_wireguard_state() == [{"type": "wireguard", "peer_id": 7}]
     assert session.requests[0]["json"]["params"] == ["sid-1", "vpn-client", "get_status", {}]
 
 
@@ -253,5 +253,5 @@ async def test_wireguard_state_uses_legacy_module_for_old_firmware() -> None:
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
     client._firmware_version = (4, 7, 9, 0)
 
-    assert await client.vpn.get_wireguard_state() == [{"status": 1, "peer_id": 7}]
+    assert await client.wg_client.get_wireguard_state() == [{"status": 1, "peer_id": 7}]
     assert session.requests[0]["json"]["params"] == ["sid-1", "wg-client", "get_status", {}]

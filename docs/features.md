@@ -9,6 +9,7 @@
 - CPU temperature, load average, memory usage, flash usage, and uptime sensors.
 - WiFi interface switches.
 - WireGuard client switches.
+- WireGuard server switch.
 - Tailscale switch.
 
 ## Added Operational Features
@@ -20,12 +21,14 @@
 - `send_sms`, `get_sms`, `remove_saved_network`, and `refresh_sms` services.
 - Repeater mode scanning, connect/disconnect, saved network management, and repeater state support.
 - Fan status monitoring, RPM speed, and threshold temperature control.
+- WireGuard server connected users count.
 
 ## Supported Actions
 
 - Reboot router.
 - Enable or disable WiFi interfaces.
 - Enable or disable WireGuard client profiles.
+- Enable or disable WireGuard server.
 - Enable or disable Tailscale when configured.
 - Send text messages when the router exposes SMS support.
 - Remove text messages when the router exposes SMS support.
@@ -52,7 +55,7 @@ When adding the GL.iNet integration or modifying it via the **Configure** menu, 
     - **Cellular**: Enables signal and network monitoring for routers with internal or USB modems.
     - **Repeater**: Enables WiFi station mode management, scanning, and saved network control.
     - **SMS**: Enables the text message inbox sensor and SMS sending/management actions.
-    - **Tailscale / WireGuard**: Enables monitoring and toggling of VPN connections.
+    - **Tailscale / WireGuard Client / WireGuard Server**: Enables monitoring and toggling of VPN connections.
 
 ## Optional Router Support
 

@@ -146,6 +146,9 @@
       },
       "wan_ip": {
         "name": "WAN IP"
+      },
+      "wg_server_users": {
+        "name": "WireGuard server users"
       }
     },
     "binary_sensor": {
@@ -184,6 +187,9 @@
       },
       "repeater_auto_switch": {
         "name": "Repeater auto-switch networks"
+      },
+      "wg_server": {
+        "name": "WG Server"
       }
     },
     "number": {}

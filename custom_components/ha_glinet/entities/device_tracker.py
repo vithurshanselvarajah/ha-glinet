@@ -82,7 +82,6 @@ class GLinetDevice(CoordinatorEntity[GLinetHub], ScannerEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
         self._device = self._hub.tracked_devices[self._device.mac]
         self._attr_hostname = self._device.name or DEFAULT_DEVICE_NAME
         self._attr_name = self._attr_hostname

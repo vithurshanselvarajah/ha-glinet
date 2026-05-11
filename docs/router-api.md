@@ -34,6 +34,7 @@ sid, module-name, function-name, optional parameters
 - `clients`: client list and optional cache clear.
 - `wifi`: interface config and enable/disable.
 - `wg-client` / `vpn-client`: Optional WireGuard client support across older and newer firmware.
+- `wg-server`: Optional WireGuard server status and control.
 - `tailscale`: Tailscale config and state.
 - `modem`: optional cellular status.
 - `repeater`: optional repeater mode status, configuration, WiFi scan, connect/disconnect, and saved AP management.

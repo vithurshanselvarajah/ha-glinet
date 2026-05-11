@@ -7,7 +7,8 @@ from .modem import ModemModule
 from .repeater import RepeaterModule
 from .system import SystemModule
 from .tailscale import TailscaleModule
-from .vpn import VpnClientModule, VpnModule, WireGuardModule
+from .wg_client import VpnClientModule, WgClientModule, WireGuardModule
+from .wg_server import WgServerModule
 from .wifi import WifiModule
 
 __all__ = [
@@ -21,7 +22,8 @@ __all__ = [
     "SystemModule",
     "TailscaleModule",
     "VpnClientModule",
-    "VpnModule",
+    "WgClientModule",
+    "WgServerModule",
     "WifiModule",
     "WireGuardModule",
 ]

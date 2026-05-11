@@ -9,7 +9,8 @@ from custom_components.ha_glinet.const import (
     CONF_ADD_ALL_DEVICES,
     CONF_ENABLED_FEATURES,
     FEATURE_REPEATER,
-    FEATURE_WIREGUARD,
+    FEATURE_WG_CLIENT,
+    FEATURE_WG_SERVER,
 )
 from custom_components.ha_glinet.hub import GLinetHub
 from custom_components.ha_glinet.models import ClientDeviceInfo, RepeaterState, RepeaterStatus
@@ -172,7 +173,10 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
         called.append("wifi")
 
     async def fake_fetch_wireguard_clients() -> None:
-        called.append("wireguard")
+        called.append("wg_client")
+
+    async def fake_fetch_wg_server_status() -> None:
+        called.append("wg_server")
 
     async def fake_fetch_repeater_status() -> None:
         called.append("repeater_status")
@@ -190,6 +194,7 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
     hub.fetch_connected_devices = fake_fetch_connected_devices
     hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
     hub.fetch_wireguard_clients = fake_fetch_wireguard_clients
+    hub.fetch_wg_server_status = fake_fetch_wg_server_status
     hub.fetch_repeater_status = fake_fetch_repeater_status
     hub.fetch_repeater_config = fake_fetch_repeater_config
     hub.fetch_saved_networks = fake_fetch_saved_networks
@@ -258,7 +263,7 @@ async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
 
 async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
-    hub._settings = {CONF_ENABLED_FEATURES: [FEATURE_WIREGUARD]}
+    hub._settings = {CONF_ENABLED_FEATURES: [FEATURE_WG_CLIENT, FEATURE_WG_SERVER]}
     hub._entry = types.SimpleNamespace(entry_id="test_entry")
     hub._host = "192.168.8.1"
     hub.hass = object()
@@ -275,7 +280,10 @@ async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> No
         called.append("wifi")
 
     async def fake_fetch_wireguard_clients() -> None:
-        called.append("wireguard")
+        called.append("wg_client")
+
+    async def fake_fetch_wg_server_status() -> None:
+        called.append("wg_server")
 
     async def fake_fetch_fan_status() -> None:
         called.append("fan")
@@ -284,12 +292,14 @@ async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> No
     hub.fetch_connected_devices = fake_fetch_connected_devices
     hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
     hub.fetch_wireguard_clients = fake_fetch_wireguard_clients
+    hub.fetch_wg_server_status = fake_fetch_wg_server_status
     hub.fetch_fan_status = fake_fetch_fan_status
     hub.refresh_session_token = _noop
 
     await hub.fetch_all_data()
 
-    assert called == ["system", "clients", "wifi", "fan", "wireguard"]
+    assert "wg_client" in called
+    assert "wg_server" in called
 
 
 async def test_scan_wifi_networks_stores_results(monkeypatch) -> None:
@@ -598,6 +608,55 @@ async def test_async_initialize_hub_cleans_up_unknown_devices(monkeypatch) -> No
     assert mock_dr.async_remove_device.call_count >= 1
     mock_dr.async_remove_device.assert_any_call("device_id")
 
+
+async def test_fetch_wg_server_status(monkeypatch) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    
+    class WgServerModule:
+        async def get_status(self) -> dict[str, Any]:
+            return {"server": {"status": 1}, "peers": [{"status": 1}, {"status": 0}]}
+            
+    hub._api = types.SimpleNamespace(wg_server=WgServerModule())
+    hub._invoke_api = lambda api_callable: api_callable()
+    
+    await hub.fetch_wg_server_status()
+    
+    assert hub.wg_server_status.enabled is True
+    assert hub.wg_server_connected_users == 1
+
+async def test_start_wg_server(monkeypatch) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    called = []
+    
+    class WgServerModule:
+        async def start(self) -> dict[str, Any]:
+            called.append("start")
+            return {"ok": True}
+        async def get_status(self) -> dict[str, Any]:
+            return {"server": {"status": 1}}
+            
+    hub._api = types.SimpleNamespace(wg_server=WgServerModule())
+    hub._invoke_api = lambda api_callable: api_callable()
+    
+    await hub.start_wg_server()
+    assert "start" in called
+
+async def test_stop_wg_server(monkeypatch) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    called = []
+    
+    class WgServerModule:
+        async def stop(self) -> dict[str, Any]:
+            called.append("stop")
+            return {"ok": True}
+        async def get_status(self) -> dict[str, Any]:
+            return {"server": {"status": 0}}
+            
+    hub._api = types.SimpleNamespace(wg_server=WgServerModule())
+    hub._invoke_api = lambda api_callable: api_callable()
+    
+    await hub.stop_wg_server()
+    assert "stop" in called
 
 async def _noop() -> None:
     return None

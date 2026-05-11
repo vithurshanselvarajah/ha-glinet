@@ -46,7 +46,8 @@ from .const import (
     FEATURE_REPEATER,
     FEATURE_SMS,
     FEATURE_TAILSCALE,
-    FEATURE_WIREGUARD,
+    FEATURE_WG_CLIENT,
+    FEATURE_WG_SERVER,
 )
 from .models import (
     ClientDeviceInfo,
@@ -57,6 +58,7 @@ from .models import (
     SmsMessage,
     WifiInterface,
     WireGuardClient,
+    WireGuardServerStatus,
 )
 from .utils import compute_mac_offset, get_first_int
 
@@ -108,6 +110,8 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._last_wifi_scan: datetime | None = None
         self._saved_networks: list[dict[str, Any]] = []
         self._fan_status: FanStatus | None = None
+        self._wg_server_status: dict[str, Any] = {}
+        self._wg_server_peers: list[dict[str, Any]] = []
 
         self._late_init_complete = False
         self._connect_error = False
@@ -148,10 +152,13 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 "disconnect_repeater",
             ],
             FEATURE_TAILSCALE: ["tailscale"],
-            FEATURE_WIREGUARD: [
+            FEATURE_WG_CLIENT: [
                 "wireguard_client",
                 "vpn_client",
                 "wg_client",
+            ],
+            FEATURE_WG_SERVER: [
+                "wg_server",
             ],
         }
 
@@ -280,11 +287,17 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self.fetch_fan_status(),
         ]
 
-        if self.feature_enabled(FEATURE_WIREGUARD):
+        if self.feature_enabled(FEATURE_WG_CLIENT):
             tasks.append(self.fetch_wireguard_clients())
         else:
             self._wireguard_clients = {}
             self._wireguard_connections = None
+
+        if self.feature_enabled(FEATURE_WG_SERVER):
+            tasks.append(self.fetch_wg_server_status())
+        else:
+            self._wg_server_status = {}
+            self._wg_server_peers = []
 
         if self.feature_enabled(FEATURE_TAILSCALE):
             tasks.append(self.fetch_tailscale_state())
@@ -445,7 +458,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         await self.fetch_wifi_interfaces()
 
     async def fetch_wireguard_clients(self) -> None:
-        response = await self._invoke_api(self.router_api.vpn.get_wireguard_clients)
+        response = await self._invoke_api(self.router_api.wg_client.get_wireguard_clients)
         if response is None:
             return
 
@@ -467,7 +480,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._wireguard_connections = []
             return
 
-        state_response = await self._invoke_api(self.router_api.vpn.get_wireguard_state)
+        state_response = await self._invoke_api(self.router_api.wg_client.get_wireguard_state)
         if state_response is None:
             return
 
@@ -486,15 +499,31 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
     async def start_vpn_client(self, group_id: int, peer_id: int) -> None:
         await self._invoke_api(
-            lambda: self.router_api.vpn.start_wireguard_client(group_id, peer_id)
+            lambda: self.router_api.wg_client.start_wireguard_client(group_id, peer_id)
         )
         await self.fetch_wireguard_clients()
 
     async def stop_vpn_client(self, peer_id: int) -> None:
         await self._invoke_api(
-            lambda: self.router_api.vpn.stop_wireguard_client(peer_id)
+            lambda: self.router_api.wg_client.stop_wireguard_client(peer_id)
         )
         await self.fetch_wireguard_clients()
+
+    async def fetch_wg_server_status(self) -> None:
+        response = await self._invoke_api(self.router_api.wg_server.get_status)
+        if response is None:
+            self._wg_server_status = {}
+            return
+        self._wg_server_status = response
+        self._wg_server_peers = response.get("peers") or []
+
+    async def start_wg_server(self) -> None:
+        await self._invoke_api(self.router_api.wg_server.start)
+        await self.fetch_wg_server_status()
+
+    async def stop_wg_server(self) -> None:
+        await self._invoke_api(self.router_api.wg_server.stop)
+        await self.fetch_wg_server_status()
 
     async def fetch_tailscale_state(self) -> None:
         details = await self._invoke_optional_api(self.router_api.tailscale.get_details)
@@ -751,12 +780,20 @@ class GLinetHub(DataUpdateCoordinator[None]):
         return self._wireguard_clients
 
     @property
-    def active_vpn_connections(self) -> list[WireGuardClient] | None:
+    def connected_vpn_clients(self) -> list[WireGuardClient] | None:
         return self._wireguard_connections
 
     @property
-    def connected_vpn_clients(self) -> list[WireGuardClient] | None:
-        return self._wireguard_connections
+    def wg_server_status(self) -> WireGuardServerStatus | None:
+        if not self._wg_server_status:
+            return None
+        return WireGuardServerStatus.from_api_response(self._wg_server_status)
+
+    @property
+    def wg_server_connected_users(self) -> int:
+        if not self._wg_server_peers:
+            return 0
+        return sum(1 for p in self._wg_server_peers if p.get("status") == 1)
 
     @property
     def router_status(self) -> RouterStatus | None:
