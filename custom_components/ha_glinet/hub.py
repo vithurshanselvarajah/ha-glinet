@@ -134,7 +134,6 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._token_error = False
 
     async def _async_update_data(self) -> None:
-        """Fetch data from GL-INet router."""
         try:
             await self.fetch_all_data()
         except ConfigEntryAuthFailed:
@@ -605,6 +604,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 location=config.get("location"),
                 locations=locations,
                 remotes=remotes,
+                tunnel_id=config.get("tunnel_id"),
             )
             self._ovpn_raw_clients[key] = config["raw_data"]
 
@@ -619,56 +619,54 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
         self._ovpn_client_status = state_response
         self._ovpn_connections = []
-        status = state_response.get("status", 0)
-        if status != 0:
-            gid = state_response.get("group_id")
-            cid = state_response.get("client_id")
-            key = f"{gid}_{cid}"
-            if key in self._ovpn_clients:
-                client = self._ovpn_clients[key]
-                client.connected = True
-                self._ovpn_connections.append(client)
-
-    async def set_ovpn_client_location(
-        self, group_id: int, client_id: int, location_index: int
-    ) -> None:
-        key = f"{group_id}_{client_id}"
-        if key not in self._ovpn_raw_clients:
-            return
-        
-        client = self._ovpn_clients[key]
-        if location_index >= len(client.remotes):
-            return
-        
-        selected_remote = client.remotes[location_index]
-        
-        params = dict(self._ovpn_raw_clients[key])
-        params["group_id"] = group_id
-        params["client_id"] = client_id
-        params["remote"] = selected_remote
-        
-        params.pop("location", None)
-        
-        await self._invoke_api(lambda: self.router_api.ovpn_client.set_config(params))
-        
-        if client.connected:
-            await self.stop_ovpn_client()
-            await self.start_ovpn_client(group_id, client_id)
-        else:
-            await self.fetch_ovpn_clients()
+        for state in state_response:
+            if state.get("type") not in {None, "openvpn"}:
+                continue
+            status = state.get("status", 0)
+            if status == 1:
+                gid = state.get("group_id")
+                cid = state.get("client_id")
+                key = f"{gid}_{cid}"
+                if key in self._ovpn_clients:
+                    client = self._ovpn_clients[key]
+                    client.connected = True
+                    client.tunnel_id = state.get("tunnel_id", client.tunnel_id)
+                    self._ovpn_connections.append(client)
 
     @property
     def ovpn_client_status(self) -> dict[str, Any]:
         return self._ovpn_client_status
 
     async def start_ovpn_client(self, group_id: int, client_id: int) -> None:
+        # Match sample project: stop active OpenVPN first
+        await self.stop_all_ovpns()
+        
+        key = f"{group_id}_{client_id}"
+        client = self._ovpn_clients.get(key)
+        tunnel_id = client.tunnel_id if client else None
+
         await self._invoke_api(
-            lambda: self.router_api.ovpn_client.start(group_id, client_id)
+            lambda: self.router_api.ovpn_client.start(group_id, client_id, tunnel_id)
         )
         await self.fetch_ovpn_clients()
 
-    async def stop_ovpn_client(self) -> None:
-        await self._invoke_api(self.router_api.ovpn_client.stop)
+    async def stop_ovpn_client(
+        self, group_id: int, client_id: int, tunnel_id: int | None = None
+    ) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.ovpn_client.stop(group_id, client_id, tunnel_id)
+        )
+        await self.fetch_ovpn_clients()
+
+    async def stop_all_ovpns(self) -> None:
+        if not self._ovpn_connections:
+            return
+        for conn in self._ovpn_connections:
+            await self._invoke_api(
+                lambda conn=conn: self.router_api.ovpn_client.stop(
+                    conn.group_id, conn.client_id, conn.tunnel_id
+                )
+            )
         await self.fetch_ovpn_clients()
 
     async def fetch_ovpn_server_status(self) -> None:

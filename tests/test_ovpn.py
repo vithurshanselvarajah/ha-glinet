@@ -7,40 +7,112 @@ from tests.test_api_client import FakeSession
 
 
 @pytest.fixture
-def ovpn_client_config_response() -> dict[str, Any]:
+def vpn_client_tunnel_response() -> dict[str, Any]:
     return {
         "result": {
-            "config_list": [
+            "tunnels": [
                 {
-                    "group_id": 1,
-                    "group_name": "Provider1",
-                    "clients": [
-                        {
-                            "client_id": 10,
-                            "name": "Location1",
-                            "location": "City1; City2",
-                            "remote": ["remote1.com", "remote2.com"]
-                        }
-                    ]
+                    "name": "Primary Tunnel",
+                    "tunnel_id": 10,
+                    "enabled": False,
+                    "via": {
+                        "type": "openvpn",
+                        "client_id": 2034,
+                        "group_id": 65395,
+                        "via": "ovpnclient1"
+                    }
                 }
             ]
         }
     }
 
+
 @pytest.fixture
-def ovpn_client_status_response() -> dict[str, Any]:
+def ovpn_groups_response() -> dict[str, Any]:
     return {
         "result": {
-            "status": 1,
-            "group_id": 1,
-            "client_id": 10,
-            "domain": "remote1.com"
+            "groups": [
+                {"group_id": 65395, "group_name": "NordVPN"}
+            ]
         }
     }
 
+
 @pytest.fixture
-def ovpn_server_status_response() -> dict[str, Any]:
+def ovpn_config_list_response() -> dict[str, Any]:
     return {
+        "result": {
+            "clients": [
+                {
+                    "client_id": 2034,
+                    "name": "gr69.nordvpn.com.udp",
+                    "location": "Greece, Athens",
+                    "remote": ["156.67.94.2:1194"]
+                }
+            ]
+        }
+    }
+
+
+async def test_ovpn_client_get_clients(
+    ovpn_groups_response: dict[str, Any],
+    ovpn_config_list_response: dict[str, Any],
+    vpn_client_tunnel_response: dict[str, Any]
+) -> None:
+    session = FakeSession([
+        ovpn_groups_response,
+        ovpn_config_list_response,
+        vpn_client_tunnel_response
+    ])
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    clients = await client.ovpn_client.get_ovpn_clients()
+    assert len(clients) == 1
+    assert clients[0]["name"] == "gr69.nordvpn.com.udp"
+    assert clients[0]["group_id"] == 65395
+    assert clients[0]["client_id"] == 2034
+    assert clients[0]["location"] == "Greece, Athens"
+    assert clients[0]["tunnel_id"] == 10
+
+
+async def test_ovpn_client_start() -> None:
+    session = FakeSession([{"result": {"ok": True}}])
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    await client.ovpn_client.start(65395, 2034, tunnel_id=10)
+    
+    # Check start call (should be set_tunnel)
+    expected_params = [
+        "sid-1", 
+        "vpn-client", 
+        "set_tunnel", 
+        {
+            "enabled": True, 
+            "tunnel_id": 10,
+            "via": {"group_id": 65395, "client_id": 2034, "type": "openvpn"}
+        }
+    ]
+    assert session.requests[0]["json"]["params"] == expected_params
+
+
+async def test_ovpn_client_stop() -> None:
+    session = FakeSession([{"result": {"ok": True}}])
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    await client.ovpn_client.stop(65395, 2034, tunnel_id=10)
+    
+    # Check stop call (should be set_tunnel)
+    expected_params = [
+        "sid-1", 
+        "vpn-client", 
+        "set_tunnel", 
+        {"enabled": False, "tunnel_id": 10}
+    ]
+    assert session.requests[0]["json"]["params"] == expected_params
+
+
+async def test_ovpn_server_get_status() -> None:
+    response = {
         "result": {
             "status": 1,
             "initialization": True,
@@ -49,44 +121,9 @@ def ovpn_server_status_response() -> dict[str, Any]:
             "tx_bytes": 600
         }
     }
-
-async def test_ovpn_client_get_clients(ovpn_client_config_response: dict[str, Any]) -> None:
-    session = FakeSession([ovpn_client_config_response])
+    session = FakeSession([response, {"result": {"user_list": []}}])
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
-    
-    clients = await client.ovpn_client.get_ovpn_clients()
-    assert len(clients) == 1
-    assert clients[0]["name"] == "Location1"
-    assert clients[0]["group_name"] == "Provider1"
-    assert clients[0]["location"] == "City1; City2"
 
-async def test_ovpn_client_start() -> None:
-    session = FakeSession([{"result": {"ok": True}}])
-    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
-    
-    await client.ovpn_client.start(1, 10)
-    expected_params = ["sid-1", "ovpn-client", "start", {"group_id": 1, "client_id": 10}]
-    assert session.requests[0]["json"]["params"] == expected_params
-
-async def test_ovpn_server_get_status(ovpn_server_status_response: dict[str, Any]) -> None:
-    session = FakeSession([ovpn_server_status_response, {"result": {"user_list": []}}])
-    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
-    
     status = await client.ovpn_server.get_status()
     assert status["status"] == 1
     assert status["tunnel_ip"] == "10.8.0.1"
-
-async def test_ovpn_client_set_config() -> None:
-    session = FakeSession([{"result": {"ok": True}}])
-    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
-    
-    await client.ovpn_client.set_config(
-        {"group_id": 1, "client_id": 10, "remote": "new-remote.com"}
-    )
-    expected_params = [
-        "sid-1",
-        "ovpn-client",
-        "set_config",
-        {"group_id": 1, "client_id": 10, "remote": "new-remote.com"},
-    ]
-    assert session.requests[0]["json"]["params"] == expected_params

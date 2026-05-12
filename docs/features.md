@@ -26,7 +26,6 @@
 - Fan status monitoring, RPM speed, and threshold temperature control.
 - WireGuard server connected users count.
 - OpenVPN server connected users count.
-- OpenVPN client location selection (when available).
 - AdGuard Home management (Enable/Disable, DNS control).
 
 ## Supported Actions
@@ -36,7 +35,6 @@
 - Enable or disable the System LED.
 - Enable or disable WireGuard client profiles or server.
 - Enable or disable OpenVPN client profiles or server.
-- Select OpenVPN server location from a dropdown (if supported by config).
 - Enable or disable Tailscale when configured.
 - Send text messages when the router exposes SMS support.
 - Remove text messages when the router exposes SMS support.

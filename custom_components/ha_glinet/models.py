@@ -151,6 +151,7 @@ class OpenVpnClient:
     location: str | None = None
     locations: list[str] = field(default_factory=list)
     remotes: list[str] = field(default_factory=list)
+    tunnel_id: int | None = None
 
 
 @dataclass(slots=True)

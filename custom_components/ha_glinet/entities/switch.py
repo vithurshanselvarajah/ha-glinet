@@ -303,12 +303,6 @@ class OpenVpnClientSwitch(GLinetSwitchBase):
 
     async def async_turn_on(self, **_: Any) -> None:
         try:
-            if (
-                self._hub.connected_ovpn_clients
-                and self._client not in self._hub.connected_ovpn_clients
-            ):
-                await self._hub.stop_ovpn_client()
-
             await self._hub.start_ovpn_client(
                 self._client.group_id,
                 self._client.client_id,
@@ -321,7 +315,9 @@ class OpenVpnClientSwitch(GLinetSwitchBase):
 
     async def async_turn_off(self, **_: Any) -> None:
         try:
-            await self._hub.stop_ovpn_client()
+            await self._hub.stop_ovpn_client(
+                self._client.group_id, self._client.client_id, self._client.tunnel_id
+            )
         except OSError:
             _LOGGER.exception("Unable to stop OpenVPN client")
             return

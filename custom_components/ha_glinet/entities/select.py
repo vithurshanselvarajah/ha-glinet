@@ -6,9 +6,8 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.select import SelectEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from ..const import FEATURE_OVPN_CLIENT, FEATURE_REPEATER
+from ..const import FEATURE_REPEATER
 from ..hub import GLinetHub
-from ..models import OpenVpnClient
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -39,10 +38,6 @@ async def async_setup_entry(
     if hub.feature_enabled(FEATURE_REPEATER):
         entities.extend([WifiNetworkSelect(hub), RepeaterBandSelect(hub)])
 
-    if hub.feature_enabled(FEATURE_OVPN_CLIENT):
-        for client in hub.ovpn_clients.values():
-            if client.locations and len(client.locations) > 1:
-                entities.append(OpenVpnClientLocationSelect(hub, client))
 
     async_add_entities(entities, True)
 
@@ -185,73 +180,4 @@ class RepeaterBandSelect(CoordinatorEntity[GLinetHub], SelectEntity):
         self.async_write_ha_state()
 
 
-class OpenVpnClientLocationSelect(CoordinatorEntity[GLinetHub], SelectEntity):
-    _attr_has_entity_name = True
-    _attr_icon = "mdi:map-marker-radius"
-
-    def __init__(self, hub: GLinetHub, client: OpenVpnClient) -> None:
-        super().__init__(hub)
-        self._hub = hub
-        self._client = client
-        self._attr_device_info = hub.device_info
-
-    @property
-    def unique_id(self) -> str:
-        key = f"{self._client.group_id}_{self._client.client_id}"
-        return f"glinet_select/{self._hub.device_mac}/{key}/ovpn_location"
-
-    @property
-    def name(self) -> str:
-        name = f"OpenVPN {self._client.name} location"
-        if self._client.group_name:
-             name = f"OpenVPN {self._client.group_name} {self._client.name} location"
-        return name
-
-    @property
-    def options(self) -> list[str]:
-
-        key = f"{self._client.group_id}_{self._client.client_id}"
-        client = self._hub.ovpn_clients.get(key, self._client)
-        return client.locations
-
-    @property
-    def current_option(self) -> str | None:
-        key = f"{self._client.group_id}_{self._client.client_id}"
-        client = self._hub.ovpn_clients.get(key, self._client)
-
-        status = self._hub.ovpn_client_status
-
-        if (
-            status.get("group_id") == client.group_id
-            and status.get("client_id") == client.client_id
-        ):
-            active_domain = status.get("domain")
-            if active_domain:
-                for i, remote in enumerate(client.remotes):
-                    if active_domain in remote:
-                        if i < len(client.locations):
-                            return client.locations[i]
-
-
-
-        current_config_remote = self._hub._ovpn_raw_clients.get(key, {}).get("remote")
-        if isinstance(current_config_remote, list):
-
-             return client.locations[0] if client.locations else None
-
-        if current_config_remote:
-             for i, remote in enumerate(client.remotes):
-                 if current_config_remote == remote:
-                     if i < len(client.locations):
-                         return client.locations[i]
-
-        return client.locations[0] if client.locations else None
-
-    async def async_select_option(self, option: str) -> None:
-        key = f"{self._client.group_id}_{self._client.client_id}"
-        client = self._hub.ovpn_clients.get(key, self._client)
-
-        if option in client.locations:
-            index = client.locations.index(option)
-            await self._hub.set_ovpn_client_location(client.group_id, client.client_id, index)
-            self.async_write_ha_state()
+
