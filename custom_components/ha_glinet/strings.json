@@ -3,21 +3,26 @@
   "config": {
     "step": {
       "user": {
-        "description": "Enter the connection details for your GL-INet router",
+        "description": "Enter your router connection details, choose the feature groups to enable, and select which WAN status sensors Home Assistant should create.",
         "data": {
           "host": "Router Address",
           "password": "Admin Password",
           "consider_home": "Away Delay",
           "scan_interval": "Update Interval",
-          "enabled_features": "Enabled Features",
-          "add_all_devices": "Discover unknown devices"
+          "enabled_features": "Enabled features",
+          "wan_status_monitors": "Monitored WAN status sensors",
+          "add_all_devices": "Discover unknown devices",
+          "cleanup_devices": "Auto-cleanup unknown devices"
         },
         "data_description": {
           "host": "Use the router URL or IP address (for example: http://192.168.8.1).",
           "password": "Provide the same password you use for the router admin interface.",
           "consider_home": "Set how many seconds a client can be offline before it is marked away.",
           "scan_interval": "Number of seconds between polling the router for updates.",
-          "add_all_devices": "Automatically track and create entities for every device connected to the router, including those not yet integrated into Home Assistant."
+          "enabled_features": "Choose the integration feature groups to set up. Disabled feature groups will not create their related entities or services.",
+          "wan_status_monitors": "Choose the interface and IP version checks to monitor. Known router interface IDs are shown with friendly names, such as Ethernet 1 and Repeater. GL.iNet reports 0 as up and 1 as down.",
+          "add_all_devices": "Automatically track and create entities for every device connected to the router, including those not yet integrated into Home Assistant.",
+          "cleanup_devices": "Set this to 0 to disable automatic cleanup. Any other number is treated as minutes; unknown discovered devices are removed after that period if they remain offline or disconnected."
         }
       }
     },
@@ -38,15 +43,20 @@
           "password": "Admin Password",
           "consider_home": "Away Delay",
           "scan_interval": "Update Interval",
-          "enabled_features": "Enabled Features",
-          "add_all_devices": "Discovery unknown devices"
+          "enabled_features": "Enabled features",
+          "wan_status_monitors": "Monitored WAN status sensors",
+          "add_all_devices": "Discover unknown devices",
+          "cleanup_devices": "Auto-cleanup unknown devices"
         },
         "data_description": {
           "host": "Use the router URL or IP address (for example: http://192.168.8.1).",
           "password": "Provide the same password you use for the router admin interface.",
           "consider_home": "Set how many seconds a client can be offline before it is marked away.",
           "scan_interval": "Number of seconds between polling the router for updates.",
-          "add_all_devices": "Automatically track and create entities for every device connected to the router, including those not yet integrated into Home Assistant."
+          "enabled_features": "Choose the integration feature groups to set up. Disabled feature groups will not create their related entities or services.",
+          "wan_status_monitors": "Choose the interface and IP version checks to monitor. Known router interface IDs are shown with friendly names, such as Ethernet 1 and Repeater. GL.iNet reports 0 as up and 1 as down.",
+          "add_all_devices": "Automatically track and create entities for every device connected to the router, including those not yet integrated into Home Assistant.",
+          "cleanup_devices": "Set this to 0 to disable automatic cleanup. Any other number is treated as minutes; unknown discovered devices are removed after that period if they remain offline or disconnected."
         }
       }
     }
@@ -152,6 +162,15 @@
       },
       "ovpn_server_users": {
         "name": "OpenVPN server users"
+      },
+      "wan_status": {
+        "name": "WAN status"
+      },
+      "firewall_rules": {
+        "name": "Firewall rules"
+      },
+      "port_forwards": {
+        "name": "Port forwards"
       }
     },
     "binary_sensor": {
@@ -208,6 +227,18 @@
       },
       "adguard_dns_enabled": {
         "name": "AdGuard Home DNS"
+      },
+      "firewall_dmz": {
+        "name": "Firewall DMZ"
+      },
+      "wan_access_ping": {
+        "name": "WAN Ping Access"
+      },
+      "wan_access_https": {
+        "name": "WAN HTTPS Access"
+      },
+      "wan_access_ssh": {
+        "name": "WAN SSH Access"
       }
     },
     "number": {}
@@ -356,6 +387,60 @@
           "description": "Optional MAC of the target router."
         }
       }
+    },
+    "add_firewall_rule": {
+      "name": "Add firewall rule",
+      "description": "Add a custom firewall rule to the router.",
+      "fields": {
+        "name": { "name": "Name" },
+        "src": { "name": "Source Zone" },
+        "src_ip": { "name": "Source IP" },
+        "src_mac": { "name": "Source MAC" },
+        "src_port": { "name": "Source Port" },
+        "proto": { "name": "Protocol" },
+        "dest": { "name": "Destination Zone" },
+        "dest_ip": { "name": "Destination IP" },
+        "dest_port": { "name": "Destination Port" },
+        "target": { "name": "Target" },
+        "enabled": { "name": "Enabled" }
+      }
+    },
+    "remove_firewall_rule": {
+      "name": "Remove firewall rule",
+      "description": "Remove an existing firewall rule.",
+      "fields": {
+        "rule_id": { "name": "Rule ID" },
+        "remove_all": { "name": "Remove all" }
+      }
+    },
+    "add_port_forward": {
+      "name": "Add port forward",
+      "description": "Add a port forwarding rule.",
+      "fields": {
+        "name": { "name": "Name" },
+        "src": { "name": "Source Zone" },
+        "src_dport": { "name": "Source Port" },
+        "proto": { "name": "Protocol" },
+        "dest": { "name": "Destination Zone" },
+        "dest_ip": { "name": "Destination IP" },
+        "dest_port": { "name": "Destination Port" },
+        "enabled": { "name": "Enabled" }
+      }
+    },
+    "remove_port_forward": {
+      "name": "Remove port forward",
+      "description": "Remove an existing port forwarding rule.",
+      "fields": {
+        "rule_id": { "name": "Rule ID" },
+        "remove_all": { "name": "Remove all" }
+      }
+    },
+    "set_dmz": {
+      "name": "Set DMZ",
+      "description": "Configure DMZ settings.",
+      "fields": {
+        "enabled": { "name": "Enabled" },
+        "dest_ip": { "name": "Destination IP" }
+      }
     }
-  }
-}
+  }}

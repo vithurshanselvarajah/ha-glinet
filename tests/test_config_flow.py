@@ -7,9 +7,15 @@ from custom_components.ha_glinet.config_flow import (
     CONF_ENABLED_FEATURES,
     DEFAULT_ENABLED_FEATURES,
     SetupHub,
+    _wan_monitor_options,
     process_user_input,
 )
-from custom_components.ha_glinet.const import DEFAULT_USERNAME, FEATURE_REPEATER, FEATURE_WG_CLIENT
+from custom_components.ha_glinet.const import (
+    CONF_WAN_STATUS_MONITORS,
+    DEFAULT_USERNAME,
+    FEATURE_REPEATER,
+    FEATURE_WG_CLIENT,
+)
 
 
 async def test_process_user_input_stores_enabled_features(monkeypatch) -> None:
@@ -18,6 +24,7 @@ async def test_process_user_input_stores_enabled_features(monkeypatch) -> None:
         self.username = DEFAULT_USERNAME
         self.router_mac = "00:00:00:00:00:00"
         self.router_model = "mr200"
+        self.wan_interfaces = ["wan", "wwan"]
 
     async def fake_check_reachable(self) -> bool:
         return True
@@ -39,6 +46,12 @@ async def test_process_user_input_stores_enabled_features(monkeypatch) -> None:
     )
 
     assert result["data"][CONF_ENABLED_FEATURES] == [FEATURE_REPEATER]
+    assert result["data"][CONF_WAN_STATUS_MONITORS] == [
+        "wan:ipv4",
+        "wan:ipv6",
+        "wwan:ipv4",
+        "wwan:ipv6",
+    ]
 
 
 async def test_process_user_input_defaults_enabled_features_when_missing(monkeypatch) -> None:
@@ -47,6 +60,7 @@ async def test_process_user_input_defaults_enabled_features_when_missing(monkeyp
         self.username = DEFAULT_USERNAME
         self.router_mac = "00:00:00:00:00:00"
         self.router_model = "mr200"
+        self.wan_interfaces = ["wan"]
 
     async def fake_check_reachable(self) -> bool:
         return True
@@ -65,3 +79,17 @@ async def test_process_user_input_defaults_enabled_features_when_missing(monkeyp
 
     assert result["data"][CONF_ENABLED_FEATURES] == DEFAULT_ENABLED_FEATURES
     assert FEATURE_WG_CLIENT in result["data"][CONF_ENABLED_FEATURES]
+    assert result["data"][CONF_WAN_STATUS_MONITORS] == ["wan:ipv4", "wan:ipv6"]
+
+
+def test_wan_monitor_options_use_friendly_known_interface_names() -> None:
+    assert _wan_monitor_options(["wan", "wwan", "modem_0001", "custom_wan"]) == [
+        {"label": "Ethernet 1 IPv4", "value": "wan:ipv4"},
+        {"label": "Ethernet 1 IPv6", "value": "wan:ipv6"},
+        {"label": "Repeater IPv4", "value": "wwan:ipv4"},
+        {"label": "Repeater IPv6", "value": "wwan:ipv6"},
+        {"label": "Cellular IPv4", "value": "modem_0001:ipv4"},
+        {"label": "Cellular IPv6", "value": "modem_0001:ipv6"},
+        {"label": "custom_wan IPv4", "value": "custom_wan:ipv4"},
+        {"label": "custom_wan IPv6", "value": "custom_wan:ipv6"},
+    ]

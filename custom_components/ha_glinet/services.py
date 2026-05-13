@@ -10,29 +10,49 @@ from homeassistant.helpers import config_validation as cv
 from .const import (
     ATTR_ALL_BAND,
     ATTR_BSSID,
+    ATTR_DEST,
+    ATTR_DEST_IP,
+    ATTR_DEST_PORT,
     ATTR_DFS,
+    ATTR_ENABLED,
     ATTR_MESSAGE_ID,
+    ATTR_NAME,
     ATTR_PASSWORD,
+    ATTR_PROTO,
     ATTR_RECIPIENT,
     ATTR_REMEMBER,
+    ATTR_REMOVE_ALL,
+    ATTR_RULE_ID,
     ATTR_SCOPE,
+    ATTR_SRC,
+    ATTR_SRC_DPORT,
+    ATTR_SRC_IP,
+    ATTR_SRC_MAC,
+    ATTR_SRC_PORT,
     ATTR_SSID,
+    ATTR_TARGET,
     ATTR_TEMPERATURE,
     ATTR_TEXT,
     CONF_ENABLED_FEATURES,
     DOMAIN,
+    FEATURE_FIREWALL,
     FEATURE_OPTIONS,
     FEATURE_REPEATER,
     FEATURE_SMS,
+    SERVICE_ADD_FIREWALL_RULE,
+    SERVICE_ADD_PORT_FORWARD,
     SERVICE_CONNECT_WIFI,
     SERVICE_DISCONNECT_WIFI,
     SERVICE_GET_SAVED_NETWORKS,
     SERVICE_GET_SMS,
     SERVICE_REFRESH_SMS,
+    SERVICE_REMOVE_FIREWALL_RULE,
+    SERVICE_REMOVE_PORT_FORWARD,
     SERVICE_REMOVE_SAVED_NETWORK,
     SERVICE_REMOVE_SMS,
     SERVICE_SCAN_WIFI,
     SERVICE_SEND_SMS,
+    SERVICE_SET_DMZ,
     SERVICE_SET_FAN_TEMPERATURE,
 )
 
@@ -65,6 +85,9 @@ async def async_register_services(hass: HomeAssistant) -> None:
     if not entries:
         return
 
+    firewall_enabled = any(
+        FEATURE_FIREWALL in _enabled_features_from_entry(entry) for entry in entries
+    )
     sms_enabled = any(FEATURE_SMS in _enabled_features_from_entry(entry) for entry in entries)
     repeater_enabled = any(
         FEATURE_REPEATER in _enabled_features_from_entry(entry) for entry in entries
@@ -109,6 +132,42 @@ async def async_register_services(hass: HomeAssistant) -> None:
         await hub.remove_sms(
             scope=call.data[ATTR_SCOPE],
             message_id=call.data.get(ATTR_MESSAGE_ID),
+        )
+
+    async def async_add_firewall_rule(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_FIREWALL, "add_firewall_rule")
+        params = {k: v for k, v in call.data.items() if k != CONF_MAC}
+        await hub.add_firewall_rule(params)
+
+    async def async_remove_firewall_rule(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_FIREWALL, "remove_firewall_rule")
+        await hub.remove_firewall_rule(
+            rule_id=call.data.get(ATTR_RULE_ID),
+            remove_all=call.data.get(ATTR_REMOVE_ALL, False),
+        )
+
+    async def async_add_port_forward(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_FIREWALL, "add_port_forward")
+        params = {k: v for k, v in call.data.items() if k != CONF_MAC}
+        await hub.add_port_forward(params)
+
+    async def async_remove_port_forward(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_FIREWALL, "remove_port_forward")
+        await hub.remove_port_forward(
+            rule_id=call.data.get(ATTR_RULE_ID),
+            remove_all=call.data.get(ATTR_REMOVE_ALL, False),
+        )
+
+    async def async_set_dmz(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_FIREWALL, "set_dmz")
+        await hub.set_dmz_config(
+            enabled=call.data[ATTR_ENABLED],
+            dest_ip=call.data.get(ATTR_DEST_IP),
         )
 
     if sms_enabled:
@@ -271,6 +330,93 @@ async def async_register_services(hass: HomeAssistant) -> None:
             SERVICE_DISCONNECT_WIFI,
             SERVICE_GET_SAVED_NETWORKS,
             SERVICE_REMOVE_SAVED_NETWORK,
+        ]:
+            if hass.services.has_service(DOMAIN, service):
+                hass.services.async_remove(DOMAIN, service)
+
+    if firewall_enabled:
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_ADD_FIREWALL_RULE,
+            async_add_firewall_rule,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Required(ATTR_NAME): cv.string,
+                    vol.Required(ATTR_SRC): cv.string,
+                    vol.Optional(ATTR_SRC_IP): cv.string,
+                    vol.Optional(ATTR_SRC_MAC): cv.string,
+                    vol.Optional(ATTR_SRC_PORT): cv.string,
+                    vol.Required(ATTR_PROTO): cv.string,
+                    vol.Required(ATTR_DEST): cv.string,
+                    vol.Optional(ATTR_DEST_IP): cv.string,
+                    vol.Optional(ATTR_DEST_PORT): cv.string,
+                    vol.Required(ATTR_TARGET): cv.string,
+                    vol.Optional(ATTR_ENABLED, default=True): cv.boolean,
+                }
+            ),
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_REMOVE_FIREWALL_RULE,
+            async_remove_firewall_rule,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Optional(ATTR_RULE_ID): cv.string,
+                    vol.Optional(ATTR_REMOVE_ALL, default=False): cv.boolean,
+                }
+            ),
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_ADD_PORT_FORWARD,
+            async_add_port_forward,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Required(ATTR_NAME): cv.string,
+                    vol.Required(ATTR_SRC): cv.string,
+                    vol.Required(ATTR_SRC_DPORT): cv.string,
+                    vol.Required(ATTR_PROTO): cv.string,
+                    vol.Required(ATTR_DEST): cv.string,
+                    vol.Required(ATTR_DEST_IP): cv.string,
+                    vol.Required(ATTR_DEST_PORT): cv.string,
+                    vol.Optional(ATTR_ENABLED, default=True): cv.boolean,
+                }
+            ),
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_REMOVE_PORT_FORWARD,
+            async_remove_port_forward,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Optional(ATTR_RULE_ID): cv.string,
+                    vol.Optional(ATTR_REMOVE_ALL, default=False): cv.boolean,
+                }
+            ),
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_DMZ,
+            async_set_dmz,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Required(ATTR_ENABLED): cv.boolean,
+                    vol.Optional(ATTR_DEST_IP): cv.string,
+                }
+            ),
+        )
+    else:
+        for service in [
+            SERVICE_ADD_FIREWALL_RULE,
+            SERVICE_REMOVE_FIREWALL_RULE,
+            SERVICE_ADD_PORT_FORWARD,
+            SERVICE_REMOVE_PORT_FORWARD,
+            SERVICE_SET_DMZ,
         ]:
             if hass.services.has_service(DOMAIN, service):
                 hass.services.async_remove(DOMAIN, service)

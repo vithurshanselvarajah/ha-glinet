@@ -208,6 +208,31 @@ async def test_get_modem_info_uses_documented_modem_endpoint() -> None:
     assert session.requests[0]["json"]["params"] == ["sid-1", "modem", "get_info", {}]
 
 
+async def test_get_kmwan_status_uses_kmwan_endpoint() -> None:
+    session = FakeSession(
+        [
+            {
+                "result": {
+                    "interfaces": [
+                        {"interface": "wan", "status_v4": 1, "status_v6": 0}
+                    ]
+                }
+            }
+        ]
+    )
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    assert await client.system.get_kmwan_status() == {
+        "interfaces": [{"interface": "wan", "status_v4": 1, "status_v6": 0}]
+    }
+    assert session.requests[0]["json"]["params"] == [
+        "sid-1",
+        "kmwan",
+        "get_status",
+        {},
+    ]
+
+
 async def test_get_modem_info_extracts_nested_fields() -> None:
     session = FakeSession(
         [

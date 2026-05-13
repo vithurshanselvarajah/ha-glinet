@@ -58,10 +58,15 @@ class SystemModule(BaseModule):
             temperature=temperature,
             flash_total=_get("flash_total", 0),
             flash_free=_get("flash_free", 0),
+            network=status.get("network", []),
         )
 
     async def get_load(self) -> dict[str, Any]:
         response = await self._call("system", "get_load")
+        return dict(response)
+
+    async def get_kmwan_status(self) -> dict[str, Any]:
+        response = await self._call("kmwan", "get_status")
         return dict(response)
 
     async def reboot(self, delay: int = 0) -> dict[str, Any]:

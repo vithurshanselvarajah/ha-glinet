@@ -39,9 +39,11 @@ def pytest_configure() -> None:
     sys.modules.setdefault("passlib.hash", passlib_hash)
 
     try:
-        __import__("voluptuous")
+        import voluptuous
     except ModuleNotFoundError:
         voluptuous = types.ModuleType("voluptuous")
+        sys.modules.setdefault("voluptuous", voluptuous)
+    if not hasattr(voluptuous, "Schema"):
         voluptuous.Schema = type(
             "Schema",
             (),
@@ -54,7 +56,6 @@ def pytest_configure() -> None:
         voluptuous.Clamp = lambda *args, **kwargs: args[0] if args else None
         voluptuous.In = lambda *args, **kwargs: args[0] if args else None
         voluptuous.Range = lambda *args, **kwargs: args[0] if args else None
-        sys.modules.setdefault("voluptuous", voluptuous)
 
     try:
         __import__("homeassistant")
@@ -212,8 +213,11 @@ def pytest_configure() -> None:
             MEASUREMENT="measurement",
             TOTAL_INCREASING="total_increasing",
         )
+        switch = types.ModuleType("homeassistant.components.switch")
+        switch.SwitchEntity = object
         homeassistant.components = components
         homeassistant.components.sensor = sensor
+        homeassistant.components.switch = switch
         homeassistant.config_entries = config_entries
         homeassistant.core = core
         homeassistant.const = const
@@ -243,6 +247,7 @@ def pytest_configure() -> None:
         sys.modules["homeassistant.util"] = util
         sys.modules["homeassistant.util.dt"] = dt
         sys.modules["homeassistant.components.sensor"] = sensor
+        sys.modules["homeassistant.components.switch"] = switch
 
 
 def pytest_pyfunc_call(pyfuncitem: Any) -> bool:

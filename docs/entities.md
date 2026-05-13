@@ -55,7 +55,10 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 
 | Entity | Source | Notes |
 | --- | --- | --- |
-| WAN IP | Optional `modem/get_status` | The IP address assigned to the internet interface (modem). |
+| WAN IP | Optional `modem/get_status` | The IP address assigned to the cellular internet interface. Hidden when unavailable. |
+| WAN status | `system/get_status` | Current status of the WAN interface (Online, Up, Down). |
+| Firewall rules | Optional `firewall/get_rules` | Count of active custom firewall rules. |
+| Port forwards | Optional `firewall/get_port_forwards` | Count of active port forwarding rules. |
 | Connected clients | `clients/get_list` | Count of currently online tracked clients. |
 | WireGuard server users | `wg-server/get_status` | Count of currently online WireGuard server peers. |
 | OpenVPN server users | `ovpn-server/get_status` | Count of currently online OpenVPN server users. |
@@ -139,3 +142,7 @@ These sensors are created only when the router reports bandwidth fields in the c
 | Repeater auto-switch | `repeater/get_config` | Toggle whether the router automatically switches between saved networks. |
 | OpenVPN client switches | `ovpn-client` API | One switch per OpenVPN client config returned by the router. |
 | OpenVPN Server | `ovpn-server` API | Toggle the OpenVPN server on or off. |
+| Firewall DMZ | `firewall/set_dmz` | Toggle the DMZ (DeMilitarized Zone) feature. |
+| WAN Ping Access | `firewall/set_wan_access` | Toggle whether the router responds to ICMP echo requests from the WAN. |
+| WAN HTTPS Access | `firewall/set_wan_access` | Toggle remote HTTPS management access from the WAN. |
+| WAN SSH Access | `firewall/set_wan_access` | Toggle remote SSH management access from the WAN. |

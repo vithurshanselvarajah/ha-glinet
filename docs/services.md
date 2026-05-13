@@ -81,7 +81,52 @@ Sets the temperature threshold at which the router's fan will start running.
 - **`temperature`**: Target threshold temperature in Celsius (typically 70-90).
 - **`mac`** (Optional): Target a specific router by MAC address.
 
-> Note: Repeater services are only registered when the router entry has repeater support enabled.
+### `add_firewall_rule`
+Adds a custom firewall rule.
+- **`name`**: Descriptive name for the rule.
+- **`src`**: Source zone (e.g., `wan`, `lan`).
+- **`src_ip`** (Optional): Source IP address.
+- **`src_mac`** (Optional): Source MAC address.
+- **`src_port`** (Optional): Source port.
+- **`proto`**: Protocol (`tcp`, `udp`, `tcpudp`).
+- **`dest`**: Destination zone.
+- **`dest_ip`** (Optional): Destination IP address.
+- **`dest_port`** (Optional): Destination port.
+- **`target`**: Target action (`ACCEPT`, `DROP`, `REJECT`).
+- **`enabled`**: Whether the rule is active.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+### `remove_firewall_rule`
+Removes a firewall rule.
+- **`rule_id`** (Optional): The ID of the rule to remove.
+- **`remove_all`** (Optional): If true, removes all custom rules.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+### `add_port_forward`
+Adds a port forwarding rule.
+- **`name`**: Descriptive name.
+- **`src`**: Source zone (usually `wan`).
+- **`src_dport`**: External port.
+- **`proto`**: Protocol.
+- **`dest`**: Destination zone (usually `lan`).
+- **`dest_ip`**: Internal IP address.
+- **`dest_port`**: Internal port.
+- **`enabled`**: Whether the rule is active.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+### `remove_port_forward`
+Removes a port forwarding rule.
+- **`rule_id`** (Optional): The ID of the rule to remove.
+- **`remove_all`** (Optional): If true, removes all port forwards.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+### `set_dmz`
+Configures DMZ (DeMilitarized Zone) settings.
+- **`enabled`**: Whether DMZ is enabled.
+- **`dest_ip`** (Optional): The internal IP address to expose.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+> Note: Firewall and repeater services are only registered when the corresponding support is enabled for the router.
 
 ## Internal Logic
 

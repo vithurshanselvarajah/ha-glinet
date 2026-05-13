@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 from custom_components.ha_glinet.const import (
     CONF_ADD_ALL_DEVICES,
     CONF_ENABLED_FEATURES,
+    CONF_WAN_STATUS_MONITORS,
     FEATURE_REPEATER,
     FEATURE_WG_CLIENT,
     FEATURE_WG_SERVER,
@@ -19,6 +20,7 @@ from custom_components.ha_glinet.models import ClientDeviceInfo, RepeaterState, 
 def _hub_with_devices() -> GLinetHub:
     hub = GLinetHub.__new__(GLinetHub)
     hub._options = {"consider_home": 0}
+    hub._settings = {}
     hub._factory_mac = "00:00:00:00:00:00"
     hub._host = "192.168.8.1"
     hub._devices = {"aa:bb:cc:dd:ee:ff": ClientDeviceInfo("aa:bb:cc:dd:ee:ff")}
@@ -55,6 +57,7 @@ async def test_fetch_connected_devices_marks_existing_devices_away_on_empty_clie
 
 async def test_fetch_tailscale_state_treats_timeout_as_optional() -> None:
     hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {}
     hub._tailscale_config = {"enabled": True}
     hub._tailscale_connection = True
 
@@ -73,6 +76,7 @@ async def test_fetch_tailscale_state_treats_timeout_as_optional() -> None:
 async def test_fetch_cellular_status_merges_modem_info_and_status() -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._cached_modem_info = None
+    hub._settings = {}
     hub._cellular_status = {}
     hub._default_modem_bus = None
     responses = [
@@ -105,6 +109,7 @@ async def test_fetch_cellular_status_merges_modem_info_and_status() -> None:
 async def test_fetch_cellular_status_extracts_apn() -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._cached_modem_info = None
+    hub._settings = {}
     hub._cellular_status = {}
     responses = [
         {"modems": [{"bus": "1-1"}]},
@@ -126,6 +131,7 @@ async def test_fetch_cellular_status_extracts_apn() -> None:
 
 async def test_send_sms_uses_default_modem_bus() -> None:
     hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {}
     hub._default_modem_bus = "1-1"
     hub.fetch_sms_messages = _noop
     sent: list[tuple[str, str, str]] = []
@@ -166,6 +172,9 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
     async def fake_fetch_system_status() -> None:
         called.append("system")
 
+    async def fake_fetch_kmwan_status() -> None:
+        called.append("kmwan")
+
     async def fake_fetch_connected_devices() -> None:
         called.append("clients")
 
@@ -194,6 +203,7 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
         called.append("led")
 
     hub.fetch_system_status = fake_fetch_system_status
+    hub.fetch_kmwan_status = fake_fetch_kmwan_status
     hub.fetch_connected_devices = fake_fetch_connected_devices
     hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
     hub.fetch_wireguard_clients = fake_fetch_wireguard_clients
@@ -209,6 +219,7 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
 
     assert called == [
         "system",
+        "kmwan",
         "clients",
         "wifi",
         "fan",
@@ -237,6 +248,9 @@ async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
     async def fake_fetch_system_status() -> None:
         called.append("system")
 
+    async def fake_fetch_kmwan_status() -> None:
+        called.append("kmwan")
+
     async def fake_fetch_connected_devices() -> None:
         called.append("clients")
 
@@ -250,6 +264,7 @@ async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
         called.append("led")
 
     hub.fetch_system_status = fake_fetch_system_status
+    hub.fetch_kmwan_status = fake_fetch_kmwan_status
     hub.fetch_connected_devices = fake_fetch_connected_devices
     hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
     hub.fetch_fan_status = fake_fetch_fan_status
@@ -259,7 +274,7 @@ async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
     hub.fetch_led_status = fake_fetch_led_status
     await hub.fetch_all_data()
 
-    assert called == ["system", "clients", "wifi", "fan", "led"]
+    assert called == ["system", "kmwan", "clients", "wifi", "fan", "led"]
     assert hub._wireguard_clients == {}
     assert hub._wireguard_connections is None
     assert hub._tailscale_config == {}
@@ -283,6 +298,9 @@ async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> No
     async def fake_fetch_system_status() -> None:
         called.append("system")
 
+    async def fake_fetch_kmwan_status() -> None:
+        called.append("kmwan")
+
     async def fake_fetch_connected_devices() -> None:
         called.append("clients")
 
@@ -302,6 +320,7 @@ async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> No
         called.append("led")
 
     hub.fetch_system_status = fake_fetch_system_status
+    hub.fetch_kmwan_status = fake_fetch_kmwan_status
     hub.fetch_connected_devices = fake_fetch_connected_devices
     hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
     hub.fetch_wireguard_clients = fake_fetch_wireguard_clients
@@ -320,6 +339,7 @@ async def test_scan_wifi_networks_stores_results(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._api = types.SimpleNamespace()
     hub._invoke_api = lambda api_callable: api_callable()
+    hub._settings = {}
     hub._factory_mac = "00:00:00:00:00:00"
     hub.hass = object()
     hub._scanned_networks = []
@@ -362,6 +382,7 @@ async def test_scan_wifi_networks_stores_results(monkeypatch) -> None:
 
 async def test_connect_to_wifi_calls_router_api_and_refreshes_status(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {}
     called: list[Any] = []
 
     class RepeaterModule:
@@ -396,6 +417,7 @@ async def test_connect_to_wifi_calls_router_api_and_refreshes_status(monkeypatch
 
 async def test_disconnect_wifi_calls_router_api_and_refreshes_status(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {}
     called: list[str] = []
 
     class RepeaterModule:
@@ -420,6 +442,7 @@ async def test_disconnect_wifi_calls_router_api_and_refreshes_status(monkeypatch
 
 async def test_set_repeater_band_updates_config(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {}
     called: list[Any] = []
 
     class RepeaterModule:
@@ -447,6 +470,7 @@ async def test_set_repeater_band_updates_config(monkeypatch) -> None:
 async def test_fetch_repeater_status_returns_none_when_unavailable() -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._invoke_optional_api = AsyncMock(return_value=None)
+    hub._settings = {}
     hub._api = SimpleNamespace(repeater=SimpleNamespace(get_status=object()))
     hub._repeater_status = RepeaterStatus(RepeaterState.CONNECTED)
 
@@ -458,6 +482,7 @@ async def test_fetch_repeater_status_returns_none_when_unavailable() -> None:
 async def test_fetch_repeater_config_stores_response() -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._invoke_optional_api = AsyncMock(return_value={"lock_band": "2g"})
+    hub._settings = {}
     hub._api = SimpleNamespace(repeater=SimpleNamespace(get_config=object()))
 
     await hub.fetch_repeater_config()
@@ -467,6 +492,7 @@ async def test_fetch_repeater_config_stores_response() -> None:
 
 async def test_get_saved_wifi_networks_and_remove_saved_wifi_network(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {}
     api_calls: list[str] = []
 
     class RepeaterModule:
@@ -533,6 +559,69 @@ async def test_async_initialize_hub_cleans_up_orphaned_entities(monkeypatch) -> 
 
 
     mock_er.async_remove.assert_called_once_with("sensor.glinet_cellular_signal")
+
+
+async def test_async_initialize_hub_cleans_up_unselected_wan_status_sensors(
+    monkeypatch,
+) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {
+        CONF_ADD_ALL_DEVICES: True,
+        CONF_WAN_STATUS_MONITORS: ["wan:ipv4", "wan:ipv6", "wwan:ipv4"],
+    }
+    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub.hass = MagicMock()
+    hub._late_init_complete = True
+    hub._factory_mac = "00:11:22:33:44:55"
+
+    selected_wan = types.SimpleNamespace(
+        entity_id="sensor.ethernet_1_status",
+        unique_id="glinet_sensor/00:11:22:33:44:55/wan_status_wan",
+        domain="sensor",
+    )
+    selected_legacy_wwan = types.SimpleNamespace(
+        entity_id="sensor.repeater_ipv4_status",
+        unique_id="glinet_sensor/00:11:22:33:44:55/wan_status_wwan_ipv4",
+        domain="sensor",
+    )
+    unselected_secondwan = types.SimpleNamespace(
+        entity_id="sensor.ethernet_2_status",
+        unique_id="glinet_sensor/00:11:22:33:44:55/wan_status_secondwan",
+        domain="sensor",
+    )
+    unselected_legacy_wwan = types.SimpleNamespace(
+        entity_id="sensor.repeater_ipv6_status",
+        unique_id="glinet_sensor/00:11:22:33:44:55/wan_status_wwan_ipv6",
+        domain="sensor",
+    )
+
+    mock_er = MagicMock()
+    mock_er.async_remove = MagicMock()
+
+    import homeassistant.helpers.entity_registry as er
+
+    monkeypatch.setattr(er, "async_get", lambda _: mock_er)
+    monkeypatch.setattr(
+        er,
+        "async_entries_for_config_entry",
+        MagicMock(
+            return_value=[
+                selected_wan,
+                selected_legacy_wwan,
+                unselected_secondwan,
+                unselected_legacy_wwan,
+            ]
+        ),
+    )
+
+    hub.refresh_session_token = _noop
+    hub.fetch_all_data = _noop
+
+    await hub.async_initialize_hub()
+
+    assert mock_er.async_remove.call_count == 2
+    mock_er.async_remove.assert_any_call("sensor.ethernet_2_status")
+    mock_er.async_remove.assert_any_call("sensor.repeater_ipv6_status")
 
 
 async def test_fetch_connected_devices_respects_add_all_devices_option(monkeypatch) -> None:
@@ -625,6 +714,7 @@ async def test_async_initialize_hub_cleans_up_unknown_devices(monkeypatch) -> No
 
 async def test_fetch_wg_server_status(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {}
 
     class WgServerModule:
         async def get_status(self) -> dict[str, Any]:
@@ -640,6 +730,7 @@ async def test_fetch_wg_server_status(monkeypatch) -> None:
 
 async def test_start_wg_server(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {}
     called = []
 
     class WgServerModule:
@@ -657,6 +748,7 @@ async def test_start_wg_server(monkeypatch) -> None:
 
 async def test_stop_wg_server(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {}
     called = []
 
     class WgServerModule:

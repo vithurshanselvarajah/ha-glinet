@@ -2,6 +2,7 @@ from .adguard import AdGuardModule
 from .clients import ClientsModule
 from .diag import DiagModule
 from .fan import FanModule
+from .firewall import FirewallModule
 from .led import LedModule
 from .macclone import MacCloneModule
 from .modem import ModemModule
@@ -20,6 +21,7 @@ __all__ = [
     "ClientsModule",
     "DiagModule",
     "FanModule",
+    "FirewallModule",
     "LedModule",
     "MacCloneModule",
     "ModemModule",

@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
 
 class TailscaleConnection(Enum):
@@ -29,6 +30,7 @@ class RouterStatus:
     temperature: int | None = None
     flash_total: int = 0
     flash_free: int = 0
+    network: list[dict[str, Any]] = field(default_factory=list)
 
 @dataclass
 class WifiInterfaceInfo:

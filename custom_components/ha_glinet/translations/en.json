@@ -9,15 +9,20 @@
           "password": "Admin Password",
           "consider_home": "Away Delay",
           "scan_interval": "Update Interval",
-          "enabled_features": "Enabled Features",
-          "add_all_devices": "Discover unknown devices"
+          "enabled_features": "Enabled features",
+          "wan_status_monitors": "Monitored WAN status sensors",
+          "add_all_devices": "Discover unknown devices",
+          "cleanup_devices": "Auto-cleanup unknown devices"
         },
         "data_description": {
           "host": "Type the router hostname, URL, or IP address.",
           "password": "Enter the admin password configured on your GL-INet router.",
           "consider_home": "Number of seconds before a disconnected client is treated as away.",
           "scan_interval": "Number of seconds between polling the router for updates.",
-          "add_all_devices": "Automatically track and create entities for every device connected to the router, including those not yet integrated into Home Assistant."
+          "enabled_features": "Choose the integration feature groups to set up. Disabled feature groups will not create their related entities or services.",
+          "wan_status_monitors": "Choose the interface and IP version checks to monitor. Known router interface IDs are shown with friendly names, such as Ethernet 1 and Repeater. GL.iNet reports 0 as up and 1 as down.",
+          "add_all_devices": "Automatically track and create entities for every device connected to the router, including those not yet integrated into Home Assistant.",
+          "cleanup_devices": "Set this to 0 to disable automatic cleanup. Any other number is treated as minutes; unknown discovered devices are removed after that period if they remain offline or disconnected."
         }
       }
     },
@@ -38,15 +43,20 @@
           "password": "Admin Password",
           "consider_home": "Away Delay",
           "scan_interval": "Update Interval",
-          "enabled_features": "Enabled Features",
-          "add_all_devices": "Discover unknown devices"
+          "enabled_features": "Enabled features",
+          "wan_status_monitors": "Monitored WAN status sensors",
+          "add_all_devices": "Discover unknown devices",
+          "cleanup_devices": "Auto-cleanup unknown devices"
         },
         "data_description": {
           "host": "Type the router hostname, URL, or IP address.",
           "password": "Enter the admin password configured on your GL-INet router.",
           "consider_home": "Number of seconds before a disconnected client is treated as away.",
           "scan_interval": "Number of seconds between polling the router for updates.",
-          "add_all_devices": "Automatically track and create entities for every device connected to the router, including those not yet integrated into Home Assistant."
+          "enabled_features": "Choose the integration feature groups to set up. Disabled feature groups will not create their related entities or services.",
+          "wan_status_monitors": "Choose the interface and IP version checks to monitor. Known router interface IDs are shown with friendly names, such as Ethernet 1 and Repeater. GL.iNet reports 0 as up and 1 as down.",
+          "add_all_devices": "Automatically track and create entities for every device connected to the router, including those not yet integrated into Home Assistant.",
+          "cleanup_devices": "Set this to 0 to disable automatic cleanup. Any other number is treated as minutes; unknown discovered devices are removed after that period if they remain offline or disconnected."
         }
       }
     }
