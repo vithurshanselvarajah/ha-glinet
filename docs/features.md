@@ -14,6 +14,8 @@
 - OpenVPN client and server switches.
 - Tailscale switch.
 - ZeroTier switch (Requires Network ID setup on router).
+- Firewall management (DMZ, port forwarding, and rules).
+- WAN access control (Ping, HTTPS, SSH).
 
 ## Added Operational Features
 
@@ -27,6 +29,8 @@
 - WireGuard server connected users count.
 - OpenVPN server connected users count.
 - AdGuard Home management (Enable/Disable, DNS control).
+- Custom firewall rules and port forwarding management.
+- Automatic stale device registry cleanup.
 
 ## Supported Actions
 
@@ -40,6 +44,10 @@
 - Remove text messages when the router exposes SMS support.
 - Trigger a 10-second fan test.
 - Set the fan threshold temperature.
+- Add or remove custom firewall rules.
+- Add or remove port forwarding rules.
+- Enable or disable DMZ.
+- Configure WAN-side management access (Ping, HTTPS, SSH).
 
 ## Authentication & Session Management
 
@@ -58,6 +66,7 @@ When adding the GL.iNet integration or modifying it via the **Configure** menu, 
 - **Update Interval**: The polling frequency (in seconds) between 10s and 300s (default 30s). Increase this if you experience router slowdowns.
 - **Consider Home**: Defines the grace period (in seconds) before a device is marked as "Away" in Home Assistant. This helps prevent devices from flickering when they briefly drop off the network.
 - **Discover unknown devices**: A toggle to choose whether to add *all* newly discovered devices to the Home Assistant device registry or only keep tracked/known devices. Toggling this off will automatically clean up any untracked devices.
+- **Auto-cleanup unknown devices (min)**: Defines the period of inactivity (in minutes) after which an unknown discovered device is automatically removed from the registry. Set to 0 to disable automatic cleanup.
 - **Enabled Features**: A selection of optional modules to activate for this router instance:
     - **Cellular**: Enables signal and network monitoring for routers with internal or USB modems.
     - **Repeater**: Enables WiFi station mode management, scanning, and saved network control.
