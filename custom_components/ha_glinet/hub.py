@@ -25,6 +25,7 @@ from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util.dt import utcnow
 
 from .api import (
     APIClientError,
@@ -38,11 +39,14 @@ from .api.models import RouterStatus
 from .const import (
     API_PATH,
     CONF_ADD_ALL_DEVICES,
+    CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
+    CONF_WAN_STATUS_MONITORS,
     DEFAULT_USERNAME,
     DOMAIN,
     FEATURE_ADGUARD,
     FEATURE_CELLULAR,
+    FEATURE_FIREWALL,
     FEATURE_OPTIONS,
     FEATURE_OVPN_CLIENT,
     FEATURE_OVPN_SERVER,
@@ -103,6 +107,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._devices: dict[str, ClientDeviceInfo] = {}
         self._wifi_ifaces: dict[str, WifiInterface] = {}
         self._system_status: RouterStatus | None = None
+        self._kmwan_status: dict[str, Any] = {}
         self._cellular_status: dict[str, Any] = {}
         self._modems: dict[str, dict[str, Any]] = {}
         self._cached_modem_info: dict[str, Any] | None = None
@@ -128,6 +133,11 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._zerotier_status: ZeroTierStatus | None = None
         self._led_enabled: bool | None = None
         self._adguard_status: AdGuardStatus | None = None
+        self._firewall_rules: list[dict[str, Any]] = []
+        self._dmz_config: dict[str, Any] = {}
+        self._port_forwards: list[dict[str, Any]] = []
+        self._wan_access: dict[str, Any] = {}
+        self._zone_list: dict[str, Any] = {}
 
         self._late_init_complete = False
         self._connect_error = False
@@ -136,6 +146,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
     async def _async_update_data(self) -> None:
         try:
             await self.fetch_all_data()
+            await self._async_cleanup_stale_devices()
         except ConfigEntryAuthFailed:
             raise
         except Exception as err:
@@ -147,6 +158,27 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
     def feature_enabled(self, feature: str) -> bool:
         return feature in self.enabled_features
+
+    def _wan_status_entity_selected(self, unique_id: str) -> bool:
+        prefix = f"glinet_sensor/{self.device_mac}/wan_status_"
+        if not unique_id.startswith(prefix):
+            return True
+
+        monitors = self.wan_status_monitors
+        if monitors is None:
+            return True
+
+        selected_parts = []
+        for monitor in monitors:
+            interface, separator, protocol = monitor.partition(":")
+            if separator and protocol in {"ipv4", "ipv6"} and interface:
+                selected_parts.append((interface, protocol))
+
+        suffix = unique_id.removeprefix(prefix)
+        return any(
+            suffix == interface or suffix == f"{interface}_{protocol}"
+            for interface, protocol in selected_parts
+        )
 
     async def async_initialize_hub(self) -> None:
         if not self._late_init_complete:
@@ -187,6 +219,11 @@ class GLinetHub(DataUpdateCoordinator[None]):
             FEATURE_ZEROTIER: [
                 "zerotier",
             ],
+            FEATURE_FIREWALL: [
+                "firewall",
+                "dmz",
+                "wan_access",
+            ],
         }
 
         for entry in track_entries:
@@ -203,7 +240,16 @@ class GLinetHub(DataUpdateCoordinator[None]):
                         removed = True
                         break
 
+            if not removed and not self._wan_status_entity_selected(entry.unique_id):
+                _LOGGER.debug(
+                    "Removing unselected WAN status entity %s",
+                    entry.entity_id,
+                )
+                entity_registry.async_remove(entry.entity_id)
+                removed = True
+
             if not removed and not self._settings.get(CONF_ADD_ALL_DEVICES):
+
                 mac = None
                 if entry.domain == TRACKER_DOMAIN:
                     mac = entry.unique_id
@@ -309,6 +355,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
         tasks: list[Awaitable[Any]] = [
             self.fetch_system_status(),
+            self.fetch_kmwan_status(),
             self.fetch_connected_devices(),
             self.fetch_wifi_interfaces(),
             self.fetch_fan_status(),
@@ -378,6 +425,23 @@ class GLinetHub(DataUpdateCoordinator[None]):
         else:
             self._adguard_status = None
 
+        if self.feature_enabled(FEATURE_FIREWALL):
+            tasks.extend(
+                [
+                    self.fetch_firewall_rules(),
+                    self.fetch_dmz_config(),
+                    self.fetch_port_forwards(),
+                    self.fetch_wan_access(),
+                    self.fetch_zone_list(),
+                ]
+            )
+        else:
+            self._firewall_rules = []
+            self._dmz_config = {}
+            self._port_forwards = []
+            self._wan_access = {}
+            self._zone_list = {}
+
         for task in tasks:
             await task
 
@@ -440,14 +504,79 @@ class GLinetHub(DataUpdateCoordinator[None]):
             _LOGGER.debug("Optional GL-INet router API is unavailable", exc_info=True)
             return None
 
+    async def reboot(self, delay: int = 0) -> None:
+        await self._invoke_api(lambda: self.router_api.system.reboot(delay))
+
     async def fetch_system_status(self) -> None:
         response = await self._invoke_api(self.router_api.system.get_status)
         if response:
             self._system_status = response
 
-    async def reboot(self, delay: int = 0) -> None:
-        await self._invoke_api(lambda: self.router_api.system.reboot(delay))
+    async def fetch_kmwan_status(self) -> None:
+        response = await self._invoke_optional_api(self.router_api.system.get_kmwan_status)
+        self._kmwan_status = response or {}
 
+    async def fetch_firewall_rules(self) -> None:
+        response = await self._invoke_optional_api(self.router_api.firewall.get_rule_list)
+        self._firewall_rules = (response or {}).get("res") or []
+
+    async def fetch_dmz_config(self) -> None:
+        response = await self._invoke_optional_api(self.router_api.firewall.get_dmz)
+        self._dmz_config = response or {}
+
+    async def fetch_port_forwards(self) -> None:
+        response = await self._invoke_optional_api(self.router_api.firewall.get_port_forward_list)
+        self._port_forwards = (response or {}).get("res") or []
+
+    async def fetch_wan_access(self) -> None:
+        response = await self._invoke_optional_api(self.router_api.firewall.get_wan_access)
+        self._wan_access = response or {}
+
+    async def fetch_zone_list(self) -> None:
+        response = await self._invoke_optional_api(self.router_api.firewall.get_zone_list)
+        self._zone_list = response or {}
+
+    async def add_firewall_rule(self, params: dict[str, Any]) -> None:
+        await self._invoke_api(lambda: self.router_api.firewall.add_rule(params))
+        await self.fetch_firewall_rules()
+
+    async def remove_firewall_rule(
+        self,
+        rule_id: str | None = None,
+        remove_all: bool = False,
+    ) -> None:
+        params = {}
+        if remove_all:
+            params["all"] = True
+        elif rule_id:
+            params["id"] = rule_id
+        await self._invoke_api(lambda: self.router_api.firewall.remove_rule(params))
+        await self.fetch_firewall_rules()
+
+    async def add_port_forward(self, params: dict[str, Any]) -> None:
+        await self._invoke_api(lambda: self.router_api.firewall.add_port_forward(params))
+        await self.fetch_port_forwards()
+
+    async def remove_port_forward(
+        self,
+        rule_id: str | None = None,
+        remove_all: bool = False,
+    ) -> None:
+        params = {}
+        if remove_all:
+            params["all"] = True
+        elif rule_id:
+            params["id"] = rule_id
+        await self._invoke_api(lambda: self.router_api.firewall.remove_port_forward(params))
+        await self.fetch_port_forwards()
+
+    async def set_dmz_config(self, enabled: bool, dest_ip: str | None = None) -> None:
+        await self._invoke_api(lambda: self.router_api.firewall.set_dmz(enabled, dest_ip))
+        await self.fetch_dmz_config()
+
+    async def set_wan_access(self, config: dict[str, Any]) -> None:
+        await self._invoke_api(lambda: self.router_api.firewall.set_wan_access(config))
+        await self.fetch_wan_access()
 
     async def fetch_connected_devices(self) -> None:
         new_device = False
@@ -486,6 +615,44 @@ class GLinetHub(DataUpdateCoordinator[None]):
         async_dispatcher_send(self.hass, self.event_device_updated)
         if new_device:
             async_dispatcher_send(self.hass, self.event_device_added)
+
+        await self._async_cleanup_stale_devices()
+
+    async def _async_cleanup_stale_devices(self) -> None:
+        cleanup_minutes = self._settings.get(CONF_CLEANUP_DEVICES, 0)
+        if cleanup_minutes <= 0:
+            return
+
+        now = utcnow()
+        stale_limit = timedelta(minutes=cleanup_minutes)
+        to_remove = []
+
+        for mac, device in self._devices.items():
+            if not device.is_connected and (now - device.last_activity) > stale_limit:
+                if not device.is_known:
+                    to_remove.append(mac)
+
+        if not to_remove:
+            return
+
+        entity_registry = er.async_get(self.hass)
+        device_registry = dr.async_get(self.hass)
+
+        for mac in to_remove:
+            _LOGGER.debug("Cleaning up stale discovered device %s", mac)
+            device = self._devices.pop(mac)
+            entities = er.async_entries_for_config_entry(entity_registry, self._entry.entry_id)
+            for entry in entities:
+                if (
+                    entry.unique_id == mac
+                    or entry.unique_id.startswith(f"glinet_client_sensor/{mac}/")
+                ):
+                    entity_registry.async_remove(entry.entity_id)
+            ha_device = device_registry.async_get_device(
+                connections={(CONNECTION_NETWORK_MAC, format_mac(mac))}
+            )
+            if ha_device and len(ha_device.config_entries) <= 1:
+                device_registry.async_remove_device(ha_device.id)
 
     async def fetch_wifi_interfaces(self) -> None:
         response = await self._invoke_api(self.router_api.wifi.get_interfaces)
@@ -1060,6 +1227,16 @@ class GLinetHub(DataUpdateCoordinator[None]):
     def router_status(self) -> RouterStatus | None:
         return self._system_status
 
+    @property
+    def kmwan_status(self) -> dict[str, Any]:
+        return self._kmwan_status
+
+    @property
+    def wan_status_monitors(self) -> set[str] | None:
+        monitors = self._settings.get(CONF_WAN_STATUS_MONITORS)
+        if monitors is None:
+            return None
+        return set(monitors)
 
     @property
     def cellular_status(self) -> dict[str, Any]:

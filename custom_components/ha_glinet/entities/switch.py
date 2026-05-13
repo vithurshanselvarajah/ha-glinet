@@ -10,6 +10,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import (
     FEATURE_ADGUARD,
+    FEATURE_FIREWALL,
     FEATURE_OVPN_CLIENT,
     FEATURE_OVPN_SERVER,
     FEATURE_REPEATER,
@@ -52,6 +53,11 @@ async def async_setup_entry(
     if hub.feature_enabled(FEATURE_ADGUARD):
         entities.append(AdGuardEnabledSwitch(hub))
         entities.append(AdGuardDnsEnabledSwitch(hub))
+    if hub.feature_enabled(FEATURE_FIREWALL):
+        entities.append(GLinetDMZSwitch(hub))
+        entities.append(GLinetWANAccessSwitch(hub, "ping", "WAN Ping", "mdi:access-point-network"))
+        entities.append(GLinetWANAccessSwitch(hub, "https", "WAN HTTPS Access", "mdi:web"))
+        entities.append(GLinetWANAccessSwitch(hub, "ssh", "WAN SSH Access", "mdi:console-network"))
     entities.append(LedSwitch(hub))
     async_add_entities(entities, True)
 
@@ -485,4 +491,65 @@ class AdGuardDnsEnabledSwitch(GLinetSwitchBase):
 
     async def async_turn_off(self, **_: Any) -> None:
         await self._hub.set_adguard_dns_enabled(False)
+        await self._hub.async_request_refresh()
+
+
+class GLinetDMZSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:shield-off"
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/firewall_dmz"
+
+    @property
+    def name(self) -> str:
+        return "Firewall DMZ"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._hub._dmz_config.get("enabled", False)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"destination_ip": self._hub._dmz_config.get("dest_ip")}
+
+    async def async_turn_on(self, **_: Any) -> None:
+        _LOGGER.warning(
+            "DMZ cannot be enabled without a destination IP. Use the service to configure."
+        )
+
+    async def async_turn_off(self, **_: Any) -> None:
+        await self._hub.set_dmz_config(False)
+        await self._hub.async_request_refresh()
+
+
+class GLinetWANAccessSwitch(GLinetSwitchBase):
+    def __init__(self, hub: GLinetHub, access_type: str, name: str, icon: str) -> None:
+        super().__init__(hub)
+        self._access_type = access_type
+        self._name = name
+        self._attr_icon = icon
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/wan_access_{self._access_type}"
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._hub._wan_access.get(f"enable_{self._access_type}", False)
+
+    async def async_turn_on(self, **_: Any) -> None:
+        config = self._hub._wan_access.copy()
+        config[f"enable_{self._access_type}"] = True
+        await self._hub.set_wan_access(config)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        config = self._hub._wan_access.copy()
+        config[f"enable_{self._access_type}"] = False
+        await self._hub.set_wan_access(config)
         await self._hub.async_request_refresh()

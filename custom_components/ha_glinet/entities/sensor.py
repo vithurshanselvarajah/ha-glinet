@@ -22,10 +22,12 @@ from ..api.models import RouterStatus
 from ..const import (
     DOMAIN,
     FEATURE_CELLULAR,
+    FEATURE_FIREWALL,
     FEATURE_OVPN_SERVER,
     FEATURE_REPEATER,
     FEATURE_SMS,
     FEATURE_WG_SERVER,
+    WAN_INTERFACE_NAMES,
 )
 from ..hub import GLinetHub
 from ..models import ClientDeviceInfo, RepeaterState
@@ -145,6 +147,24 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
             ("ip",),
             nested=("modem", "cellular", "sim", "network", "ipv4"),
         ),
+    ),
+    HubSensorEntityDescription(
+        key="firewall_rules",
+        name="Firewall rules",
+        has_entity_name=True,
+        icon="mdi:security",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda hub: len(hub._firewall_rules),
+    ),
+    HubSensorEntityDescription(
+        key="port_forwards",
+        name="Port forwards",
+        has_entity_name=True,
+        icon="mdi:router-network",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda hub: len(hub._port_forwards),
     ),
     HubSensorEntityDescription(
         key="cellular_signal",
@@ -414,6 +434,8 @@ FEATURE_SENSOR_MAP: dict[str, str] = {
     "repeater_bssid": FEATURE_REPEATER,
     "wg_server_users": FEATURE_WG_SERVER,
     "ovpn_server_users": FEATURE_OVPN_SERVER,
+    "firewall_rules": FEATURE_FIREWALL,
+    "port_forwards": FEATURE_FIREWALL,
 }
 
 
@@ -483,6 +505,46 @@ def _repeater_state_attributes(hub: GLinetHub) -> dict[str, Any] | None:
     return attrs if attrs else None
 
 
+def _wan_interfaces(hub: GLinetHub) -> list[dict[str, Any]]:
+    interfaces = hub.kmwan_status.get("interfaces", [])
+    if not isinstance(interfaces, list):
+        return []
+    return [iface for iface in interfaces if isinstance(iface, dict)]
+
+
+def _wan_interface_label(interface_name: str) -> str:
+    return WAN_INTERFACE_NAMES.get(interface_name, interface_name)
+
+
+def _wan_interface_by_name(hub: GLinetHub, interface_name: str) -> dict[str, Any] | None:
+    for interface in _wan_interfaces(hub):
+        if interface.get("interface") == interface_name:
+            return interface
+    return None
+
+
+def _wan_protocol_field(protocol: str) -> str:
+    return "status_v6" if protocol == "ipv6" else "status_v4"
+
+
+def _wan_protocol_status(interface: dict[str, Any] | None, protocol: str) -> str:
+    if interface is None:
+        return "Unknown"
+    value = interface.get(_wan_protocol_field(protocol))
+    if value == 0:
+        return "Up"
+    if value == 1:
+        return "Down"
+    return "Unknown"
+
+
+def _wan_monitor_parts(monitor: str) -> tuple[str, str] | None:
+    interface, separator, protocol = monitor.partition(":")
+    if not separator or protocol not in {"ipv4", "ipv6"} or not interface:
+        return None
+    return interface, protocol
+
+
 def _calc_usage_percent(total: Any, free: Any) -> float | None:
     if not isinstance(total, (int, float)) or total <= 0:
         return None
@@ -514,6 +576,24 @@ async def async_setup_entry(
         for description in HUB_SENSORS
         if _sensor_is_enabled(hub, description)
     )
+    wan_status_monitors = hub.wan_status_monitors
+    if wan_status_monitors is None:
+        for interface in _wan_interfaces(hub):
+            interface_name = interface.get("interface")
+            if interface_name:
+                entities.append(WanStatusSensor(hub, str(interface_name), {"ipv4", "ipv6"}))
+    else:
+        monitored_interfaces: dict[str, set[str]] = {}
+        for monitor in sorted(wan_status_monitors):
+            parts = _wan_monitor_parts(monitor)
+            if parts is not None:
+                interface, protocol = parts
+                monitored_interfaces.setdefault(interface, set()).add(protocol)
+        entities.extend(
+            WanStatusSensor(hub, interface, protocols)
+            for interface, protocols in monitored_interfaces.items()
+            if protocols
+        )
     entities.append(
         SystemUptimeSensor(
             hub=hub,
@@ -600,6 +680,59 @@ class HubStatusSensor(CoordinatorEntity[GLinetHub], SensorEntity):
         if self.entity_description.extra_attributes_fn is None:
             return None
         return self.entity_description.extra_attributes_fn(self.hub)
+
+    @property
+    def available(self) -> bool:
+        if not super().available:
+            return False
+        if self.entity_description.key == "wan_ip":
+            return self.native_value is not None
+        return True
+
+
+class WanStatusSensor(CoordinatorEntity[GLinetHub], SensorEntity):
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:web"
+
+    def __init__(self, hub: GLinetHub, interface_name: str, protocols: set[str]) -> None:
+        super().__init__(hub)
+        self.hub = hub
+        self._interface_name = interface_name
+        self._interface_label = _wan_interface_label(interface_name)
+        self._protocols = protocols
+        self._attr_name = f"{self._interface_label} status"
+        self._attr_device_info = hub.device_info
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_sensor/{self.hub.device_mac}/wan_status_{self._interface_name}"
+
+    @property
+    def native_value(self) -> str:
+        interface = _wan_interface_by_name(self.hub, self._interface_name)
+        statuses = [
+            _wan_protocol_status(interface, protocol) for protocol in sorted(self._protocols)
+        ]
+        if not statuses or all(status == "Unknown" for status in statuses):
+            return "Unknown"
+        if any(status == "Up" for status in statuses):
+            return "Up"
+        if all(status == "Down" for status in statuses):
+            return "Down"
+        return "Unknown"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        interface = _wan_interface_by_name(self.hub, self._interface_name) or {}
+        return {
+            "interface": self._interface_name,
+            "interface_name": self._interface_label,
+            "monitored_protocols": sorted(self._protocols),
+            "ipv4_status": _wan_protocol_status(interface, "ipv4"),
+            "ipv6_status": _wan_protocol_status(interface, "ipv6"),
+            "status_v4": interface.get("status_v4"),
+            "status_v6": interface.get("status_v6"),
+        }
 
 
 class SystemUptimeSensor(GLinetSensorBase):

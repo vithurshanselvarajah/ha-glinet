@@ -23,6 +23,7 @@ from .modules import (
     ClientsModule,
     DiagModule,
     FanModule,
+    FirewallModule,
     LedModule,
     MacCloneModule,
     ModemModule,
@@ -103,6 +104,7 @@ class GLinetApiClient:
         self.tailscale = TailscaleModule(self)
         self.repeater = RepeaterModule(self)
         self.fan = FanModule(self)
+        self.firewall = FirewallModule(self)
         self.led = LedModule(self)
         self.macclone = MacCloneModule(self)
         self.diag = DiagModule(self)

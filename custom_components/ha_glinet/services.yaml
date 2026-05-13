@@ -175,3 +175,118 @@ set_fan_temperature:
           mode: slider
       required: true
       example: 75
+
+add_firewall_rule:
+  name: Add firewall rule
+  description: Add a custom firewall rule to the router.
+  fields:
+    mac:
+      selector:
+        text:
+    name:
+      selector:
+        text:
+    src:
+      selector:
+        text:
+    src_ip:
+      selector:
+        text:
+    src_mac:
+      selector:
+        text:
+    src_port:
+      selector:
+        text:
+    proto:
+      selector:
+        text:
+    dest:
+      selector:
+        text:
+    dest_ip:
+      selector:
+        text:
+    dest_port:
+      selector:
+        text:
+    target:
+      selector:
+        text:
+    enabled:
+      selector:
+        boolean:
+
+remove_firewall_rule:
+  name: Remove firewall rule
+  description: Remove an existing firewall rule.
+  fields:
+    mac:
+      selector:
+        text:
+    rule_id:
+      selector:
+        text:
+    remove_all:
+      selector:
+        boolean:
+
+add_port_forward:
+  name: Add port forward
+  description: Add a port forwarding rule.
+  fields:
+    mac:
+      selector:
+        text:
+    name:
+      selector:
+        text:
+    src:
+      selector:
+        text:
+    src_dport:
+      selector:
+        text:
+    proto:
+      selector:
+        text:
+    dest:
+      selector:
+        text:
+    dest_ip:
+      selector:
+        text:
+    dest_port:
+      selector:
+        text:
+    enabled:
+      selector:
+        boolean:
+
+remove_port_forward:
+  name: Remove port forward
+  description: Remove an existing port forwarding rule.
+  fields:
+    mac:
+      selector:
+        text:
+    rule_id:
+      selector:
+        text:
+    remove_all:
+      selector:
+        boolean:
+
+set_dmz:
+  name: Set DMZ
+  description: Configure DMZ (Demilitarized Zone) settings.
+  fields:
+    mac:
+      selector:
+        text:
+    enabled:
+      selector:
+        boolean:
+    dest_ip:
+      selector:
+        text:

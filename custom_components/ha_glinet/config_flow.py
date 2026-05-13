@@ -14,19 +14,22 @@ from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import format_mac
 
-from .api import GLinetApiClient, NonZeroResponse
+from .api import APIClientError, GLinetApiClient, NonZeroResponse
 from .const import (
     API_PATH,
     CONF_ADD_ALL_DEVICES,
+    CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
     CONF_SCAN_INTERVAL,
     CONF_TITLE,
+    CONF_WAN_STATUS_MONITORS,
     DEFAULT_PASSWORD,
     DEFAULT_URL,
     DEFAULT_USERNAME,
     DOMAIN,
     FEATURE_ADGUARD,
     FEATURE_CELLULAR,
+    FEATURE_FIREWALL,
     FEATURE_OVPN_CLIENT,
     FEATURE_OVPN_SERVER,
     FEATURE_REPEATER,
@@ -36,6 +39,7 @@ from .const import (
     FEATURE_WG_SERVER,
     FEATURE_ZEROTIER,
     INTEGRATION_NAME,
+    WAN_INTERFACE_NAMES,
 )
 from .utils import compute_mac_offset
 
@@ -56,6 +60,7 @@ FEATURE_OPTIONS = [
     {"label": "OpenVPN Server", "value": FEATURE_OVPN_SERVER},
     {"label": "ZeroTier (Requires Network ID setup on router)", "value": FEATURE_ZEROTIER},
     {"label": "AdGuard Home", "value": FEATURE_ADGUARD},
+    {"label": "Firewall", "value": FEATURE_FIREWALL},
 ]
 DEFAULT_ENABLED_FEATURES = [
     FEATURE_CELLULAR,
@@ -67,36 +72,105 @@ DEFAULT_ENABLED_FEATURES = [
     FEATURE_OVPN_CLIENT,
     FEATURE_OVPN_SERVER,
     FEATURE_ADGUARD,
+    FEATURE_FIREWALL,
 ]
+DEFAULT_WAN_INTERFACES = ["wan", "wwan", "tethering", "modem_0001", "secondwan"]
+WAN_STATUS_PROTOCOLS = [("ipv4", "IPv4"), ("ipv6", "IPv6")]
 
-STEP_USER_DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_HOST, default=DEFAULT_URL): selector.TextSelector(
-            selector.TextSelectorConfig(type=selector.TextSelectorType.URL)
-        ),
-        vol.Required(CONF_PASSWORD, default=DEFAULT_PASSWORD): selector.TextSelector(
-            selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
-        ),
-        vol.Optional(
-            CONF_CONSIDER_HOME,
-            default=DEFAULT_CONSIDER_HOME.total_seconds(),
-        ): vol.All(vol.Coerce(int), vol.Clamp(min=0, max=900)),
-        vol.Optional(
-            CONF_ENABLED_FEATURES,
-            default=DEFAULT_ENABLED_FEATURES,
-        ): selector.SelectSelector(
-            selector.SelectSelectorConfig(
-                options=FEATURE_OPTIONS,
-                multiple=True,
-            )
-        ),
-        vol.Optional(
-            CONF_SCAN_INTERVAL,
-            default=30,
-        ): vol.All(vol.Coerce(int), vol.Clamp(min=10, max=300)),
-        vol.Optional(CONF_ADD_ALL_DEVICES, default=False): bool,
-    }
-)
+
+def _wan_monitor_key(interface: str, protocol: str) -> str:
+    return f"{interface}:{protocol}"
+
+
+def _wan_interface_label(interface: str) -> str:
+    return WAN_INTERFACE_NAMES.get(interface, interface)
+
+
+def _wan_monitor_options(interfaces: list[str]) -> list[dict[str, str]]:
+    return [
+        {
+            "label": f"{_wan_interface_label(interface)} {label}",
+            "value": _wan_monitor_key(interface, protocol),
+        }
+        for interface in interfaces
+        for protocol, label in WAN_STATUS_PROTOCOLS
+    ]
+
+
+def _default_wan_status_monitors(interfaces: list[str]) -> list[str]:
+    return [
+        _wan_monitor_key(interface, protocol)
+        for interface in interfaces
+        for protocol, _ in WAN_STATUS_PROTOCOLS
+    ]
+
+
+def _wan_interfaces_from_monitors(monitors: list[str]) -> list[str]:
+    interfaces = []
+    for monitor in monitors:
+        interface, separator, protocol = monitor.partition(":")
+        if separator and protocol in {"ipv4", "ipv6"} and interface not in interfaces:
+            interfaces.append(interface)
+    return interfaces
+
+
+def _config_schema(
+    defaults: dict[str, Any] | None = None,
+    wan_interfaces: list[str] | None = None,
+) -> vol.Schema:
+    defaults = defaults or {}
+    wan_interfaces = wan_interfaces or DEFAULT_WAN_INTERFACES
+    selected_interfaces = _wan_interfaces_from_monitors(
+        defaults.get(CONF_WAN_STATUS_MONITORS, [])
+    )
+    wan_interfaces = [*dict.fromkeys([*wan_interfaces, *selected_interfaces])]
+    return vol.Schema(
+        {
+            vol.Required(CONF_HOST, default=DEFAULT_URL): selector.TextSelector(
+                selector.TextSelectorConfig(type=selector.TextSelectorType.URL)
+            ),
+            vol.Required(CONF_PASSWORD, default=DEFAULT_PASSWORD): selector.TextSelector(
+                selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+            ),
+            vol.Optional(
+                CONF_CONSIDER_HOME,
+                default=DEFAULT_CONSIDER_HOME.total_seconds(),
+            ): vol.All(vol.Coerce(int), vol.Clamp(min=0, max=900)),
+            vol.Optional(
+                CONF_ENABLED_FEATURES,
+                default=DEFAULT_ENABLED_FEATURES,
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=FEATURE_OPTIONS,
+                    multiple=True,
+                )
+            ),
+            vol.Optional(
+                CONF_WAN_STATUS_MONITORS,
+                default=defaults.get(
+                    CONF_WAN_STATUS_MONITORS,
+                    _default_wan_status_monitors(wan_interfaces),
+                ),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=_wan_monitor_options(wan_interfaces),
+                    multiple=True,
+                )
+            ),
+            vol.Optional(
+                CONF_SCAN_INTERVAL,
+                default=30,
+            ): vol.All(vol.Coerce(int), vol.Clamp(min=10, max=300)),
+            vol.Optional(CONF_ADD_ALL_DEVICES, default=False): bool,
+            vol.Optional(
+                CONF_CLEANUP_DEVICES,
+                default=0,
+            ): vol.All(vol.Coerce(int), vol.Clamp(min=0, max=10080)),
+        }
+    )
+
+
+STEP_USER_DATA_SCHEMA = _config_schema()
 
 
 class SetupHub:
@@ -110,6 +184,7 @@ class SetupHub:
         )
         self.router_mac = ""
         self.router_model = ""
+        self.wan_interfaces: list[str] = DEFAULT_WAN_INTERFACES
 
     async def check_reachable(self) -> bool:
         try:
@@ -128,6 +203,18 @@ class SetupHub:
 
         self.router_mac = str(info.mac)
         self.router_model = str(info.model)
+        try:
+            kmwan_status = await self.router.system.get_kmwan_status()
+        except (APIClientError, ConnectionError, TimeoutError, OSError, ValueError):
+            _LOGGER.debug("Unable to fetch WAN interfaces during setup", exc_info=True)
+        else:
+            interfaces = [
+                str(interface.get("interface"))
+                for interface in kmwan_status.get("interfaces", [])
+                if isinstance(interface, dict) and interface.get("interface")
+            ]
+            if interfaces:
+                self.wan_interfaces = interfaces
         return self.router.logged_in
 
 
@@ -157,11 +244,16 @@ async def process_user_input(
                 CONF_ENABLED_FEATURES,
                 DEFAULT_ENABLED_FEATURES,
             ),
+            CONF_WAN_STATUS_MONITORS: data.get(
+                CONF_WAN_STATUS_MONITORS,
+                _default_wan_status_monitors(hub.wan_interfaces),
+            ),
             CONF_SCAN_INTERVAL: data.get(
                 CONF_SCAN_INTERVAL,
                 30,
             ),
             CONF_ADD_ALL_DEVICES: data.get(CONF_ADD_ALL_DEVICES, False),
+            CONF_CLEANUP_DEVICES: data.get(CONF_CLEANUP_DEVICES, 0),
         },
     }
 
@@ -196,7 +288,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         defaults = user_input or self._discovered_data or {}
         return self.async_show_form(
             step_id="user",
-            data_schema=self.add_suggested_values_to_schema(STEP_USER_DATA_SCHEMA, defaults),
+            data_schema=self.add_suggested_values_to_schema(
+                _config_schema(defaults),
+                defaults,
+            ),
             errors=errors,
         )
 
@@ -253,9 +348,18 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     data=self.config_entry.options | info["data"],
                 )
 
+        defaults = {**self.config_entry.data, **self.config_entry.options}
+        wan_interfaces = None
+        hub = getattr(self.config_entry, "runtime_data", None)
+        if hub is not None:
+            wan_interfaces = [
+                str(interface.get("interface"))
+                for interface in hub.kmwan_status.get("interfaces", [])
+                if isinstance(interface, dict) and interface.get("interface")
+            ]
         data_schema = self.add_suggested_values_to_schema(
-            STEP_USER_DATA_SCHEMA,
-            {**self.config_entry.data, **self.config_entry.options},
+            _config_schema(defaults, wan_interfaces or None),
+            defaults,
         )
         return self.async_show_form(step_id="init", data_schema=data_schema, errors=errors)
 
