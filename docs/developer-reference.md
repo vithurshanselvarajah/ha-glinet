@@ -31,6 +31,8 @@ The `GLinetHub` is the heart of the integration. It inherits from `DataUpdateCoo
 - **Polling Loop:** Executing API requests sequentially every scan interval (user-configurable, default 30s) to prevent overwhelming the router's lighttpd server.
 - **Caching:** Storing the latest fetched values from the API models so Home Assistant entities can read them instantly without making network calls.
 
+> For more details on the Hub's functions and data fetching logic, see the [Runtime State & Poller Reference](hub.md).
+
 ### Diagnostics (`diagnostics.py`)
 The integration implements the Home Assistant `diagnostics` platform. This allows users to download a sanitized JSON snapshot of the router's state for debugging. 
 When adding new data points to the hub, ensure they are also captured in `async_get_config_entry_diagnostics` and properly redacted if they contain PII (SSIDs, MACs, IPs, etc.).

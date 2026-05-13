@@ -36,13 +36,17 @@ sid, module-name, function-name, optional parameters
 - `wg-client` / `vpn-client`: Optional WireGuard client support across older and newer firmware.
 - `ovpn-client` / `vpn-client`: Hybrid OpenVPN client support. Discovers profiles via `ovpn-client` and manages state via the unified `vpn-client` tunnel API.
 - `wg-server`: Optional WireGuard server status and control.
+- `ovpn-server`: Optional OpenVPN server status and control.
 - `tailscale`: Tailscale config and state.
 - `modem`: optional cellular status.
 - `repeater`: optional repeater mode status, configuration, WiFi scan, connect/disconnect, and saved AP management.
 - `sms`: optional text message list, send, and delete.
 - `zerotier`: ZeroTier config and state.
 - `adguardhome`: AdGuard Home config and state.
+- `firewall`: Firewall rules, port forwarding, and DMZ management.
+- `fan`: Optional fan status, speed, and threshold control.
 - `led`: System LED control.
+- `macclone`: MAC clone capabilities.
 
 ## Firmware Variation
 

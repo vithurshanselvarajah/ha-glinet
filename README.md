@@ -78,15 +78,20 @@ Simply put, I use this integration in my own home and wanted specific features t
 
 ## Documentation
 
-Detailed documentation lives in [Wiki](https://github.com/vithurshanselvarajah/ha-glinet/wiki).
+Detailed documentation lives in the project [Wiki](https://github.com/vithurshanselvarajah/ha-glinet/wiki).
 
-Start with:
+### For End Users
+- [Feature Matrix](https://github.com/vithurshanselvarajah/ha-glinet/wiki/features) - A high-level overview of supported features and actions.
+- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/entities) - Detailed list of all sensors, switches, buttons, and trackers.
+- [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet/wiki/services) - Guide on using Home Assistant services to control your router (e.g., sending SMS, connecting to WiFi).
 
-- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/entities)
-- [Services](https://github.com/vithurshanselvarajah/ha-glinet/wiki/services)
-- [Router API Notes](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api)
-- [Developer Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/developer-reference)
-- [CI and Release Workflows](https://github.com/vithurshanselvarajah/ha-glinet/wiki/ci-release)
+### For Developers
+- [Developer Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/developer-reference) - Start here! Contribution guide, codebase structure, and tooling.
+- [Architecture](https://github.com/vithurshanselvarajah/ha-glinet/wiki/architecture) - How the integration interacts with Home Assistant and the router.
+- [Runtime State & Poller (Hub)](https://github.com/vithurshanselvarajah/ha-glinet/wiki/hub) - Details on the `GLinetHub` and `DataUpdateCoordinator`.
+- [Router API Notes](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api) - Notes on the GL.iNet JSON-RPC API and authentication.
+- [Modem API Coverage](https://github.com/vithurshanselvarajah/ha-glinet/wiki/modem-api) - Details on the optional cellular modem API.
+- [CI and Release Workflows](https://github.com/vithurshanselvarajah/ha-glinet/wiki/ci-release) - How automated testing and releases work.
 
 ## Development Checks
 
