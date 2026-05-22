@@ -37,6 +37,22 @@ class RepeaterModule(BaseModule):
         response = await self._call("repeater", "disconnect")
         return dict(response) if response else {}
 
+    async def enter_bare_mode(self) -> dict[str, Any]:
+        response = await self._call("repeater", "enter_bare_mode")
+        return dict(response) if response else {}
+
+    async def exit_bare_mode(self) -> dict[str, Any]:
+        response = await self._call("repeater", "exit_bare_mode")
+        return dict(response) if response else {}
+
+    async def get_channel_prompt(self) -> dict[str, Any]:
+        response = await self._call("repeater", "get_channel_prompt")
+        return dict(response) if response else {}
+
+    async def set_channel_prompt(self, params: dict[str, Any]) -> dict[str, Any]:
+        response = await self._call("repeater", "set_channel_prompt", params)
+        return dict(response) if response else {}
+
     async def get_saved_ap_list(self) -> list[dict[str, Any]]:
         response = await self._call("repeater", "get_saved_ap_list")
         return list(dict(response).get("res", []))

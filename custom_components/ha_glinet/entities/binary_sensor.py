@@ -21,7 +21,12 @@ async def async_setup_entry(
     hub: GLinetHub = entry.runtime_data
     entities = [FanRunningBinarySensor(hub)]
     if hub.feature_enabled(FEATURE_REPEATER):
-        entities.append(RepeaterConnectedBinarySensor(hub))
+        entities.extend(
+            [
+                RepeaterConnectedBinarySensor(hub),
+                RepeaterBareModeBinarySensor(hub),
+            ]
+        )
     async_add_entities(entities, True)
 
 
@@ -57,7 +62,34 @@ class RepeaterConnectedBinarySensor(CoordinatorEntity[GLinetHub], BinarySensorEn
             attrs["bssid"] = status.bssid
         if status.signal is not None:
             attrs["signal"] = status.signal
+        if status.wifi_generation:
+            attrs["wifi_generation"] = status.wifi_generation
+        if status.eap is not None:
+            attrs["eap"] = status.eap
+        if status.bare_mode is not None:
+            attrs["bare_mode"] = status.bare_mode
         return attrs if attrs else None
+
+
+class RepeaterBareModeBinarySensor(CoordinatorEntity[GLinetHub], BinarySensorEntity):
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "repeater_bare_mode"
+    _attr_icon = "mdi:wifi-off"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, hub: GLinetHub) -> None:
+        super().__init__(hub)
+        self._hub = hub
+        self._attr_device_info = hub.device_info
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_binary_sensor/{self._hub.device_mac}/repeater_bare_mode"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._hub.repeater_bare_mode
 
 
 class FanRunningBinarySensor(CoordinatorEntity[GLinetHub], BinarySensorEntity):
