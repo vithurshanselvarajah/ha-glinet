@@ -82,13 +82,15 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 | Entity | Source | Notes |
 | --- | --- | --- |
 | Repeater state | Optional `repeater/get_status` | Current repeater connection state. |
-| Repeater SSID | Optional `repeater/get_status` | SSID of the connected external network. |
-| Repeater signal | Optional `repeater/get_status` | Signal strength of the repeater connection. |
-| Repeater channel | Optional `repeater/get_status` | Enum sensor showing the WiFi band. See [Channel-to-band mapping](#channel-to-band-mapping) below. |
-| Repeater IP address | Optional `repeater/get_status` | IP address assigned to the repeater interface. |
-| Repeater gateway | Optional `repeater/get_status` | Default gateway of the repeater interface. |
-| Repeater DNS | Optional `repeater/get_status` | Primary DNS server. Additional servers are listed in the `dns_servers` attribute. |
-| Repeater BSSID | Optional `repeater/get_status` | MAC address of the connected access point. |
+| Repeater SSID | Optional `repeater/get_status` | SSID of the connected external network. Available while connecting, connected, or WAN available. |
+| Repeater signal | Optional `repeater/get_status` | Signal strength of the repeater connection. Available while connecting, connected, or WAN available. |
+| Repeater channel | Optional `repeater/get_status` | Enum sensor showing the WiFi band. Available while connecting, connected, or WAN available. See [Channel-to-band mapping](#channel-to-band-mapping) below. |
+| Repeater IP address | Optional `repeater/get_status` | IP address assigned to the repeater interface. Available only when connected or WAN available. |
+| Repeater gateway | Optional `repeater/get_status` | Default gateway of the repeater interface. Available only when connected or WAN available. |
+| Repeater DNS | Optional `repeater/get_status` | Primary DNS server. Additional servers are listed in the `dns_servers` attribute. Available only when connected or WAN available. |
+| Repeater BSSID | Optional `repeater/get_status` | MAC address of the connected access point. Available while connecting, connected, or WAN available. |
+
+The **Repeater state** sensor remains available whenever the repeater feature is enabled so it can report states including `initializing` and `wan_available`. Connection detail sensors become unavailable when the repeater is off or failed, which avoids stale SSID/IP/DNS values after a disconnect.
 
 #### Channel-to-band mapping
 
@@ -116,6 +118,8 @@ These sensors are created only when the router reports bandwidth fields in the c
 | Entity | Source | Notes |
 | --- | --- | --- |
 | Fan status | Optional `fan/get_status` | Binary sensor showing if the fan is currently active. |
+| Repeater connected | Optional `repeater/get_status` | Binary sensor showing if the repeater is connected or WAN available. Attributes include SSID, BSSID, signal, WiFi generation, EAP, and bare mode when reported. |
+| Repeater bare mode | Optional `repeater/get_status` | Binary sensor showing if repeater bare mode is active. |
 | Fan speed | Optional `fan/get_status` | Diagnostic sensor showing current fan speed in RPM. |
 | Fan threshold temperature | Optional `fan/get_config` | Diagnostic sensor showing the current temperature threshold. |
 
@@ -140,6 +144,8 @@ These sensors are created only when the router reports bandwidth fields in the c
 | AdGuard Home DNS | `adguardhome/get_config`, `adguardhome/set_config` | Toggle AdGuard Home DNS redirection. |
 | System LED | `led/get_config`, `led/set_config` | Toggle the system status LED. |
 | Repeater auto-switch | `repeater/get_config` | Toggle whether the router automatically switches between saved networks. |
+| Repeater bare mode | `repeater/enter_bare_mode`, `repeater/exit_bare_mode` | Toggle bare mode for the active repeater connection. |
+| Repeater smart reconnect | `repeater/set_config` | Toggle smart reconnection logic. |
 | OpenVPN client switches | `ovpn-client` API | One switch per OpenVPN client config returned by the router. |
 | OpenVPN Server | `ovpn-server` API | Toggle the OpenVPN server on or off. |
 | Firewall DMZ | `firewall/set_dmz` | Toggle the DMZ (DeMilitarized Zone) feature. |
