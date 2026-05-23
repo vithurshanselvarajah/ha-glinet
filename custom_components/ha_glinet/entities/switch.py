@@ -49,7 +49,13 @@ async def async_setup_entry(
         entities.append(ZeroTierSwitch(hub))
     entities.extend(WifiApSwitch(hub, name, iface) for name, iface in hub.wifi_interfaces.items())
     if hub.feature_enabled(FEATURE_REPEATER):
-        entities.append(RepeaterAutoSwitchSwitch(hub))
+        entities.extend(
+            [
+                RepeaterAutoSwitchSwitch(hub),
+                RepeaterBareModeSwitch(hub),
+                RepeaterSmartReconnectSwitch(hub),
+            ]
+        )
     if hub.feature_enabled(FEATURE_ADGUARD):
         entities.append(AdGuardEnabledSwitch(hub))
         entities.append(AdGuardDnsEnabledSwitch(hub))
@@ -276,6 +282,64 @@ class RepeaterAutoSwitchSwitch(GLinetSwitchBase):
             await self._hub.set_repeater_auto_switch(False)
         except OSError:
             _LOGGER.exception("Unable to disable repeater auto-switch")
+            return
+        await self._hub.async_request_refresh()
+
+
+class RepeaterBareModeSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:wifi-off"
+    _attr_translation_key = "repeater_bare_mode"
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/repeater_bare_mode"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._hub.repeater_bare_mode
+
+    async def async_turn_on(self, **_: Any) -> None:
+        try:
+            await self._hub.set_repeater_bare_mode(True)
+        except OSError:
+            _LOGGER.exception("Unable to enable repeater bare mode")
+            return
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        try:
+            await self._hub.set_repeater_bare_mode(False)
+        except OSError:
+            _LOGGER.exception("Unable to disable repeater bare mode")
+            return
+        await self._hub.async_request_refresh()
+
+
+class RepeaterSmartReconnectSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:wifi-refresh"
+    _attr_translation_key = "repeater_smart_reconnect"
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/repeater_smart_reconnect"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._hub.repeater_smart_reconnect
+
+    async def async_turn_on(self, **_: Any) -> None:
+        try:
+            await self._hub.set_repeater_smart_reconnect(True)
+        except OSError:
+            _LOGGER.exception("Unable to enable repeater smart reconnect")
+            return
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        try:
+            await self._hub.set_repeater_smart_reconnect(False)
+        except OSError:
+            _LOGGER.exception("Unable to disable repeater smart reconnect")
             return
         await self._hub.async_request_refresh()
 

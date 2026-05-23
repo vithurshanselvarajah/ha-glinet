@@ -222,6 +222,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             FEATURE_FIREWALL: [
                 "firewall",
                 "dmz",
+                "port_forwards",
                 "wan_access",
             ],
         }
@@ -980,6 +981,19 @@ class GLinetHub(DataUpdateCoordinator[None]):
         )
         await self.fetch_repeater_config()
 
+    async def set_repeater_smart_reconnect(self, enabled: bool) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.repeater.set_config({"smart_reconnect": enabled})
+        )
+        await self.fetch_repeater_config()
+
+    async def set_repeater_bare_mode(self, enabled: bool) -> None:
+        if enabled:
+            await self._invoke_api(self.router_api.repeater.enter_bare_mode)
+        else:
+            await self._invoke_api(self.router_api.repeater.exit_bare_mode)
+        await self.fetch_repeater_status()
+
     async def set_repeater_band(self, band: str | None) -> None:
         await self._invoke_api(
             lambda: self.router_api.repeater.set_config({"lock_band": band})
@@ -1285,7 +1299,10 @@ class GLinetHub(DataUpdateCoordinator[None]):
     def repeater_connected(self) -> bool | None:
         if self._repeater_status is None:
             return None
-        return self._repeater_status.state == RepeaterState.CONNECTED
+        return self._repeater_status.state in {
+            RepeaterState.CONNECTED,
+            RepeaterState.WAN_AVAILABLE,
+        }
 
     @property
     def repeater_config(self) -> dict[str, Any]:
@@ -1294,6 +1311,16 @@ class GLinetHub(DataUpdateCoordinator[None]):
     @property
     def repeater_auto_switch(self) -> bool | None:
         return self._repeater_config.get("auto")
+
+    @property
+    def repeater_smart_reconnect(self) -> bool | None:
+        return self._repeater_config.get("smart_reconnect")
+
+    @property
+    def repeater_bare_mode(self) -> bool | None:
+        if self._repeater_status is None:
+            return None
+        return self._repeater_status.bare_mode
 
     @property
     def repeater_band(self) -> str | None:

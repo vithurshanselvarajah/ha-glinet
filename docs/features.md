@@ -24,7 +24,7 @@
 - Cellular signal and network sensors using the optional `modem` module.
 - Text message count sensor with message details as attributes.
 - `send_sms`, `get_sms`, `remove_saved_network`, and `refresh_sms` services.
-- Repeater mode scanning, connect/disconnect, saved network management, and repeater state support.
+- Repeater mode scanning, connect/disconnect, saved network management, smart availability, expanded state support, bare mode, and smart reconnect toggles.
 - Fan status monitoring, RPM speed, and threshold temperature control.
 - WireGuard server connected users count.
 - OpenVPN server connected users count.
@@ -48,6 +48,8 @@
 - Add or remove port forwarding rules.
 - Enable or disable DMZ.
 - Configure WAN-side management access (Ping, HTTPS, SSH).
+- Enable or disable repeater bare mode.
+- Enable or disable repeater smart reconnect.
 
 ## Authentication & Session Management
 
@@ -93,4 +95,5 @@ Furthermore, disabling unused features (via the Options Flow) completely removes
 
 The integration dynamically manages its footprint based on your selections in the **Configure** menu:
 - **Entity Cleanup**: When a feature is disabled, the integration automatically removes any associated entities from the Home Assistant Entity Registry.
+- **Firewall Cleanup**: Disabling the firewall feature also removes port forwarding entities, avoiding orphaned `port_forwards` sensors.
 - **Action Cleanup**: Services (Actions) are registered at the domain level. If a feature (like SMS) is disabled across all configured routers, the corresponding services are automatically removed from Home Assistant to keep the UI clean.
