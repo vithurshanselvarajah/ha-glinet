@@ -4,27 +4,38 @@ from types import SimpleNamespace
 from typing import Any
 
 from custom_components.ha_glinet.const import (
+    ATTR_BLOCK,
     ATTR_DEST,
     ATTR_DEST_IP,
     ATTR_DEST_PORT,
     ATTR_ENABLED,
+    ATTR_GROUP_ID,
+    ATTR_MODE,
     ATTR_NAME,
     ATTR_PROTO,
     ATTR_REMOVE_ALL,
     ATTR_RULE_ID,
     ATTR_SRC,
     ATTR_SRC_DPORT,
+    ATTR_SRC_MAC,
     CONF_ENABLED_FEATURES,
     DOMAIN,
     FEATURE_FIREWALL,
+    FEATURE_PARENTAL_CONTROL,
     FEATURE_REPEATER,
     FEATURE_SMS,
+    SERVICE_ACCESS_CONTROL_SET_DEVICE_BLOCK,
+    SERVICE_ACCESS_CONTROL_SET_MODE,
     SERVICE_ADD_FIREWALL_RULE,
     SERVICE_ADD_PORT_FORWARD,
     SERVICE_CONNECT_WIFI,
     SERVICE_DISCONNECT_WIFI,
     SERVICE_GET_SAVED_NETWORKS,
     SERVICE_GET_SMS,
+    SERVICE_PARENTAL_CONTROL_SET_FILTERING_MODE,
+    SERVICE_PARENTAL_CONTROL_SET_GROUP_SCHEDULES,
+    SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE,
+    SERVICE_PARENTAL_CONTROL_UPDATE_SIGNATURES,
     SERVICE_REFRESH_SMS,
     SERVICE_REMOVE_FIREWALL_RULE,
     SERVICE_REMOVE_PORT_FORWARD,
@@ -86,6 +97,26 @@ async def test_register_services_removes_services_when_feature_is_disabled() -> 
     assert not hass.services.has_service(DOMAIN, SERVICE_SEND_SMS)
 
 
+async def test_register_services_removes_parental_services_when_feature_is_disabled() -> None:
+    entry = DummyEntry(data={CONF_ENABLED_FEATURES: [FEATURE_PARENTAL_CONTROL]})
+    hass = DummyHass([entry])
+    await async_register_services(hass)
+    assert hass.services.has_service(
+        DOMAIN,
+        SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE,
+    )
+
+    entry.data[CONF_ENABLED_FEATURES] = []
+    await async_register_services(hass)
+
+    assert not hass.services.has_service(
+        DOMAIN,
+        SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE,
+    )
+    assert not hass.services.has_service(DOMAIN, SERVICE_ACCESS_CONTROL_SET_MODE)
+    assert not hass.services.has_service(DOMAIN, SERVICE_ACCESS_CONTROL_SET_DEVICE_BLOCK)
+
+
 async def test_enabled_features_from_entry_uses_default_options_when_missing() -> None:
     entry = DummyEntry()
 
@@ -128,6 +159,21 @@ async def test_register_services_records_firewall_services_when_enabled() -> Non
     assert SERVICE_ADD_PORT_FORWARD in registered
     assert SERVICE_REMOVE_PORT_FORWARD in registered
     assert SERVICE_SET_DMZ in registered
+
+
+async def test_register_services_records_parental_control_services_when_enabled() -> None:
+    entry = DummyEntry(data={CONF_ENABLED_FEATURES: [FEATURE_PARENTAL_CONTROL]})
+    hass = DummyHass([entry])
+
+    await async_register_services(hass)
+
+    registered = {service for service, _ in hass.services.registrations}
+    assert SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE in registered
+    assert SERVICE_PARENTAL_CONTROL_SET_FILTERING_MODE in registered
+    assert SERVICE_PARENTAL_CONTROL_UPDATE_SIGNATURES in registered
+    assert SERVICE_ACCESS_CONTROL_SET_MODE in registered
+    assert SERVICE_ACCESS_CONTROL_SET_DEVICE_BLOCK in registered
+    assert SERVICE_PARENTAL_CONTROL_SET_GROUP_SCHEDULES in registered
 
 
 async def test_firewall_service_handlers_call_hub_methods() -> None:
@@ -233,6 +279,83 @@ async def test_firewall_service_handlers_call_hub_methods() -> None:
         ),
         ("remove_port_forward", (None, True)),
         ("set_dmz_config", (True, "192.168.8.50")),
+    ]
+
+
+async def test_parental_control_service_handlers_call_hub_methods() -> None:
+    calls: list[tuple[str, Any]] = []
+
+    class Hub:
+        device_mac = "00:11:22:33:44:55"
+
+        def feature_enabled(self, feature: str) -> bool:
+            return feature == FEATURE_PARENTAL_CONTROL
+
+        async def set_temporary_override(
+            self,
+            group_id: str,
+            enable: bool,
+            duration: str,
+            rule_id: str,
+        ) -> None:
+            calls.append(("temporary_override", group_id, enable, duration, rule_id))
+
+        async def set_parental_mode(self, mode: int) -> None:
+            calls.append(("parental_mode", mode))
+
+        async def update_parental_signatures(self) -> None:
+            calls.append(("update_signatures", None))
+
+        async def set_access_control_mode(self, mode: str) -> None:
+            calls.append(("access_mode", mode))
+
+        async def set_single_device_block(self, mac: str, block: bool) -> None:
+            calls.append(("device_block", mac, block))
+
+        async def set_group_schedules_enabled(
+            self,
+            group_id: str,
+            enabled: bool,
+        ) -> None:
+            calls.append(("group_schedules", group_id, enabled))
+
+    entry = DummyEntry(data={CONF_ENABLED_FEATURES: [FEATURE_PARENTAL_CONTROL]})
+    entry.runtime_data = Hub()
+    hass = DummyHass([entry])
+    await async_register_services(hass)
+
+    await hass.services.handlers[SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE](
+        SimpleNamespace(
+            data={
+                ATTR_GROUP_ID: "group1",
+                ATTR_ENABLED: True,
+                ATTR_RULE_ID: "drop",
+            }
+        )
+    )
+    await hass.services.handlers[SERVICE_PARENTAL_CONTROL_SET_FILTERING_MODE](
+        SimpleNamespace(data={ATTR_MODE: 1})
+    )
+    await hass.services.handlers[SERVICE_PARENTAL_CONTROL_UPDATE_SIGNATURES](
+        SimpleNamespace(data={})
+    )
+    await hass.services.handlers[SERVICE_ACCESS_CONTROL_SET_MODE](
+        SimpleNamespace(data={ATTR_MODE: "black"})
+    )
+    await hass.services.handlers[SERVICE_ACCESS_CONTROL_SET_DEVICE_BLOCK](
+        SimpleNamespace(data={ATTR_SRC_MAC: "aa:bb", ATTR_BLOCK: True})
+    )
+    await hass.services.handlers[SERVICE_PARENTAL_CONTROL_SET_GROUP_SCHEDULES](
+        SimpleNamespace(data={ATTR_GROUP_ID: "group1", ATTR_ENABLED: False})
+    )
+
+    assert calls == [
+        ("temporary_override", "group1", True, "", "drop"),
+        ("parental_mode", 1),
+        ("update_signatures", None),
+        ("access_mode", "black"),
+        ("device_block", "aa:bb", True),
+        ("group_schedules", "group1", False),
     ]
 
 
