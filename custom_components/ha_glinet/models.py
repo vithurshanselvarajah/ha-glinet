@@ -10,10 +10,12 @@ from .utils import calculate_rate, get_first_int
 
 
 class RepeaterState(IntEnum):
+    INITIALIZING = -1
     NOT_USED = 0
     CONNECTING = 1
     CONNECTED = 2
     FAILED = 3
+    WAN_AVAILABLE = 4
 
 
 @dataclass(slots=True)
@@ -28,13 +30,21 @@ class RepeaterStatus:
     ipv4_dns: list[str] | None = None
     device: str | None = None
     fail_type: str | None = None
+    eap: bool | None = None
+    wifi_generation: str | None = None
+    bare_mode: bool | None = None
 
     @classmethod
     def from_api_response(cls, data: dict) -> RepeaterStatus:
         ipv4 = data.get("ipv4") or {}
         dns_list = ipv4.get("dns")
+        state = data.get("state", 0)
+        try:
+            repeater_state = RepeaterState(state)
+        except ValueError:
+            repeater_state = RepeaterState.NOT_USED
         return cls(
-            state=RepeaterState(data.get("state", 0)),
+            state=repeater_state,
             ssid=data.get("ssid"),
             bssid=data.get("bssid"),
             channel=data.get("channel"),
@@ -44,6 +54,9 @@ class RepeaterStatus:
             ipv4_dns=dns_list if isinstance(dns_list, list) else None,
             device=data.get("device"),
             fail_type=data.get("fail_type"),
+            eap=data.get("eap"),
+            wifi_generation=data.get("wifi_generation"),
+            bare_mode=data.get("bare_mode"),
         )
 
 
@@ -74,6 +87,8 @@ class ScannedNetwork:
     encryption_type: str
     saved: bool
     channel: int | None = None
+    dfs: bool = False
+    device: str | None = None
 
     @classmethod
     def from_api_response(cls, data: dict) -> ScannedNetwork:
@@ -87,6 +102,8 @@ class ScannedNetwork:
             encryption_type=encryption.get("description", "Open"),
             saved=data.get("saved", False),
             channel=data.get("channel"),
+            dfs=data.get("dfs", False),
+            device=data.get("device"),
         )
 
 

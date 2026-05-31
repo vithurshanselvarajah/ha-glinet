@@ -467,6 +467,53 @@ async def test_set_repeater_band_updates_config(monkeypatch) -> None:
     assert called == ["5g", "fetch_config"]
 
 
+async def test_set_repeater_smart_reconnect_updates_config() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    called: list[Any] = []
+
+    class RepeaterModule:
+        async def set_config(self, params: dict[str, Any]) -> dict[str, Any]:
+            called.append(params)
+            return {}
+
+    async def fake_fetch_repeater_config() -> None:
+        called.append("fetch_config")
+
+    hub._api = SimpleNamespace(repeater=RepeaterModule())
+    hub._invoke_api = lambda api_callable: api_callable()
+    hub.fetch_repeater_config = fake_fetch_repeater_config
+
+    await hub.set_repeater_smart_reconnect(True)
+
+    assert called == [{"smart_reconnect": True}, "fetch_config"]
+
+
+async def test_set_repeater_bare_mode_calls_expected_methods() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    called: list[str] = []
+
+    class RepeaterModule:
+        async def enter_bare_mode(self) -> dict[str, Any]:
+            called.append("enter")
+            return {}
+
+        async def exit_bare_mode(self) -> dict[str, Any]:
+            called.append("exit")
+            return {}
+
+    async def fake_fetch_repeater_status() -> None:
+        called.append("fetch_status")
+
+    hub._api = SimpleNamespace(repeater=RepeaterModule())
+    hub._invoke_api = lambda api_callable: api_callable()
+    hub.fetch_repeater_status = fake_fetch_repeater_status
+
+    await hub.set_repeater_bare_mode(True)
+    await hub.set_repeater_bare_mode(False)
+
+    assert called == ["enter", "fetch_status", "exit", "fetch_status"]
+
+
 async def test_fetch_repeater_status_returns_none_when_unavailable() -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._invoke_optional_api = AsyncMock(return_value=None)

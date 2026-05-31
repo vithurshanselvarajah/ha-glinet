@@ -6,6 +6,9 @@ from custom_components.ha_glinet.models import (
     ClientDeviceInfo,
     DeviceInterfaceType,
     FanStatus,
+    RepeaterState,
+    RepeaterStatus,
+    ScannedNetwork,
     SmsDirection,
     SmsMessage,
     SmsStatus,
@@ -144,3 +147,41 @@ def test_fan_status_from_api_response() -> None:
     assert fan.speed == 1000
     assert fan.temperature_threshold == 75
     assert fan.warn_temperature == 90
+
+
+def test_repeater_status_from_advanced_response() -> None:
+    status = RepeaterStatus.from_api_response(
+        {
+            "state": 4,
+            "ssid": "Example",
+            "eap": True,
+            "wifi_generation": "6",
+            "bare_mode": False,
+            "ipv4": {"ip": "192.168.8.2/24", "dns": ["1.1.1.1"]},
+        }
+    )
+
+    assert status.state is RepeaterState.WAN_AVAILABLE
+    assert status.eap is True
+    assert status.wifi_generation == "6"
+    assert status.bare_mode is False
+    assert status.ipv4_dns == ["1.1.1.1"]
+
+
+def test_scanned_network_from_advanced_response() -> None:
+    network = ScannedNetwork.from_api_response(
+        {
+            "ssid": "Example",
+            "bssid": "00:11:22:33:44:55",
+            "signal": -55,
+            "band": "5g",
+            "saved": True,
+            "channel": 100,
+            "dfs": True,
+            "device": "radio1",
+            "encryption": {"enabled": True, "description": "WPA2 PSK"},
+        }
+    )
+
+    assert network.dfs is True
+    assert network.device == "radio1"

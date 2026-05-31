@@ -105,10 +105,12 @@
       "repeater_state": {
         "name": "Repeater state",
         "state": {
+          "initializing": "Initializing",
           "not_used": "Not used",
           "connecting": "Connecting",
           "connected": "Connected",
-          "failed": "Failed"
+          "failed": "Failed",
+          "wan_available": "WAN available"
         }
       },
       "repeater_ssid": {
@@ -149,6 +151,9 @@
       },
       "repeater_connected": {
         "name": "Repeater connected"
+      },
+      "repeater_bare_mode": {
+        "name": "Repeater bare mode"
       }
     },
     "button": {
@@ -176,6 +181,12 @@
       },
       "repeater_auto_switch": {
         "name": "Repeater auto-switch networks"
+      },
+      "repeater_bare_mode": {
+        "name": "Repeater bare mode"
+      },
+      "repeater_smart_reconnect": {
+        "name": "Repeater smart reconnect"
       },
       "wg_server": {
         "name": "WG Server"

@@ -142,6 +142,33 @@ async def test_get_online_clients_filters_offline_clients() -> None:
     }
 
 
+async def test_repeater_advanced_methods_use_expected_payloads() -> None:
+    session = FakeSession(
+        [
+            {"result": None},
+            {"result": None},
+            {"result": {"chan_prompt_en": True, "popup_prompt_en": False}},
+            {"result": None},
+        ]
+    )
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    assert await client.repeater.enter_bare_mode() == {}
+    assert await client.repeater.exit_bare_mode() == {}
+    assert await client.repeater.get_channel_prompt() == {
+        "chan_prompt_en": True,
+        "popup_prompt_en": False,
+    }
+    assert await client.repeater.set_channel_prompt({"chan_prompt_en": False}) == {}
+
+    assert [request["json"]["params"] for request in session.requests] == [
+        ["sid-1", "repeater", "enter_bare_mode", {}],
+        ["sid-1", "repeater", "exit_bare_mode", {}],
+        ["sid-1", "repeater", "get_channel_prompt", {}],
+        ["sid-1", "repeater", "set_channel_prompt", {"chan_prompt_en": False}],
+    ]
+
+
 async def test_get_wifi_interfaces_returns_models() -> None:
     session = FakeSession(
         [

@@ -125,7 +125,7 @@ SYSTEM_SENSORS: tuple[SystemStatusEntityDescription, ...] = (
 @dataclass(frozen=True, kw_only=True)
 class HubSensorEntityDescription(SensorEntityDescription):
     value_fn: Callable[[GLinetHub], int | float | str | None]
-    extra_attributes_fn: Callable[[GLinetHub], dict[str, Any]] | None = None
+    extra_attributes_fn: Callable[[GLinetHub], dict[str, Any] | None] | None = None
 
 
 HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
@@ -307,7 +307,14 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         has_entity_name=True,
         icon="mdi:wifi-sync",
         device_class=SensorDeviceClass.ENUM,
-        options=["not_used", "connecting", "connected", "failed"],
+        options=[
+            "initializing",
+            "not_used",
+            "connecting",
+            "connected",
+            "failed",
+            "wan_available",
+        ],
         value_fn=lambda hub: _repeater_state_value(hub),
         extra_attributes_fn=lambda hub: _repeater_state_attributes(hub),
     ),
@@ -486,10 +493,12 @@ def _repeater_state_value(hub: GLinetHub) -> str | None:
     if hub.repeater_status is None:
         return None
     state_map = {
+        RepeaterState.INITIALIZING: "initializing",
         RepeaterState.NOT_USED: "not_used",
         RepeaterState.CONNECTING: "connecting",
         RepeaterState.CONNECTED: "connected",
         RepeaterState.FAILED: "failed",
+        RepeaterState.WAN_AVAILABLE: "wan_available",
     }
     return state_map.get(hub.repeater_status.state)
 
@@ -502,7 +511,41 @@ def _repeater_state_attributes(hub: GLinetHub) -> dict[str, Any] | None:
         attrs["bssid"] = hub.repeater_status.bssid
     if hub.repeater_status.fail_type:
         attrs["fail_type"] = hub.repeater_status.fail_type
+    if hub.repeater_status.device:
+        attrs["device"] = hub.repeater_status.device
+    if hub.repeater_status.wifi_generation:
+        attrs["wifi_generation"] = hub.repeater_status.wifi_generation
+    if hub.repeater_status.eap is not None:
+        attrs["eap"] = hub.repeater_status.eap
+    if hub.repeater_status.bare_mode is not None:
+        attrs["bare_mode"] = hub.repeater_status.bare_mode
     return attrs if attrs else None
+
+
+def _repeater_state_is(hub: GLinetHub, states: set[RepeaterState]) -> bool:
+    status = hub.repeater_status
+    return status is not None and status.state in states
+
+
+def _repeater_link_sensor_available(hub: GLinetHub) -> bool:
+    return _repeater_state_is(
+        hub,
+        {
+            RepeaterState.CONNECTING,
+            RepeaterState.CONNECTED,
+            RepeaterState.WAN_AVAILABLE,
+        },
+    )
+
+
+def _repeater_network_sensor_available(hub: GLinetHub) -> bool:
+    return _repeater_state_is(
+        hub,
+        {
+            RepeaterState.CONNECTED,
+            RepeaterState.WAN_AVAILABLE,
+        },
+    )
 
 
 def _wan_interfaces(hub: GLinetHub) -> list[dict[str, Any]]:
@@ -687,6 +730,18 @@ class HubStatusSensor(CoordinatorEntity[GLinetHub], SensorEntity):
             return False
         if self.entity_description.key == "wan_ip":
             return self.native_value is not None
+        if self.entity_description.key in {
+            "repeater_ssid",
+            "repeater_signal",
+            "repeater_bssid",
+        }:
+            return _repeater_link_sensor_available(self.hub)
+        if self.entity_description.key in {
+            "repeater_ip",
+            "repeater_gateway",
+            "repeater_dns",
+        }:
+            return _repeater_network_sensor_available(self.hub)
         return True
 
 
@@ -814,3 +869,7 @@ class RepeaterChannelSensor(CoordinatorEntity[GLinetHub], SensorEntity):
             return None
         channel = self._hub.repeater_status.channel
         return {"channel": channel, "band": channel_to_band(channel)}
+
+    @property
+    def available(self) -> bool:
+        return super().available and _repeater_link_sensor_available(self._hub)
