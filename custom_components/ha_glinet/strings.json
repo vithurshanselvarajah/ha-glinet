@@ -206,6 +206,9 @@
       },
       "repeater_band": {
         "name": "Repeater band"
+      },
+      "parental_control_group": {
+        "name": "Parental control group"
       }
     },
     "switch": {
@@ -250,6 +253,12 @@
       },
       "wan_access_ssh": {
         "name": "WAN SSH Access"
+      },
+      "parental_control": {
+        "name": "Parental control"
+      },
+      "internet_access": {
+        "name": "Internet access"
       }
     },
     "number": {}

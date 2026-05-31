@@ -1,4 +1,5 @@
 from .adguard import AdGuardModule
+from .black_white_list import BlackWhiteListModule
 from .clients import ClientsModule
 from .diag import DiagModule
 from .fan import FanModule
@@ -8,6 +9,7 @@ from .macclone import MacCloneModule
 from .modem import ModemModule
 from .ovpn_client import OvpnClientModule
 from .ovpn_server import OvpnServerModule
+from .parental_control import ParentalControlModule
 from .repeater import RepeaterModule
 from .system import SystemModule
 from .tailscale import TailscaleModule
@@ -18,6 +20,7 @@ from .zerotier import ZeroTierModule
 
 __all__ = [
     "AdGuardModule",
+    "BlackWhiteListModule",
     "ClientsModule",
     "DiagModule",
     "FanModule",
@@ -27,6 +30,7 @@ __all__ = [
     "ModemModule",
     "OvpnClientModule",
     "OvpnServerModule",
+    "ParentalControlModule",
     "RepeaterModule",
     "SystemModule",
     "TailscaleModule",

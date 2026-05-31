@@ -229,6 +229,140 @@ class AdGuardStatus:
         )
 
 
+def _mac_list(value: object) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).lower() for item in value if item]
+    if isinstance(value, str) and value:
+        return [value.lower()]
+    return []
+
+
+@dataclass(slots=True)
+class ParentalGroup:
+    id: str
+    name: str
+    enabled: bool = True
+    rule: str | None = None
+    macs: list[str] = field(default_factory=list)
+    schedules_enabled: bool = True
+    brief: bool = False
+    active_rule_id: str | None = None
+    active_schedule_ids: list[str] = field(default_factory=list)
+    raw: dict = field(default_factory=dict)
+
+    @classmethod
+    def from_api_response(cls, data: dict) -> ParentalGroup:
+        group_id = str(data.get("id") or data.get("group_id") or data.get(".name") or "")
+        name = str(data.get("name") or data.get("alias") or group_id)
+        macs = _mac_list(
+            data.get("mac")
+            or data.get("macs")
+            or data.get("clients")
+            or data.get("devices")
+        )
+        rule = data.get("rule") or data.get("rule_id")
+        return cls(
+            id=group_id,
+            name=name,
+            enabled=bool(data.get("enable", data.get("enabled", True))),
+            rule=str(rule) if rule is not None else None,
+            macs=macs,
+            schedules_enabled=bool(
+                data.get("schedule_enable", data.get("schedules_enabled", True))
+            ),
+            brief=bool(data.get("brief", False)),
+            active_rule_id=(
+                str(data.get("active_rule") or data.get("active_rule_id"))
+                if data.get("active_rule") or data.get("active_rule_id")
+                else None
+            ),
+            active_schedule_ids=[
+                str(item)
+                for item in (
+                    data.get("active_schedule_ids")
+                    or data.get("active_schedules")
+                    or []
+                )
+            ],
+            raw=dict(data),
+        )
+
+    def with_updates(self, **updates: object) -> dict:
+        data = dict(self.raw)
+        data.update(updates)
+        data["id"] = self.id
+        return data
+
+    def with_merged(self, other: ParentalGroup) -> ParentalGroup:
+        raw = dict(self.raw)
+        raw.update(other.raw)
+        other_has_name = any(key in other.raw for key in ("name", "alias"))
+        return ParentalGroup(
+            id=other.id or self.id,
+            name=other.name if other_has_name else self.name,
+            enabled=other.enabled,
+            rule=other.rule or self.rule,
+            macs=_merge_unique(self.macs, other.macs),
+            schedules_enabled=other.schedules_enabled,
+            brief=other.brief or self.brief,
+            active_rule_id=other.active_rule_id or self.active_rule_id,
+            active_schedule_ids=_merge_unique(
+                self.active_schedule_ids,
+                other.active_schedule_ids,
+            ),
+            raw=raw,
+        )
+
+
+@dataclass(slots=True)
+class ParentalStatus:
+    enabled: bool | None = None
+    mode: int | None = None
+    groups: dict[str, ParentalGroup] = field(default_factory=dict)
+    time_valid: bool | None = None
+    raw_config: dict = field(default_factory=dict)
+    raw_status: dict = field(default_factory=dict)
+
+    @classmethod
+    def from_api_response(
+        cls,
+        config: dict | None,
+        status: dict | None,
+        mode: dict | None = None,
+    ) -> ParentalStatus:
+        config = config or {}
+        status = status or {}
+        mode = mode or {}
+        groups: dict[str, ParentalGroup] = {}
+
+        for source in (config.get("groups"), config.get("group"), status.get("groups")):
+            if isinstance(source, dict):
+                iterable = source.values()
+            elif isinstance(source, list):
+                iterable = source
+            else:
+                iterable = []
+            for item in iterable:
+                if not isinstance(item, dict):
+                    continue
+                group = ParentalGroup.from_api_response(item)
+                if group.id:
+                    groups[group.id] = groups.get(group.id, group).with_merged(group)
+
+        return cls(
+            enabled=config.get("enable", config.get("enabled")),
+            mode=mode.get("mode") if isinstance(mode.get("mode"), int) else None,
+            groups=groups,
+            time_valid=status.get("time_valid"),
+            raw_config=config,
+            raw_status=status,
+        )
+
+
+def _merge_unique(first: list[str], second: list[str]) -> list[str]:
+    return list(dict.fromkeys([*first, *second]))
+
+
 @dataclass(slots=True)
 class WifiInterface:
     name: str
