@@ -215,9 +215,19 @@ def pytest_configure() -> None:
         )
         switch = types.ModuleType("homeassistant.components.switch")
         switch.SwitchEntity = object
+        select = types.ModuleType("homeassistant.components.select")
+        select.SelectEntity = object
+        binary_sensor = types.ModuleType("homeassistant.components.binary_sensor")
+        binary_sensor.BinarySensorEntity = object
+        binary_sensor.BinarySensorDeviceClass = types.SimpleNamespace(
+            CONNECTIVITY="connectivity",
+            RUNNING="running",
+        )
         homeassistant.components = components
         homeassistant.components.sensor = sensor
         homeassistant.components.switch = switch
+        homeassistant.components.select = select
+        homeassistant.components.binary_sensor = binary_sensor
         homeassistant.config_entries = config_entries
         homeassistant.core = core
         homeassistant.const = const
@@ -248,6 +258,8 @@ def pytest_configure() -> None:
         sys.modules["homeassistant.util.dt"] = dt
         sys.modules["homeassistant.components.sensor"] = sensor
         sys.modules["homeassistant.components.switch"] = switch
+        sys.modules["homeassistant.components.select"] = select
+        sys.modules["homeassistant.components.binary_sensor"] = binary_sensor
 
 
 def pytest_pyfunc_call(pyfuncitem: Any) -> bool:

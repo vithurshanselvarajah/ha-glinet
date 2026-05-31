@@ -6,8 +6,9 @@ from homeassistant.components.binary_sensor import BinarySensorDeviceClass, Bina
 from homeassistant.const import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from ..const import FEATURE_REPEATER
+from ..const import FEATURE_PARENTAL_CONTROL, FEATURE_REPEATER
 from ..hub import GLinetHub
+from ..models import ParentalGroup
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -26,6 +27,11 @@ async def async_setup_entry(
                 RepeaterConnectedBinarySensor(hub),
                 RepeaterBareModeBinarySensor(hub),
             ]
+        )
+    if hub.feature_enabled(FEATURE_PARENTAL_CONTROL):
+        entities.extend(
+            GLinetParentalControlGroupOverrideBinarySensor(hub, group)
+            for group in hub.parental_groups.values()
         )
     async_add_entities(entities, True)
 
@@ -121,3 +127,45 @@ class FanRunningBinarySensor(CoordinatorEntity[GLinetHub], BinarySensorEntity):
         if self._hub.fan_temperature_threshold is not None:
             attrs["temperature_threshold"] = self._hub.fan_temperature_threshold
         return attrs if attrs else None
+
+
+class GLinetParentalControlGroupOverrideBinarySensor(
+    CoordinatorEntity[GLinetHub],
+    BinarySensorEntity,
+):
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:timer-alert"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, hub: GLinetHub, group: ParentalGroup) -> None:
+        super().__init__(hub)
+        self._hub = hub
+        self._group = group
+        self._attr_device_info = hub.device_info
+
+    @property
+    def unique_id(self) -> str:
+        return (
+            f"glinet_binary_sensor/{self._hub.device_mac}/"
+            f"parental_control_group_{self._group.id}_override"
+        )
+
+    @property
+    def name(self) -> str:
+        return f"Parental control {self._group.name} override"
+
+    @property
+    def is_on(self) -> bool | None:
+        self._group = self._hub.parental_groups.get(self._group.id, self._group)
+        return self._group.brief
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        attrs: dict[str, Any] = {}
+        if self._group.rule:
+            attrs["rule"] = self._group.rule
+        if self._group.active_rule_id:
+            attrs["active_rule_id"] = self._group.active_rule_id
+        if self._group.active_schedule_ids:
+            attrs["active_schedule_ids"] = self._group.active_schedule_ids
+        return attrs or None

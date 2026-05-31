@@ -6,13 +6,19 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import EntityCategory
+from homeassistant.core import callback
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import (
+    DOMAIN,
     FEATURE_ADGUARD,
     FEATURE_FIREWALL,
     FEATURE_OVPN_CLIENT,
     FEATURE_OVPN_SERVER,
+    FEATURE_PARENTAL_CONTROL,
     FEATURE_REPEATER,
     FEATURE_TAILSCALE,
     FEATURE_WG_CLIENT,
@@ -20,7 +26,7 @@ from ..const import (
     FEATURE_ZEROTIER,
 )
 from ..hub import GLinetHub
-from ..models import OpenVpnClient, WifiInterface, WireGuardClient
+from ..models import ClientDeviceInfo, OpenVpnClient, ParentalGroup, WifiInterface, WireGuardClient
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -64,8 +70,38 @@ async def async_setup_entry(
         entities.append(GLinetWANAccessSwitch(hub, "ping", "WAN Ping", "mdi:access-point-network"))
         entities.append(GLinetWANAccessSwitch(hub, "https", "WAN HTTPS Access", "mdi:web"))
         entities.append(GLinetWANAccessSwitch(hub, "ssh", "WAN SSH Access", "mdi:console-network"))
+    if hub.feature_enabled(FEATURE_PARENTAL_CONTROL):
+        entities.append(GLinetParentalControlGlobalSwitch(hub))
+        entities.extend(
+            GLinetParentalControlGroupSwitch(hub, group)
+            for group in hub.parental_groups.values()
+        )
     entities.append(LedSwitch(hub))
     async_add_entities(entities, True)
+
+    if hub.feature_enabled(FEATURE_PARENTAL_CONTROL):
+        tracked: set[str] = set()
+
+        @callback
+        def register_new_devices() -> None:
+            new_entities = [
+                GLinetClientInternetAccessSwitch(hub, device)
+                for mac, device in hub.tracked_devices.items()
+                if mac not in tracked
+            ]
+            for entity in new_entities:
+                tracked.add(entity._device.mac)
+            if new_entities:
+                async_add_entities(new_entities, True)
+
+        register_new_devices()
+        entry.async_on_unload(
+            async_dispatcher_connect(
+                hub.hass,
+                hub.event_device_added,
+                register_new_devices,
+            )
+        )
 
 
 class GLinetSwitchBase(CoordinatorEntity[GLinetHub], SwitchEntity):
@@ -616,4 +652,94 @@ class GLinetWANAccessSwitch(GLinetSwitchBase):
         config = self._hub._wan_access.copy()
         config[f"enable_{self._access_type}"] = False
         await self._hub.set_wan_access(config)
+        await self._hub.async_request_refresh()
+
+
+class GLinetParentalControlGlobalSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:account-child"
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/parental_control"
+
+    @property
+    def name(self) -> str:
+        return "Parental control"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._hub.parental_control_enabled
+
+    async def async_turn_on(self, **_: Any) -> None:
+        await self._hub.set_parental_control_enabled(True)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        await self._hub.set_parental_control_enabled(False)
+        await self._hub.async_request_refresh()
+
+
+class GLinetParentalControlGroupSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:account-group"
+
+    def __init__(self, hub: GLinetHub, group: ParentalGroup) -> None:
+        super().__init__(hub)
+        self._group = group
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._hub.device_mac}/parental_control_group_{self._group.id}"
+
+    @property
+    def name(self) -> str:
+        return f"Parental control {self._group.name}"
+
+    @property
+    def is_on(self) -> bool | None:
+        self._group = self._hub.parental_groups.get(self._group.id, self._group)
+        return self._group.enabled
+
+    async def async_turn_on(self, **_: Any) -> None:
+        await self._hub.set_group_enabled(self._group.id, True)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        await self._hub.set_group_enabled(self._group.id, False)
+        await self._hub.async_request_refresh()
+
+
+class GLinetClientInternetAccessSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:web-check"
+
+    def __init__(self, hub: GLinetHub, device: ClientDeviceInfo) -> None:
+        super().__init__(hub)
+        self._device = device
+        self._attr_device_info = DeviceInfo(
+            connections={(CONNECTION_NETWORK_MAC, format_mac(device.mac))},
+            name=device.name or device.mac,
+            via_device=(DOMAIN, self._hub.router_id),
+        )
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_switch/{self._device.mac}/internet_access"
+
+    @property
+    def name(self) -> str:
+        return "Internet access"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._hub.device_internet_access_enabled(self._device.mac)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"access_control_mode": self._hub.access_control_mode}
+
+    async def async_turn_on(self, **_: Any) -> None:
+        await self._hub.set_single_device_block(self._device.mac, False)
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        await self._hub.set_single_device_block(self._device.mac, True)
         await self._hub.async_request_refresh()

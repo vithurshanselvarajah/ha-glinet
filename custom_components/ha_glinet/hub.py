@@ -50,6 +50,7 @@ from .const import (
     FEATURE_OPTIONS,
     FEATURE_OVPN_CLIENT,
     FEATURE_OVPN_SERVER,
+    FEATURE_PARENTAL_CONTROL,
     FEATURE_REPEATER,
     FEATURE_SMS,
     FEATURE_TAILSCALE,
@@ -63,6 +64,8 @@ from .models import (
     FanStatus,
     OpenVpnClient,
     OpenVpnServerStatus,
+    ParentalGroup,
+    ParentalStatus,
     RepeaterState,
     RepeaterStatus,
     ScannedNetwork,
@@ -138,6 +141,11 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._port_forwards: list[dict[str, Any]] = []
         self._wan_access: dict[str, Any] = {}
         self._zone_list: dict[str, Any] = {}
+        self._access_control_config: dict[str, Any] = {}
+        self._access_control_mode: str = "black"
+        self._black_mac: list[str] = []
+        self._white_mac: list[str] = []
+        self._parental_status: ParentalStatus = ParentalStatus()
 
         self._late_init_complete = False
         self._connect_error = False
@@ -225,6 +233,13 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 "port_forwards",
                 "wan_access",
             ],
+            FEATURE_PARENTAL_CONTROL: [
+                "parental_control",
+                "access_control",
+                "black_white_list",
+                "black_white",
+                "internet_access",
+            ],
         }
 
         for entry in track_entries:
@@ -256,6 +271,13 @@ class GLinetHub(DataUpdateCoordinator[None]):
                     mac = entry.unique_id
                 elif entry.unique_id.startswith("glinet_client_sensor/"):
                     mac = entry.unique_id.split("/")[1]
+                elif entry.unique_id.startswith(("glinet_switch/", "glinet_select/")):
+                    parts = entry.unique_id.split("/")
+                    if len(parts) >= 3 and parts[2] in {
+                        "internet_access",
+                        "parental_control_group",
+                    }:
+                        mac = parts[1]
 
                 if mac:
                     dev_reg = dr.async_get(self.hass)
@@ -443,6 +465,20 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._wan_access = {}
             self._zone_list = {}
 
+        if self.feature_enabled(FEATURE_PARENTAL_CONTROL):
+            tasks.extend(
+                [
+                    self.fetch_parental_control_status(),
+                    self.fetch_access_control_config(),
+                ]
+            )
+        else:
+            self._parental_status = ParentalStatus()
+            self._access_control_config = {}
+            self._access_control_mode = "black"
+            self._black_mac = []
+            self._white_mac = []
+
         for task in tasks:
             await task
 
@@ -579,6 +615,130 @@ class GLinetHub(DataUpdateCoordinator[None]):
         await self._invoke_api(lambda: self.router_api.firewall.set_wan_access(config))
         await self.fetch_wan_access()
 
+    async def fetch_access_control_config(self) -> None:
+        response = await self._invoke_optional_api(
+            self.router_api.black_white_list.get_config
+        )
+        self._access_control_config = response or {}
+        self._access_control_mode = str(
+            self._access_control_config.get("mode")
+            or self._access_control_config.get("type")
+            or "black"
+        )
+        self._black_mac = _extract_access_macs(
+            self._access_control_config,
+            "black",
+            "black_mac",
+        )
+        self._white_mac = _extract_access_macs(
+            self._access_control_config,
+            "white",
+            "white_mac",
+        )
+
+    async def fetch_parental_control_status(self) -> None:
+        config = await self._invoke_optional_api(self.router_api.parental_control.get_config)
+        status = await self._invoke_optional_api(self.router_api.parental_control.get_status)
+        mode = await self._invoke_optional_api(self.router_api.parental_control.get_mode)
+        self._parental_status = ParentalStatus.from_api_response(config, status, mode)
+
+    async def set_parental_control_enabled(self, enabled: bool) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.parental_control.set_config(enabled)
+        )
+        await self.fetch_parental_control_status()
+
+    async def set_group_enabled(self, group_id: str, enabled: bool) -> None:
+        group = self._parental_status.groups.get(group_id)
+        params = group.with_updates(enable=enabled, enabled=enabled) if group else {}
+        params.pop("id", None)
+        await self._invoke_api(
+            lambda: self.router_api.parental_control.set_group(group_id, **params)
+        )
+        await self.fetch_parental_control_status()
+
+    async def set_temporary_override(
+        self,
+        group_id: str,
+        enable: bool,
+        duration: str,
+        rule_id: str,
+    ) -> None:
+        await self._invoke_api(
+            lambda: self.router_api.parental_control.set_brief(
+                enable=enable,
+                time=duration,
+                rule_id=rule_id,
+                group_id=group_id,
+                manual_stop=False,
+            )
+        )
+        await self.fetch_parental_control_status()
+
+    async def set_parental_mode(self, mode: int) -> None:
+        await self._invoke_api(lambda: self.router_api.parental_control.set_mode(mode))
+        await self.fetch_parental_control_status()
+
+    async def update_parental_signatures(self) -> None:
+        await self._invoke_api(self.router_api.parental_control.update)
+
+    async def set_access_control_mode(self, mode: str) -> None:
+        macs = self._white_mac if mode == "white" else self._black_mac
+        await self._invoke_api(
+            lambda: self.router_api.black_white_list.set_config(mode, macs)
+        )
+        await self.fetch_access_control_config()
+
+    async def set_single_device_block(self, mac: str, block: bool) -> None:
+        mode = self._access_control_mode
+        operate = "add" if (block if _access_mode_is_black(mode) else not block) else "del"
+        await self._invoke_api(
+            lambda: self.router_api.black_white_list.set_single_mac(
+                mode,
+                operate,
+                mac.lower(),
+            )
+        )
+        await self.fetch_access_control_config()
+
+    async def set_group_schedules_enabled(self, group_id: str, enabled: bool) -> None:
+        group = self._parental_status.groups.get(group_id)
+        params = (
+            group.with_updates(schedule_enable=enabled, schedules_enabled=enabled)
+            if group
+            else {}
+        )
+        params.pop("id", None)
+        await self._invoke_api(
+            lambda: self.router_api.parental_control.set_group(group_id, **params)
+        )
+        await self.fetch_parental_control_status()
+
+    async def assign_device_to_parental_group(
+        self,
+        mac: str,
+        group_name_or_id: str | None,
+    ) -> None:
+        normalized_mac = mac.lower()
+        target = self.parental_group_by_name_or_id(group_name_or_id)
+        for group in self.parental_groups.values():
+            group_macs = [item.lower() for item in group.macs]
+            should_include = target is not None and group.id == target.id
+            if should_include and normalized_mac not in group_macs:
+                group_macs.append(normalized_mac)
+            if not should_include and normalized_mac in group_macs:
+                group_macs = [item for item in group_macs if item != normalized_mac]
+            if group_macs != group.macs:
+                params = group.with_updates(mac=group_macs, macs=group_macs)
+                params.pop("id", None)
+                await self._invoke_api(
+                    lambda group=group, params=params: self.router_api.parental_control.set_group(
+                        group.id,
+                        **params,
+                    )
+                )
+        await self.fetch_parental_control_status()
+
     async def fetch_connected_devices(self) -> None:
         new_device = False
         connected_devices = await self._invoke_api(self.router_api.clients.get_online)
@@ -647,6 +807,11 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 if (
                     entry.unique_id == mac
                     or entry.unique_id.startswith(f"glinet_client_sensor/{mac}/")
+                    or entry.unique_id
+                    in {
+                        f"glinet_switch/{mac}/internet_access",
+                        f"glinet_select/{mac}/parental_control_group",
+                    }
                 ):
                     entity_registry.async_remove(entry.entity_id)
             ha_device = device_registry.async_get_device(
@@ -1290,6 +1455,51 @@ class GLinetHub(DataUpdateCoordinator[None]):
     def default_modem_bus(self) -> str | None:
         return self._default_modem_bus
 
+    @property
+    def access_control_mode(self) -> str:
+        return self._access_control_mode
+
+    @property
+    def black_mac(self) -> list[str]:
+        return self._black_mac
+
+    @property
+    def white_mac(self) -> list[str]:
+        return self._white_mac
+
+    @property
+    def parental_status(self) -> ParentalStatus:
+        return self._parental_status
+
+    @property
+    def parental_control_enabled(self) -> bool | None:
+        return self._parental_status.enabled
+
+    @property
+    def parental_groups(self) -> dict[str, ParentalGroup]:
+        return self._parental_status.groups
+
+    def device_internet_access_enabled(self, mac: str) -> bool:
+        normalized_mac = mac.lower()
+        if _access_mode_is_white(self._access_control_mode):
+            return normalized_mac in self._white_mac
+        return normalized_mac not in self._black_mac
+
+    def parental_group_for_device(self, mac: str) -> ParentalGroup | None:
+        normalized_mac = mac.lower()
+        for group in self._parental_status.groups.values():
+            if normalized_mac in group.macs:
+                return group
+        return None
+
+    def parental_group_by_name_or_id(self, value: str | None) -> ParentalGroup | None:
+        if value is None:
+            return None
+        normalized_value = value.lower()
+        for group in self._parental_status.groups.values():
+            if group.id.lower() == normalized_value or group.name.lower() == normalized_value:
+                return group
+        return None
 
     @property
     def repeater_status(self) -> RepeaterStatus | None:
@@ -1403,5 +1613,30 @@ def _sms_status_is_read(status: Any) -> bool | None:
     if isinstance(status, int):
         return status in {1, 2, 3, 4, 5}
     return None
+
+
+def _extract_access_macs(data: dict[str, Any], section: str, key: str) -> list[str]:
+    value = data.get(key) or data.get(f"{section}_mac")
+    if isinstance(value, list):
+        return [str(item).lower() for item in value if item]
+    section_data = data.get(section)
+    if isinstance(section_data, dict):
+        value = section_data.get("mac") or section_data.get("macs")
+        if isinstance(value, list):
+            return [str(item).lower() for item in value if item]
+    if isinstance(section_data, list):
+        return [str(item).lower() for item in section_data if item]
+    value = data.get("mac") if data.get("mode") == section else None
+    if isinstance(value, list):
+        return [str(item).lower() for item in value if item]
+    return []
+
+
+def _access_mode_is_black(mode: str) -> bool:
+    return mode in {"black", "blacklist", "deny"}
+
+
+def _access_mode_is_white(mode: str) -> bool:
+    return mode in {"white", "whitelist", "allow"}
 
 

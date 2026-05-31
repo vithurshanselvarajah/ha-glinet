@@ -4,10 +4,15 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.select import SelectEntity
+from homeassistant.core import callback
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from ..const import FEATURE_REPEATER
+from ..const import DOMAIN, FEATURE_PARENTAL_CONTROL, FEATURE_REPEATER
 from ..hub import GLinetHub
+from ..models import ClientDeviceInfo
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -40,6 +45,30 @@ async def async_setup_entry(
 
 
     async_add_entities(entities, True)
+
+    if hub.feature_enabled(FEATURE_PARENTAL_CONTROL):
+        tracked: set[str] = set()
+
+        @callback
+        def register_new_devices() -> None:
+            new_entities = [
+                GLinetClientParentalGroupSelect(hub, device)
+                for mac, device in hub.tracked_devices.items()
+                if mac not in tracked
+            ]
+            for entity in new_entities:
+                tracked.add(entity._device.mac)
+            if new_entities:
+                async_add_entities(new_entities, True)
+
+        register_new_devices()
+        entry.async_on_unload(
+            async_dispatcher_connect(
+                hub.hass,
+                hub.event_device_added,
+                register_new_devices,
+            )
+        )
 
 
 class WifiNetworkSelect(CoordinatorEntity[GLinetHub], SelectEntity):
@@ -180,4 +209,38 @@ class RepeaterBandSelect(CoordinatorEntity[GLinetHub], SelectEntity):
         self.async_write_ha_state()
 
 
-
+class GLinetClientParentalGroupSelect(CoordinatorEntity[GLinetHub], SelectEntity):
+    _attr_has_entity_name = True
+    _attr_name = "Parental control group"
+    _attr_icon = "mdi:account-child-circle"
+
+    def __init__(self, hub: GLinetHub, device: ClientDeviceInfo) -> None:
+        super().__init__(hub)
+        self._hub = hub
+        self._device = device
+        self._attr_device_info = DeviceInfo(
+            connections={(CONNECTION_NETWORK_MAC, format_mac(device.mac))},
+            name=device.name or device.mac,
+            via_device=(DOMAIN, self._hub.router_id),
+        )
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_select/{self._device.mac}/parental_control_group"
+
+    @property
+    def options(self) -> list[str]:
+        return ["None", *[group.name for group in self._hub.parental_groups.values()]]
+
+    @property
+    def current_option(self) -> str | None:
+        group = self._hub.parental_group_for_device(self._device.mac)
+        return group.name if group else "None"
+
+    async def async_select_option(self, option: str) -> None:
+        group = None if option == "None" else option
+        await self._hub.assign_device_to_parental_group(self._device.mac, group)
+        await self._hub.async_request_refresh()
+
+
+

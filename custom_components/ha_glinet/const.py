@@ -31,6 +31,7 @@ FEATURE_ZEROTIER = "zerotier"
 FEATURE_ADGUARD = "adguard"
 FEATURE_LED = "led"
 FEATURE_FIREWALL = "firewall"
+FEATURE_PARENTAL_CONTROL = "parental_control"
 FEATURE_OPTIONS = [
     FEATURE_CELLULAR,
     FEATURE_REPEATER,
@@ -42,6 +43,7 @@ FEATURE_OPTIONS = [
     FEATURE_OVPN_SERVER,
     FEATURE_ZEROTIER,
     FEATURE_FIREWALL,
+    FEATURE_PARENTAL_CONTROL,
 ]
 
 SERVICE_GET_SMS = "get_sms"
@@ -61,6 +63,12 @@ SERVICE_REMOVE_FIREWALL_RULE = "remove_firewall_rule"
 SERVICE_ADD_PORT_FORWARD = "add_port_forward"
 SERVICE_REMOVE_PORT_FORWARD = "remove_port_forward"
 SERVICE_SET_DMZ = "set_dmz"
+SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE = "parental_control_set_temporary_override"
+SERVICE_PARENTAL_CONTROL_SET_FILTERING_MODE = "parental_control_set_filtering_mode"
+SERVICE_PARENTAL_CONTROL_UPDATE_SIGNATURES = "parental_control_update_signatures"
+SERVICE_ACCESS_CONTROL_SET_MODE = "access_control_set_mode"
+SERVICE_ACCESS_CONTROL_SET_DEVICE_BLOCK = "access_control_set_device_block"
+SERVICE_PARENTAL_CONTROL_SET_GROUP_SCHEDULES = "parental_control_set_group_schedules"
 
 ATTR_MESSAGE_ID = "message_id"
 ATTR_SCOPE = "scope"
@@ -89,3 +97,8 @@ ATTR_DEST_PORT = "dest_port"
 ATTR_TARGET = "target"
 ATTR_SRC_DPORT = "src_dport"
 ATTR_NAME = "name"
+ATTR_GROUP = "group"
+ATTR_GROUP_ID = "group_id"
+ATTR_DURATION = "duration"
+ATTR_MODE = "mode"
+ATTR_BLOCK = "block"

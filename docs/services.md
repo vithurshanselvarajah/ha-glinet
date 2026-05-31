@@ -126,7 +126,41 @@ Configures DMZ (DeMilitarized Zone) settings.
 - **`dest_ip`** (Optional): The internal IP address to expose.
 - **`mac`** (Optional): Target a specific router by MAC address.
 
-> Note: Firewall and repeater services are only registered when the corresponding support is enabled for the router.
+### `parental_control_set_temporary_override`
+Enables or disables a parental control brief/temporary override for a group.
+- **`group_id`**: Router parental group ID, such as `group7342748`.
+- **`enabled`**: Whether to enable the override.
+- **`rule_id`**: Rule to apply, such as `drop`.
+- **`duration`** (Optional): Router duration string, for example `01:00:00`.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+### `parental_control_set_filtering_mode`
+Sets the router parental control filtering mode.
+- **`mode`**: Numeric router mode value.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+### `parental_control_update_signatures`
+Triggers a parental control signature database update on the router.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+### `access_control_set_mode`
+Switches device access control between blacklist and whitelist modes.
+- **`mode`**: `black` or `white`.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+### `access_control_set_device_block`
+Blocks or unblocks a specific client MAC address.
+- **`src_mac`**: Client MAC address.
+- **`block`**: Whether internet access should be blocked.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+### `parental_control_set_group_schedules`
+Enables or bypasses schedules for a parental control group.
+- **`group_id`**: Router parental group ID.
+- **`enabled`**: Whether schedules should be enforced.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+> Note: Firewall, repeater, SMS, and parental/access services are only registered when the corresponding support is enabled for at least one router.
 
 ## Internal Logic
 

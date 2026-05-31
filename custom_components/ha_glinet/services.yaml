@@ -290,3 +290,100 @@ set_dmz:
     dest_ip:
       selector:
         text:
+
+parental_control_set_temporary_override:
+  name: Set parental control temporary override
+  description: Enable or disable a temporary brief rule for a parental control group.
+  fields:
+    mac:
+      selector:
+        text:
+    group_id:
+      selector:
+        text:
+      required: true
+    enabled:
+      selector:
+        boolean:
+      required: true
+    rule_id:
+      selector:
+        text:
+      required: true
+      example: "drop"
+    duration:
+      selector:
+        text:
+      required: false
+      example: "01:00:00"
+
+parental_control_set_filtering_mode:
+  name: Set parental control filtering mode
+  description: Set the router parental control filtering mode.
+  fields:
+    mac:
+      selector:
+        text:
+    mode:
+      selector:
+        number:
+          min: 0
+          max: 10
+          mode: box
+      required: true
+
+parental_control_update_signatures:
+  name: Update parental control signatures
+  description: Ask the router to update its parental control signature database.
+  fields:
+    mac:
+      selector:
+        text:
+
+access_control_set_mode:
+  name: Set access control mode
+  description: Switch device access control between blacklist and whitelist modes.
+  fields:
+    mac:
+      selector:
+        text:
+    mode:
+      selector:
+        select:
+          options:
+            - black
+            - white
+      required: true
+
+access_control_set_device_block:
+  name: Set device block
+  description: Block or unblock internet access for a client MAC address.
+  fields:
+    mac:
+      selector:
+        text:
+    src_mac:
+      name: Client MAC
+      selector:
+        text:
+      required: true
+    block:
+      selector:
+        boolean:
+      required: true
+
+parental_control_set_group_schedules:
+  name: Set parental control group schedules
+  description: Enable or bypass schedules for a parental control group.
+  fields:
+    mac:
+      selector:
+        text:
+    group_id:
+      selector:
+        text:
+      required: true
+    enabled:
+      selector:
+        boolean:
+      required: true

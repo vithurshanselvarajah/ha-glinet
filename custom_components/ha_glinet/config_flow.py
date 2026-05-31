@@ -32,6 +32,7 @@ from .const import (
     FEATURE_FIREWALL,
     FEATURE_OVPN_CLIENT,
     FEATURE_OVPN_SERVER,
+    FEATURE_PARENTAL_CONTROL,
     FEATURE_REPEATER,
     FEATURE_SMS,
     FEATURE_TAILSCALE,
@@ -61,6 +62,7 @@ FEATURE_OPTIONS = [
     {"label": "ZeroTier (Requires Network ID setup on router)", "value": FEATURE_ZEROTIER},
     {"label": "AdGuard Home", "value": FEATURE_ADGUARD},
     {"label": "Firewall", "value": FEATURE_FIREWALL},
+    {"label": "Parental & Access Control", "value": FEATURE_PARENTAL_CONTROL},
 ]
 DEFAULT_ENABLED_FEATURES = [
     FEATURE_CELLULAR,
@@ -73,6 +75,7 @@ DEFAULT_ENABLED_FEATURES = [
     FEATURE_OVPN_SERVER,
     FEATURE_ADGUARD,
     FEATURE_FIREWALL,
+    FEATURE_PARENTAL_CONTROL,
 ]
 DEFAULT_WAN_INTERFACES = ["wan", "wwan", "tethering", "modem_0001", "secondwan"]
 WAN_STATUS_PROTOCOLS = [("ipv4", "IPv4"), ("ipv6", "IPv6")]

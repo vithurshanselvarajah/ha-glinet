@@ -16,6 +16,7 @@
 - ZeroTier switch (Requires Network ID setup on router).
 - Firewall management (DMZ, port forwarding, and rules).
 - WAN access control (Ping, HTTPS, SSH).
+- Parental & Access Control feature group for device internet access and parental profiles.
 
 ## Added Operational Features
 
@@ -30,6 +31,9 @@
 - OpenVPN server connected users count.
 - AdGuard Home management (Enable/Disable, DNS control).
 - Custom firewall rules and port forwarding management.
+- Device-level Internet access switches attached to tracked client devices.
+- Device-level Parental control group selectors attached to tracked client devices.
+- Router-level parental control global, group, and override state entities.
 - Automatic stale device registry cleanup.
 
 ## Supported Actions
@@ -48,6 +52,10 @@
 - Add or remove port forwarding rules.
 - Enable or disable DMZ.
 - Configure WAN-side management access (Ping, HTTPS, SSH).
+- Enable or disable internet access for an individual client device.
+- Assign an individual client device to a parental control profile group.
+- Enable or disable parental control globally or per group.
+- Run advanced parental/access actions such as temporary overrides, filtering mode changes, signature updates, and blacklist/whitelist mode changes.
 - Enable or disable repeater bare mode.
 - Enable or disable repeater smart reconnect.
 
@@ -74,10 +82,11 @@ When adding the GL.iNet integration or modifying it via the **Configure** menu, 
     - **Repeater**: Enables WiFi station mode management, scanning, and saved network control.
     - **SMS**: Enables the text message inbox sensor and SMS sending/management actions.
     - **Tailscale / WireGuard / OpenVPN / ZeroTier**: Enables monitoring and toggling of VPN connections and servers.
+    - **Parental & Access Control**: Enables per-client internet access switches, per-client parental group selectors, router/group parental controls, and advanced parental/access actions.
 
 ## Optional Router Support
 
-GL.iNet firmware varies by model and firmware generation. The integration treats WireGuard, cellular, repeater, SMS, Tailscale, and ZeroTier as optional modules. During setup you can choose which of these optional features to enable, and unsupported or unavailable APIs are skipped without failing setup.
+GL.iNet firmware varies by model and firmware generation. The integration treats WireGuard, cellular, repeater, SMS, Tailscale, ZeroTier, and Parental & Access Control as optional modules. During setup you can choose which of these optional features to enable, and unsupported or unavailable APIs are skipped without failing setup.
 
 If you disable all optional features, the integration still registers core router status sensors and entities. 
 

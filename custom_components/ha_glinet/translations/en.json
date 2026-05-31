@@ -173,6 +173,9 @@
       },
       "repeater_band": {
         "name": "Repeater band"
+      },
+      "parental_control_group": {
+        "name": "Parental control group"
       }
     },
     "switch": {
@@ -205,6 +208,12 @@
       },
       "adguard_dns_enabled": {
         "name": "AdGuard Home DNS"
+      },
+      "parental_control": {
+        "name": "Parental control"
+      },
+      "internet_access": {
+        "name": "Internet access"
       }
     }
   },

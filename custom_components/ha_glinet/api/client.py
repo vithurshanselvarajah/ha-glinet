@@ -20,6 +20,7 @@ from .exceptions import (
 )
 from .modules import (
     AdGuardModule,
+    BlackWhiteListModule,
     ClientsModule,
     DiagModule,
     FanModule,
@@ -29,6 +30,7 @@ from .modules import (
     ModemModule,
     OvpnClientModule,
     OvpnServerModule,
+    ParentalControlModule,
     RepeaterModule,
     SystemModule,
     TailscaleModule,
@@ -109,6 +111,8 @@ class GLinetApiClient:
         self.macclone = MacCloneModule(self)
         self.diag = DiagModule(self)
         self.adguard = AdGuardModule(self)
+        self.parental_control = ParentalControlModule(self)
+        self.black_white_list = BlackWhiteListModule(self)
 
     @staticmethod
     def _build_sid_payload(method: str, params: list[Any], sid: str | None) -> dict[str, Any]:

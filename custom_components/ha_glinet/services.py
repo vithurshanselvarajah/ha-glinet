@@ -9,13 +9,17 @@ from homeassistant.helpers import config_validation as cv
 
 from .const import (
     ATTR_ALL_BAND,
+    ATTR_BLOCK,
     ATTR_BSSID,
     ATTR_DEST,
     ATTR_DEST_IP,
     ATTR_DEST_PORT,
     ATTR_DFS,
+    ATTR_DURATION,
     ATTR_ENABLED,
+    ATTR_GROUP_ID,
     ATTR_MESSAGE_ID,
+    ATTR_MODE,
     ATTR_NAME,
     ATTR_PASSWORD,
     ATTR_PROTO,
@@ -37,14 +41,21 @@ from .const import (
     DOMAIN,
     FEATURE_FIREWALL,
     FEATURE_OPTIONS,
+    FEATURE_PARENTAL_CONTROL,
     FEATURE_REPEATER,
     FEATURE_SMS,
+    SERVICE_ACCESS_CONTROL_SET_DEVICE_BLOCK,
+    SERVICE_ACCESS_CONTROL_SET_MODE,
     SERVICE_ADD_FIREWALL_RULE,
     SERVICE_ADD_PORT_FORWARD,
     SERVICE_CONNECT_WIFI,
     SERVICE_DISCONNECT_WIFI,
     SERVICE_GET_SAVED_NETWORKS,
     SERVICE_GET_SMS,
+    SERVICE_PARENTAL_CONTROL_SET_FILTERING_MODE,
+    SERVICE_PARENTAL_CONTROL_SET_GROUP_SCHEDULES,
+    SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE,
+    SERVICE_PARENTAL_CONTROL_UPDATE_SIGNATURES,
     SERVICE_REFRESH_SMS,
     SERVICE_REMOVE_FIREWALL_RULE,
     SERVICE_REMOVE_PORT_FORWARD,
@@ -91,6 +102,10 @@ async def async_register_services(hass: HomeAssistant) -> None:
     sms_enabled = any(FEATURE_SMS in _enabled_features_from_entry(entry) for entry in entries)
     repeater_enabled = any(
         FEATURE_REPEATER in _enabled_features_from_entry(entry) for entry in entries
+    )
+    parental_control_enabled = any(
+        FEATURE_PARENTAL_CONTROL in _enabled_features_from_entry(entry)
+        for entry in entries
     )
 
     async def async_set_fan_temperature(call: ServiceCall) -> None:
@@ -168,6 +183,66 @@ async def async_register_services(hass: HomeAssistant) -> None:
         await hub.set_dmz_config(
             enabled=call.data[ATTR_ENABLED],
             dest_ip=call.data.get(ATTR_DEST_IP),
+        )
+
+    async def async_parental_control_set_temporary_override(
+        call: ServiceCall,
+    ) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(
+            hub,
+            FEATURE_PARENTAL_CONTROL,
+            "parental_control_set_temporary_override",
+        )
+        await hub.set_temporary_override(
+            group_id=call.data[ATTR_GROUP_ID],
+            enable=call.data[ATTR_ENABLED],
+            duration=call.data.get(ATTR_DURATION, ""),
+            rule_id=call.data[ATTR_RULE_ID],
+        )
+
+    async def async_parental_control_set_filtering_mode(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(
+            hub,
+            FEATURE_PARENTAL_CONTROL,
+            "parental_control_set_filtering_mode",
+        )
+        await hub.set_parental_mode(call.data[ATTR_MODE])
+
+    async def async_parental_control_update_signatures(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(
+            hub,
+            FEATURE_PARENTAL_CONTROL,
+            "parental_control_update_signatures",
+        )
+        await hub.update_parental_signatures()
+
+    async def async_access_control_set_mode(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_PARENTAL_CONTROL, "access_control_set_mode")
+        await hub.set_access_control_mode(call.data[ATTR_MODE])
+
+    async def async_access_control_set_device_block(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(
+            hub,
+            FEATURE_PARENTAL_CONTROL,
+            "access_control_set_device_block",
+        )
+        await hub.set_single_device_block(call.data[ATTR_SRC_MAC], call.data[ATTR_BLOCK])
+
+    async def async_parental_control_set_group_schedules(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(
+            hub,
+            FEATURE_PARENTAL_CONTROL,
+            "parental_control_set_group_schedules",
+        )
+        await hub.set_group_schedules_enabled(
+            call.data[ATTR_GROUP_ID],
+            call.data[ATTR_ENABLED],
         )
 
     if sms_enabled:
@@ -417,6 +492,85 @@ async def async_register_services(hass: HomeAssistant) -> None:
             SERVICE_ADD_PORT_FORWARD,
             SERVICE_REMOVE_PORT_FORWARD,
             SERVICE_SET_DMZ,
+        ]:
+            if hass.services.has_service(DOMAIN, service):
+                hass.services.async_remove(DOMAIN, service)
+
+    if parental_control_enabled:
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE,
+            async_parental_control_set_temporary_override,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Required(ATTR_GROUP_ID): cv.string,
+                    vol.Required(ATTR_ENABLED): cv.boolean,
+                    vol.Required(ATTR_RULE_ID): cv.string,
+                    vol.Optional(ATTR_DURATION, default=""): cv.string,
+                }
+            ),
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_PARENTAL_CONTROL_SET_FILTERING_MODE,
+            async_parental_control_set_filtering_mode,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Required(ATTR_MODE): vol.Coerce(int),
+                }
+            ),
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_PARENTAL_CONTROL_UPDATE_SIGNATURES,
+            async_parental_control_update_signatures,
+            schema=vol.Schema({vol.Optional(CONF_MAC): cv.string}),
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_ACCESS_CONTROL_SET_MODE,
+            async_access_control_set_mode,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Required(ATTR_MODE): vol.In(["black", "white"]),
+                }
+            ),
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_ACCESS_CONTROL_SET_DEVICE_BLOCK,
+            async_access_control_set_device_block,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Required(ATTR_SRC_MAC): cv.string,
+                    vol.Required(ATTR_BLOCK): cv.boolean,
+                }
+            ),
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_PARENTAL_CONTROL_SET_GROUP_SCHEDULES,
+            async_parental_control_set_group_schedules,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Required(ATTR_GROUP_ID): cv.string,
+                    vol.Required(ATTR_ENABLED): cv.boolean,
+                }
+            ),
+        )
+    else:
+        for service in [
+            SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE,
+            SERVICE_PARENTAL_CONTROL_SET_FILTERING_MODE,
+            SERVICE_PARENTAL_CONTROL_UPDATE_SIGNATURES,
+            SERVICE_ACCESS_CONTROL_SET_MODE,
+            SERVICE_ACCESS_CONTROL_SET_DEVICE_BLOCK,
+            SERVICE_PARENTAL_CONTROL_SET_GROUP_SCHEDULES,
         ]:
             if hass.services.has_service(DOMAIN, service):
                 hass.services.async_remove(DOMAIN, service)
