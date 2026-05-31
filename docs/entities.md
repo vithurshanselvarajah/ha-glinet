@@ -120,6 +120,7 @@ These sensors are created only when the router reports bandwidth fields in the c
 | Fan status | Optional `fan/get_status` | Binary sensor showing if the fan is currently active. |
 | Repeater connected | Optional `repeater/get_status` | Binary sensor showing if the repeater is connected or WAN available. Attributes include SSID, BSSID, signal, WiFi generation, EAP, and bare mode when reported. |
 | Repeater bare mode | Optional `repeater/get_status` | Binary sensor showing if repeater bare mode is active. |
+| Parental control group override | Optional `parental-control/get_status` | One diagnostic binary sensor per parental group showing whether a temporary brief/override is active. |
 | Fan speed | Optional `fan/get_status` | Diagnostic sensor showing current fan speed in RPM. |
 | Fan threshold temperature | Optional `fan/get_config` | Diagnostic sensor showing the current temperature threshold. |
 
@@ -130,6 +131,7 @@ These sensors are created only when the router reports bandwidth fields in the c
 | WiFi network | `hub.scanned_networks` | Choose a saved or available WiFi SSID for repeater mode. Groups options by "Known" and "Available". |
 | Repeater band | Optional `repeater/get_config` | Controls the locked wireless band used for repeater scanning and connection. |
 | OpenVPN location | `ovpn-client/get_config` | Choose the server location for an active OpenVPN client profile. |
+| Parental control group | Optional `parental-control/get_config` | One select per tracked client device. Options are `None` plus router parental control group names. The entity is attached to the client MAC device. |
 
 ## Switches
 
@@ -152,3 +154,6 @@ These sensors are created only when the router reports bandwidth fields in the c
 | WAN Ping Access | `firewall/set_wan_access` | Toggle whether the router responds to ICMP echo requests from the WAN. |
 | WAN HTTPS Access | `firewall/set_wan_access` | Toggle remote HTTPS management access from the WAN. |
 | WAN SSH Access | `firewall/set_wan_access` | Toggle remote SSH management access from the WAN. |
+| Parental control | Optional `parental-control/set_config` | Global parental control toggle on the router device. |
+| Parental control group | Optional `parental-control/set_group` | One switch per parental control group to enable or disable the group. |
+| Internet access | Optional `black_white_list/set_single_mac` | One switch per tracked client device. Turning it off blocks internet access for that client MAC; turning it on restores access. |

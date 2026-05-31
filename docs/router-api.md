@@ -44,6 +44,8 @@ sid, module-name, function-name, optional parameters
 - `zerotier`: ZeroTier config and state.
 - `adguardhome`: AdGuard Home config and state.
 - `firewall`: Firewall rules, port forwarding, and DMZ management.
+- `parental-control`: Parental control config, status, group updates, filtering mode, brief/temporary overrides, and signature updates.
+- `black_white_list`: Access control blacklist/whitelist config and single-MAC updates.
 - `fan`: Optional fan status, speed, and threshold control.
 - `led`: System LED control.
 - `macclone`: MAC clone capabilities.
@@ -64,6 +66,6 @@ Core APIs:
 
 Optional APIs:
 
-- LED, cellular, SMS, AdGuard Home, and client cache clear calls are optional.
+- LED, cellular, SMS, AdGuard Home, parental/access control, and client cache clear calls are optional.
 - Unsupported optional APIs are logged at debug level and do not fail setup.
 - Entities for optional features are created only when useful data is available or the feature is enabled in options.
