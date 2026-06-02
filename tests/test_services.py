@@ -4,20 +4,27 @@ from types import SimpleNamespace
 from typing import Any
 
 from custom_components.ha_glinet.const import (
+    ATTR_ALL_BAND,
     ATTR_BLOCK,
+    ATTR_BSSID,
     ATTR_DEST,
     ATTR_DEST_IP,
     ATTR_DEST_PORT,
+    ATTR_DFS,
     ATTR_ENABLED,
     ATTR_GROUP_ID,
     ATTR_MODE,
     ATTR_NAME,
+    ATTR_PASSWORD,
     ATTR_PROTO,
+    ATTR_REFRESH,
+    ATTR_REMEMBER,
     ATTR_REMOVE_ALL,
     ATTR_RULE_ID,
     ATTR_SRC,
     ATTR_SRC_DPORT,
     ATTR_SRC_MAC,
+    ATTR_SSID,
     CONF_ENABLED_FEATURES,
     DOMAIN,
     FEATURE_FIREWALL,
@@ -367,6 +374,94 @@ async def test_register_services_skips_disabled_features() -> None:
 
     assert hass.services.has_service(DOMAIN, SERVICE_SET_FAN_TEMPERATURE)
     assert [s for s, _ in hass.services.registrations if s != SERVICE_SET_FAN_TEMPERATURE] == []
+
+
+async def test_repeater_scan_action_passes_refresh_flags() -> None:
+    calls: list[tuple[str, Any]] = []
+
+    class Hub:
+        device_mac = "00:11:22:33:44:55"
+
+        def feature_enabled(self, feature: str) -> bool:
+            return feature == FEATURE_REPEATER
+
+        async def scan_wifi_networks(
+            self,
+            all_band: bool = False,
+            dfs: bool = False,
+            refresh: bool = False,
+        ) -> list[Any]:
+            calls.append(("scan", {"all_band": all_band, "dfs": dfs, "refresh": refresh}))
+            return []
+
+    entry = DummyEntry(data={CONF_ENABLED_FEATURES: [FEATURE_REPEATER]})
+    entry.runtime_data = Hub()
+    hass = DummyHass([entry])
+    await async_register_services(hass)
+
+    response = await hass.services.handlers[SERVICE_SCAN_WIFI](
+        SimpleNamespace(data={ATTR_ALL_BAND: True, ATTR_DFS: True, ATTR_REFRESH: True})
+    )
+
+    assert calls == [("scan", {"all_band": True, "dfs": True, "refresh": True})]
+    assert response == {"networks": []}
+
+
+async def test_repeater_connect_action_passes_secured_network_password() -> None:
+    calls: list[tuple[str, Any]] = []
+
+    class Hub:
+        device_mac = "00:11:22:33:44:55"
+
+        def feature_enabled(self, feature: str) -> bool:
+            return feature == FEATURE_REPEATER
+
+        async def connect_to_wifi(
+            self,
+            ssid: str,
+            password: str | None = None,
+            remember: bool = True,
+            bssid: str | None = None,
+        ) -> None:
+            calls.append(
+                (
+                    "connect",
+                    {
+                        "ssid": ssid,
+                        "password": password,
+                        "remember": remember,
+                        "bssid": bssid,
+                    },
+                )
+            )
+
+    entry = DummyEntry(data={CONF_ENABLED_FEATURES: [FEATURE_REPEATER]})
+    entry.runtime_data = Hub()
+    hass = DummyHass([entry])
+    await async_register_services(hass)
+
+    await hass.services.handlers[SERVICE_CONNECT_WIFI](
+        SimpleNamespace(
+            data={
+                ATTR_SSID: "SecuredNet",
+                ATTR_PASSWORD: "secret-pass",
+                ATTR_REMEMBER: False,
+                ATTR_BSSID: "00:11:22:33:44:55",
+            }
+        )
+    )
+
+    assert calls == [
+        (
+            "connect",
+            {
+                "ssid": "SecuredNet",
+                "password": "secret-pass",
+                "remember": False,
+                "bssid": "00:11:22:33:44:55",
+            },
+        )
+    ]
 
 
 async def test_register_services_does_not_register_repeater_when_not_enabled() -> None:

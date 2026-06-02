@@ -348,6 +348,7 @@ async def test_scan_wifi_networks_stores_results(monkeypatch) -> None:
     async def fake_scan_wifi_networks(
         params: dict[str, Any]
     ) -> list[dict[str, Any]]:
+        calls.append(params)
         return [
             {
                 "ssid": "TestNet",
@@ -362,7 +363,7 @@ async def test_scan_wifi_networks_stores_results(monkeypatch) -> None:
 
     hub._api.repeater = types.SimpleNamespace(scan=fake_scan_wifi_networks)
 
-    calls: list[str] = []
+    calls: list[Any] = []
 
     def fake_dispatcher_send(hass: Any, event: str) -> None:
         calls.append(event)
@@ -371,13 +372,16 @@ async def test_scan_wifi_networks_stores_results(monkeypatch) -> None:
 
     monkeypatch.setattr(hub_module, "async_dispatcher_send", fake_dispatcher_send)
 
-    networks = await hub.scan_wifi_networks(all_band=True, dfs=True)
+    networks = await hub.scan_wifi_networks(all_band=True, dfs=True, refresh=True)
 
     assert len(networks) == 1
     assert networks[0].ssid == "TestNet"
     assert hub._scanned_networks[0].ssid == "TestNet"
     assert hub._last_wifi_scan is not None
-    assert calls == ["ha_glinet-networks-update-00:00:00:00:00:00"]
+    assert calls == [
+        {"refresh": True},
+        "ha_glinet-networks-update-00:00:00:00:00:00",
+    ]
 
 
 async def test_connect_to_wifi_calls_router_api_and_refreshes_status(monkeypatch) -> None:
@@ -390,14 +394,7 @@ async def test_connect_to_wifi_calls_router_api_and_refreshes_status(monkeypatch
             self,
             params: dict[str, Any],
         ) -> dict[str, Any]:
-            called.append(
-                (
-                    params.get("ssid"),
-                    params.get("key"),
-                    params.get("remember", True),
-                    params.get("bssid"),
-                )
-            )
+            called.append(params)
             return {}
 
     class RouterApi:
@@ -412,7 +409,57 @@ async def test_connect_to_wifi_calls_router_api_and_refreshes_status(monkeypatch
 
     await hub.connect_to_wifi("test-ssid", "pass", remember=False, bssid="aa:bb")
 
-    assert called == [("test-ssid", "pass", False, "aa:bb"), "fetch_status"]
+    assert called == [
+        {
+            "ssid": "test-ssid",
+            "remember": False,
+            "manual": False,
+            "protocol": "dhcp",
+            "disguise": False,
+            "auto_portal": False,
+            "key": "pass",
+            "bssid": "aa:bb",
+        },
+        "fetch_status",
+    ]
+
+
+async def test_connect_to_open_wifi_omits_empty_optional_fields(monkeypatch) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {}
+    called: list[Any] = []
+
+    class RepeaterModule:
+        async def connect(
+            self,
+            params: dict[str, Any],
+        ) -> dict[str, Any]:
+            called.append(params)
+            return {}
+
+    class RouterApi:
+        repeater = RepeaterModule()
+
+    async def fake_fetch_repeater_status() -> None:
+        called.append("fetch_status")
+
+    hub._api = RouterApi()
+    hub._invoke_api = lambda api_callable: api_callable()
+    hub.fetch_repeater_status = fake_fetch_repeater_status
+
+    await hub.connect_to_wifi("open-ssid", "")
+
+    assert called == [
+        {
+            "ssid": "open-ssid",
+            "remember": True,
+            "manual": False,
+            "protocol": "dhcp",
+            "disguise": False,
+            "auto_portal": False,
+        },
+        "fetch_status",
+    ]
 
 
 async def test_disconnect_wifi_calls_router_api_and_refreshes_status(monkeypatch) -> None:
