@@ -56,6 +56,7 @@
 - Assign an individual client device to a parental control profile group.
 - Enable or disable parental control globally or per group.
 - Run advanced parental/access actions such as temporary overrides, filtering mode changes, signature updates, and blacklist/whitelist mode changes.
+- Connect the router to open or secured external WiFi networks via the `connect_wifi` action.
 - Enable or disable repeater bare mode.
 - Enable or disable repeater smart reconnect.
 

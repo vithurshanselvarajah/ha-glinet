@@ -54,6 +54,14 @@ sid, module-name, function-name, optional parameters
 
 The GL.iNet API surface is not identical across all devices. When adding new features, prefer optional API calls for model-specific modules and expose entities only when useful data is returned.
 
+## Repeater Notes
+
+The repeater integration follows the SDK 4.0 repeater module endpoints:
+
+- `repeater/scan` uses the documented `refresh` parameter for forced scans.
+- `repeater/connect` supports secured networks by passing `key` only when an action password is provided. The default action path uses DHCP client mode with `manual: false`, `protocol: dhcp`, `disguise: false`, and `auto_portal: false`.
+- Saved-network action responses intentionally omit saved WiFi passwords even though the router can return them.
+
 ## Error Handling
 
 The integration treats documented/core APIs and optional model-specific APIs differently.

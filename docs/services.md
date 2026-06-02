@@ -42,8 +42,9 @@ Manually triggers a poll for new SMS messages.
 ### `scan_wifi`
 Scans available WiFi networks for repeater mode.
 - **`mac`** (Optional): Target a specific router by MAC address.
-- **`all_band`** (Optional): Scan all radio bands.
-- **`dfs`** (Optional): Include DFS channels in the scan.
+- **`refresh`** (Optional): Force a fresh router scan instead of using cached scan results.
+- **`all_band`** (Optional): Compatibility alias that requests a fresh router scan.
+- **`dfs`** (Optional): Compatibility alias that requests a fresh router scan.
 
 **Response Format**:
 Returns a `networks` array containing:
@@ -56,12 +57,24 @@ Returns a `networks` array containing:
 - `saved`
 
 ### `connect_wifi`
-Connects the router to an external WiFi network in repeater mode.
+Connects the router to an open or secured external WiFi network in repeater mode.
 - **`ssid`**: Network name to connect to.
-- **`password`** (Optional): Network passphrase.
+- **`password`** (Optional): Network passphrase. Required for secured networks; omit or leave empty for open networks.
 - **`remember`** (Optional): Save network credentials for auto-reconnect. Defaults to `true`.
 - **`bssid`** (Optional): Lock connection to a specific AP MAC.
 - **`mac`** (Optional): Target a specific router by MAC address.
+
+Example secured-network action:
+
+```yaml
+action: ha_glinet.connect_wifi
+data:
+  ssid: CampgroundWiFi
+  password: !secret campground_wifi_password
+  remember: true
+```
+
+The integration sends the documented GL.iNet repeater defaults for DHCP client mode (`manual: false`, `protocol: dhcp`, `disguise: false`, and `auto_portal: false`) and only includes password/BSSID parameters when they are provided.
 
 ### `disconnect_wifi`
 Disconnects the router from the current external WiFi repeater network.
