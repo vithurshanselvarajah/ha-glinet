@@ -655,6 +655,81 @@ async def test_async_initialize_hub_cleans_up_orphaned_entities(monkeypatch) -> 
     mock_er.async_remove.assert_called_once_with("sensor.glinet_cellular_signal")
 
 
+async def test_async_initialize_hub_cleans_up_repeater_entities_when_disabled(
+    monkeypatch,
+) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {CONF_ENABLED_FEATURES: []}
+    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub.hass = MagicMock()
+    hub._late_init_complete = True
+    hub._factory_mac = "00:11:22:33:44:55"
+
+    repeater_entries = [
+        types.SimpleNamespace(
+            entity_id="sensor.repeater_state",
+            unique_id="glinet_sensor/00:11:22:33:44:55/repeater_state",
+            domain="sensor",
+        ),
+        types.SimpleNamespace(
+            entity_id="binary_sensor.repeater_connected",
+            unique_id="glinet_binary_sensor/00:11:22:33:44:55/repeater_connected",
+            domain="binary_sensor",
+        ),
+        types.SimpleNamespace(
+            entity_id="select.wifi_network",
+            unique_id="glinet_select/00:11:22:33:44:55/wifi_network",
+            domain="select",
+        ),
+        types.SimpleNamespace(
+            entity_id="select.repeater_band",
+            unique_id="glinet_select/00:11:22:33:44:55/repeater_band",
+            domain="select",
+        ),
+        types.SimpleNamespace(
+            entity_id="switch.repeater_auto_switch",
+            unique_id="glinet_switch/00:11:22:33:44:55/repeater_auto_switch",
+            domain="switch",
+        ),
+        types.SimpleNamespace(
+            entity_id="button.scan_wifi",
+            unique_id="glinet_button/00:11:22:33:44:55/scan_wifi",
+            domain="button",
+        ),
+        types.SimpleNamespace(
+            entity_id="button.disconnect_repeater",
+            unique_id="glinet_button/00:11:22:33:44:55/disconnect_repeater",
+            domain="button",
+        ),
+    ]
+    valid_entry = types.SimpleNamespace(
+        entity_id="sensor.glinet_uptime",
+        unique_id="glinet_sensor/00:11:22:33:44:55/system_uptime",
+        domain="sensor",
+    )
+
+    mock_er = MagicMock()
+    mock_er.async_remove = MagicMock()
+
+    import homeassistant.helpers.entity_registry as er
+
+    monkeypatch.setattr(er, "async_get", lambda _: mock_er)
+    monkeypatch.setattr(
+        er,
+        "async_entries_for_config_entry",
+        MagicMock(return_value=[*repeater_entries, valid_entry]),
+    )
+
+    hub.refresh_session_token = _noop
+    hub.fetch_all_data = _noop
+
+    await hub.async_initialize_hub()
+
+    assert mock_er.async_remove.call_count == len(repeater_entries)
+    for entry in repeater_entries:
+        mock_er.async_remove.assert_any_call(entry.entity_id)
+
+
 async def test_async_initialize_hub_cleans_up_unselected_wan_status_sensors(
     monkeypatch,
 ) -> None:

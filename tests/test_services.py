@@ -104,6 +104,26 @@ async def test_register_services_removes_services_when_feature_is_disabled() -> 
     assert not hass.services.has_service(DOMAIN, SERVICE_SEND_SMS)
 
 
+async def test_register_services_removes_repeater_actions_when_feature_is_disabled() -> None:
+    entry = DummyEntry(data={CONF_ENABLED_FEATURES: [FEATURE_REPEATER]})
+    hass = DummyHass([entry])
+    await async_register_services(hass)
+    assert hass.services.has_service(DOMAIN, SERVICE_SCAN_WIFI)
+    assert hass.services.has_service(DOMAIN, SERVICE_CONNECT_WIFI)
+    assert hass.services.has_service(DOMAIN, SERVICE_DISCONNECT_WIFI)
+    assert hass.services.has_service(DOMAIN, SERVICE_GET_SAVED_NETWORKS)
+    assert hass.services.has_service(DOMAIN, SERVICE_REMOVE_SAVED_NETWORK)
+
+    entry.data[CONF_ENABLED_FEATURES] = []
+    await async_register_services(hass)
+
+    assert not hass.services.has_service(DOMAIN, SERVICE_SCAN_WIFI)
+    assert not hass.services.has_service(DOMAIN, SERVICE_CONNECT_WIFI)
+    assert not hass.services.has_service(DOMAIN, SERVICE_DISCONNECT_WIFI)
+    assert not hass.services.has_service(DOMAIN, SERVICE_GET_SAVED_NETWORKS)
+    assert not hass.services.has_service(DOMAIN, SERVICE_REMOVE_SAVED_NETWORK)
+
+
 async def test_register_services_removes_parental_services_when_feature_is_disabled() -> None:
     entry = DummyEntry(data={CONF_ENABLED_FEATURES: [FEATURE_PARENTAL_CONTROL]})
     hass = DummyHass([entry])
