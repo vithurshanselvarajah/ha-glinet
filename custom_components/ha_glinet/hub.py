@@ -1181,12 +1181,22 @@ class GLinetHub(DataUpdateCoordinator[None]):
         await self._invoke_api(lambda: self.router_api.fan.set_test(test=True, time=duration))
 
     async def scan_wifi_networks(
-        self, all_band: bool = False, dfs: bool = False, store_results: bool = True
+        self,
+        all_band: bool = False,
+        dfs: bool = False,
+        refresh: bool = False,
+        store_results: bool = True,
     ) -> list[ScannedNetwork]:
-        _LOGGER.info("Starting WiFi network scan (all_band=%s, dfs=%s)", all_band, dfs)
-        response = await self._invoke_api(
-            lambda: self.router_api.repeater.scan({"all_band": all_band, "dfs": dfs})
+        _LOGGER.info(
+            "Starting WiFi network scan (all_band=%s, dfs=%s, refresh=%s)",
+            all_band,
+            dfs,
+            refresh,
         )
+        params: dict[str, Any] = {}
+        if refresh or all_band or dfs:
+            params["refresh"] = True
+        response = await self._invoke_api(lambda: self.router_api.repeater.scan(params))
         if response is None:
             _LOGGER.warning(
                 "WiFi scan returned None, keeping %d cached networks",
@@ -1208,10 +1218,20 @@ class GLinetHub(DataUpdateCoordinator[None]):
         remember: bool = True,
         bssid: str | None = None,
     ) -> None:
+        params: dict[str, Any] = {
+            "ssid": ssid,
+            "remember": remember,
+            "manual": False,
+            "protocol": "dhcp",
+            "disguise": False,
+            "auto_portal": False,
+        }
+        if password:
+            params["key"] = password
+        if bssid:
+            params["bssid"] = bssid
         await self._invoke_api(
-            lambda: self.router_api.repeater.connect(
-                {"ssid": ssid, "key": password, "remember": remember, "bssid": bssid}
-            )
+            lambda: self.router_api.repeater.connect(params)
         )
         await self.fetch_repeater_status()
 

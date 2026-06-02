@@ -322,11 +322,15 @@
       "fields": {
         "all_band": {
           "name": "All bands",
-          "description": "Scan both 2.4GHz and 5GHz bands."
+          "description": "Compatibility option. Requests a fresh router scan."
         },
         "dfs": {
           "name": "Include DFS",
-          "description": "Include DFS channels in the scan."
+          "description": "Compatibility option. Requests a fresh router scan."
+        },
+        "refresh": {
+          "name": "Refresh",
+          "description": "Force a fresh router scan instead of using cached scan results."
         },
         "mac": {
           "name": "MAC address",
@@ -336,7 +340,7 @@
     },
     "connect_wifi": {
       "name": "Connect to WiFi",
-      "description": "Connect to an external WiFi network in repeater mode.",
+      "description": "Connect to an open or secured external WiFi network in repeater mode.",
       "fields": {
         "ssid": {
           "name": "SSID",
@@ -344,7 +348,7 @@
         },
         "password": {
           "name": "Password",
-          "description": "The WiFi password."
+          "description": "The WiFi password. Required for secured networks; leave empty for open networks."
         },
         "remember": {
           "name": "Remember",

@@ -81,6 +81,7 @@ ATTR_REMEMBER = "remember"
 ATTR_BSSID = "bssid"
 ATTR_ALL_BAND = "all_band"
 ATTR_DFS = "dfs"
+ATTR_REFRESH = "refresh"
 ATTR_TEMPERATURE = "temperature"
 
 ATTR_ENABLED = "enabled"

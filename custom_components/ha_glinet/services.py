@@ -24,6 +24,7 @@ from .const import (
     ATTR_PASSWORD,
     ATTR_PROTO,
     ATTR_RECIPIENT,
+    ATTR_REFRESH,
     ATTR_REMEMBER,
     ATTR_REMOVE_ALL,
     ATTR_RULE_ID,
@@ -295,6 +296,7 @@ async def async_register_services(hass: HomeAssistant) -> None:
         networks = await hub.scan_wifi_networks(
             all_band=call.data.get(ATTR_ALL_BAND, False),
             dfs=call.data.get(ATTR_DFS, False),
+            refresh=call.data.get(ATTR_REFRESH, False),
         )
         return {
             "networks": [
@@ -356,6 +358,7 @@ async def async_register_services(hass: HomeAssistant) -> None:
                     vol.Optional(CONF_MAC): cv.string,
                     vol.Optional(ATTR_ALL_BAND, default=False): cv.boolean,
                     vol.Optional(ATTR_DFS, default=False): cv.boolean,
+                    vol.Optional(ATTR_REFRESH, default=False): cv.boolean,
                 }
             ),
             supports_response=SupportsResponse.ONLY,
