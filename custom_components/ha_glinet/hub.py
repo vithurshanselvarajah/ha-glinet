@@ -47,6 +47,8 @@ from .const import (
     FEATURE_ADGUARD,
     FEATURE_CELLULAR,
     FEATURE_FIREWALL,
+    FEATURE_MCU_BATTERY,
+    FEATURE_MCU_OLED,
     FEATURE_OPTIONS,
     FEATURE_OVPN_CLIENT,
     FEATURE_OVPN_SERVER,
@@ -137,6 +139,8 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._led_enabled: bool | None = None
         self._adguard_status: AdGuardStatus | None = None
         self._firewall_rules: list[dict[str, Any]] = []
+        self._mcu_battery_config: dict[str, Any] = {}
+        self._mcu_oled_config: dict[str, Any] = {}
         self._dmz_config: dict[str, Any] = {}
         self._port_forwards: list[dict[str, Any]] = []
         self._wan_access: dict[str, Any] = {}
@@ -232,6 +236,14 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 "dmz",
                 "port_forwards",
                 "wan_access",
+            ],
+            FEATURE_MCU_BATTERY: [
+                "battery",
+                "mcu_battery",
+            ],
+            FEATURE_MCU_OLED: [
+                "oled",
+                "mcu_oled",
             ],
             FEATURE_PARENTAL_CONTROL: [
                 "parental_control",
@@ -577,18 +589,20 @@ class GLinetHub(DataUpdateCoordinator[None]):
         await self._invoke_api(lambda: self.router_api.firewall.add_rule(params))
         await self.fetch_firewall_rules()
 
-    async def remove_firewall_rule(
-        self,
-        rule_id: str | None = None,
-        remove_all: bool = False,
-    ) -> None:
-        params = {}
-        if remove_all:
-            params["all"] = True
-        elif rule_id:
-            params["id"] = rule_id
+    async def remove_firewall_rule(self, rule_id: str) -> None:
+        params = {"id": rule_id}
         await self._invoke_api(lambda: self.router_api.firewall.remove_rule(params))
         await self.fetch_firewall_rules()
+
+    async def get_firewall_rule_summaries(self) -> list[dict[str, str | None]]:
+        await self.fetch_firewall_rules()
+        return [
+            {
+                "id": str(rule.get("id")) if rule.get("id") is not None else None,
+                "name": str(rule.get("name")) if rule.get("name") is not None else None,
+            }
+            for rule in self._firewall_rules
+        ]
 
     async def add_port_forward(self, params: dict[str, Any]) -> None:
         await self._invoke_api(lambda: self.router_api.firewall.add_port_forward(params))
@@ -614,6 +628,29 @@ class GLinetHub(DataUpdateCoordinator[None]):
     async def set_wan_access(self, config: dict[str, Any]) -> None:
         await self._invoke_api(lambda: self.router_api.firewall.set_wan_access(config))
         await self.fetch_wan_access()
+
+    async def get_mcu_battery_config(self) -> dict[str, Any]:
+        response = await self._invoke_optional_api(self.router_api.mcu.get_battery_config)
+        self._mcu_battery_config = response or {}
+        return self._mcu_battery_config
+
+    async def set_mcu_battery_config(self, config: dict[str, Any]) -> None:
+        await self._invoke_api(lambda: self.router_api.mcu.set_battery_config(config))
+        await self.get_mcu_battery_config()
+
+    async def get_mcu_oled_config(self) -> dict[str, Any]:
+        response = await self._invoke_optional_api(self.router_api.mcu.get_oled_config)
+        self._mcu_oled_config = response or {}
+        return self._mcu_oled_config
+
+    async def set_mcu_oled_config(self, screen_display: dict[str, Any]) -> None:
+        current = await self.get_mcu_oled_config()
+        current_display = current.get("screen_display")
+        if not isinstance(current_display, dict):
+            current_display = {}
+        config = {"screen_display": current_display | screen_display}
+        await self._invoke_api(lambda: self.router_api.mcu.set_oled_config(config))
+        await self.get_mcu_oled_config()
 
     async def fetch_access_control_config(self) -> None:
         response = await self._invoke_optional_api(
@@ -1181,12 +1218,22 @@ class GLinetHub(DataUpdateCoordinator[None]):
         await self._invoke_api(lambda: self.router_api.fan.set_test(test=True, time=duration))
 
     async def scan_wifi_networks(
-        self, all_band: bool = False, dfs: bool = False, store_results: bool = True
+        self,
+        all_band: bool = False,
+        dfs: bool = False,
+        refresh: bool = False,
+        store_results: bool = True,
     ) -> list[ScannedNetwork]:
-        _LOGGER.info("Starting WiFi network scan (all_band=%s, dfs=%s)", all_band, dfs)
-        response = await self._invoke_api(
-            lambda: self.router_api.repeater.scan({"all_band": all_band, "dfs": dfs})
+        _LOGGER.info(
+            "Starting WiFi network scan (all_band=%s, dfs=%s, refresh=%s)",
+            all_band,
+            dfs,
+            refresh,
         )
+        params: dict[str, Any] = {}
+        if refresh or all_band or dfs:
+            params["refresh"] = True
+        response = await self._invoke_api(lambda: self.router_api.repeater.scan(params))
         if response is None:
             _LOGGER.warning(
                 "WiFi scan returned None, keeping %d cached networks",
@@ -1208,10 +1255,20 @@ class GLinetHub(DataUpdateCoordinator[None]):
         remember: bool = True,
         bssid: str | None = None,
     ) -> None:
+        params: dict[str, Any] = {
+            "ssid": ssid,
+            "remember": remember,
+            "manual": False,
+            "protocol": "dhcp",
+            "disguise": False,
+            "auto_portal": False,
+        }
+        if password:
+            params["key"] = password
+        if bssid:
+            params["bssid"] = bssid
         await self._invoke_api(
-            lambda: self.router_api.repeater.connect(
-                {"ssid": ssid, "key": password, "remember": remember, "bssid": bssid}
-            )
+            lambda: self.router_api.repeater.connect(params)
         )
         await self.fetch_repeater_status()
 

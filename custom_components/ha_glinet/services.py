@@ -11,6 +11,10 @@ from .const import (
     ATTR_ALL_BAND,
     ATTR_BLOCK,
     ATTR_BSSID,
+    ATTR_CAPACITY,
+    ATTR_CAPACITY_ENABLED,
+    ATTR_CONTENT,
+    ATTR_CUSTOM,
     ATTR_DEST,
     ATTR_DEST_IP,
     ATTR_DEST_PORT,
@@ -18,12 +22,15 @@ from .const import (
     ATTR_DURATION,
     ATTR_ENABLED,
     ATTR_GROUP_ID,
+    ATTR_LAN,
+    ATTR_MAIN,
     ATTR_MESSAGE_ID,
     ATTR_MODE,
     ATTR_NAME,
     ATTR_PASSWORD,
     ATTR_PROTO,
     ATTR_RECIPIENT,
+    ATTR_REFRESH,
     ATTR_REMEMBER,
     ATTR_REMOVE_ALL,
     ATTR_RULE_ID,
@@ -35,11 +42,21 @@ from .const import (
     ATTR_SRC_PORT,
     ATTR_SSID,
     ATTR_TARGET,
+    ATTR_TEMP_HIGH,
+    ATTR_TEMP_HIGH_ENABLED,
+    ATTR_TEMP_LOW,
+    ATTR_TEMP_LOW_ENABLED,
     ATTR_TEMPERATURE,
     ATTR_TEXT,
+    ATTR_VPN,
+    ATTR_WIFI_2G,
+    ATTR_WIFI_5G,
+    ATTR_WIFI_PASSWORD,
     CONF_ENABLED_FEATURES,
     DOMAIN,
     FEATURE_FIREWALL,
+    FEATURE_MCU_BATTERY,
+    FEATURE_MCU_OLED,
     FEATURE_OPTIONS,
     FEATURE_PARENTAL_CONTROL,
     FEATURE_REPEATER,
@@ -50,6 +67,9 @@ from .const import (
     SERVICE_ADD_PORT_FORWARD,
     SERVICE_CONNECT_WIFI,
     SERVICE_DISCONNECT_WIFI,
+    SERVICE_GET_FIREWALL_RULES,
+    SERVICE_GET_MCU_BATTERY_CONFIG,
+    SERVICE_GET_MCU_OLED_CONFIG,
     SERVICE_GET_SAVED_NETWORKS,
     SERVICE_GET_SMS,
     SERVICE_PARENTAL_CONTROL_SET_FILTERING_MODE,
@@ -65,6 +85,8 @@ from .const import (
     SERVICE_SEND_SMS,
     SERVICE_SET_DMZ,
     SERVICE_SET_FAN_TEMPERATURE,
+    SERVICE_SET_MCU_BATTERY_CONFIG,
+    SERVICE_SET_MCU_OLED_CONFIG,
 )
 
 if TYPE_CHECKING:
@@ -98,6 +120,12 @@ async def async_register_services(hass: HomeAssistant) -> None:
 
     firewall_enabled = any(
         FEATURE_FIREWALL in _enabled_features_from_entry(entry) for entry in entries
+    )
+    mcu_battery_enabled = any(
+        FEATURE_MCU_BATTERY in _enabled_features_from_entry(entry) for entry in entries
+    )
+    mcu_oled_enabled = any(
+        FEATURE_MCU_OLED in _enabled_features_from_entry(entry) for entry in entries
     )
     sms_enabled = any(FEATURE_SMS in _enabled_features_from_entry(entry) for entry in entries)
     repeater_enabled = any(
@@ -158,10 +186,12 @@ async def async_register_services(hass: HomeAssistant) -> None:
     async def async_remove_firewall_rule(call: ServiceCall) -> None:
         hub = _get_hub(hass, call.data)
         _ensure_feature_enabled(hub, FEATURE_FIREWALL, "remove_firewall_rule")
-        await hub.remove_firewall_rule(
-            rule_id=call.data.get(ATTR_RULE_ID),
-            remove_all=call.data.get(ATTR_REMOVE_ALL, False),
-        )
+        await hub.remove_firewall_rule(rule_id=call.data[ATTR_RULE_ID])
+
+    async def async_get_firewall_rules(call: ServiceCall) -> ServiceResponse:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_FIREWALL, "get_firewall_rules")
+        return {"rules": await hub.get_firewall_rule_summaries()}
 
     async def async_add_port_forward(call: ServiceCall) -> None:
         hub = _get_hub(hass, call.data)
@@ -184,6 +214,54 @@ async def async_register_services(hass: HomeAssistant) -> None:
             enabled=call.data[ATTR_ENABLED],
             dest_ip=call.data.get(ATTR_DEST_IP),
         )
+
+    async def async_get_mcu_battery_config(call: ServiceCall) -> ServiceResponse:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_MCU_BATTERY, "get_mcu_battery_config")
+        return {"config": await hub.get_mcu_battery_config()}
+
+    async def async_set_mcu_battery_config(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_MCU_BATTERY, "set_mcu_battery_config")
+        config = {
+            "capacity": {
+                "enable": call.data[ATTR_CAPACITY_ENABLED],
+                "value": call.data[ATTR_CAPACITY],
+            },
+            "temp_high": {
+                "enable": call.data[ATTR_TEMP_HIGH_ENABLED],
+                "value": call.data[ATTR_TEMP_HIGH],
+            },
+            "temp_low": {
+                "enable": call.data[ATTR_TEMP_LOW_ENABLED],
+                "value": call.data[ATTR_TEMP_LOW],
+            },
+        }
+        await hub.set_mcu_battery_config(config)
+
+    async def async_get_mcu_oled_config(call: ServiceCall) -> ServiceResponse:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_MCU_OLED, "get_mcu_oled_config")
+        return {"config": await hub.get_mcu_oled_config()}
+
+    async def async_set_mcu_oled_config(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_MCU_OLED, "set_mcu_oled_config")
+        screen_display = {
+            key: call.data[key]
+            for key in (
+                ATTR_MAIN,
+                ATTR_WIFI_PASSWORD,
+                ATTR_WIFI_2G,
+                ATTR_WIFI_5G,
+                ATTR_LAN,
+                ATTR_VPN,
+                ATTR_CUSTOM,
+                ATTR_CONTENT,
+            )
+            if key in call.data
+        }
+        await hub.set_mcu_oled_config(screen_display)
 
     async def async_parental_control_set_temporary_override(
         call: ServiceCall,
@@ -295,6 +373,7 @@ async def async_register_services(hass: HomeAssistant) -> None:
         networks = await hub.scan_wifi_networks(
             all_band=call.data.get(ATTR_ALL_BAND, False),
             dfs=call.data.get(ATTR_DFS, False),
+            refresh=call.data.get(ATTR_REFRESH, False),
         )
         return {
             "networks": [
@@ -356,6 +435,7 @@ async def async_register_services(hass: HomeAssistant) -> None:
                     vol.Optional(CONF_MAC): cv.string,
                     vol.Optional(ATTR_ALL_BAND, default=False): cv.boolean,
                     vol.Optional(ATTR_DFS, default=False): cv.boolean,
+                    vol.Optional(ATTR_REFRESH, default=False): cv.boolean,
                 }
             ),
             supports_response=SupportsResponse.ONLY,
@@ -433,13 +513,19 @@ async def async_register_services(hass: HomeAssistant) -> None:
         )
         hass.services.async_register(
             DOMAIN,
+            SERVICE_GET_FIREWALL_RULES,
+            async_get_firewall_rules,
+            schema=vol.Schema({vol.Optional(CONF_MAC): cv.string}),
+            supports_response=SupportsResponse.ONLY,
+        )
+        hass.services.async_register(
+            DOMAIN,
             SERVICE_REMOVE_FIREWALL_RULE,
             async_remove_firewall_rule,
             schema=vol.Schema(
                 {
                     vol.Optional(CONF_MAC): cv.string,
-                    vol.Optional(ATTR_RULE_ID): cv.string,
-                    vol.Optional(ATTR_REMOVE_ALL, default=False): cv.boolean,
+                    vol.Required(ATTR_RULE_ID): cv.string,
                 }
             ),
         )
@@ -488,10 +574,79 @@ async def async_register_services(hass: HomeAssistant) -> None:
     else:
         for service in [
             SERVICE_ADD_FIREWALL_RULE,
+            SERVICE_GET_FIREWALL_RULES,
             SERVICE_REMOVE_FIREWALL_RULE,
             SERVICE_ADD_PORT_FORWARD,
             SERVICE_REMOVE_PORT_FORWARD,
             SERVICE_SET_DMZ,
+        ]:
+            if hass.services.has_service(DOMAIN, service):
+                hass.services.async_remove(DOMAIN, service)
+
+    if mcu_battery_enabled:
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_MCU_BATTERY_CONFIG,
+            async_get_mcu_battery_config,
+            schema=vol.Schema({vol.Optional(CONF_MAC): cv.string}),
+            supports_response=SupportsResponse.ONLY,
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_MCU_BATTERY_CONFIG,
+            async_set_mcu_battery_config,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Required(ATTR_CAPACITY_ENABLED): cv.boolean,
+                    vol.Required(ATTR_CAPACITY): vol.All(
+                        vol.Coerce(int), vol.Range(min=1, max=100)
+                    ),
+                    vol.Required(ATTR_TEMP_HIGH_ENABLED): cv.boolean,
+                    vol.Required(ATTR_TEMP_HIGH): vol.Coerce(int),
+                    vol.Required(ATTR_TEMP_LOW_ENABLED): cv.boolean,
+                    vol.Required(ATTR_TEMP_LOW): vol.Coerce(int),
+                }
+            ),
+        )
+    else:
+        for service in [
+            SERVICE_GET_MCU_BATTERY_CONFIG,
+            SERVICE_SET_MCU_BATTERY_CONFIG,
+        ]:
+            if hass.services.has_service(DOMAIN, service):
+                hass.services.async_remove(DOMAIN, service)
+
+    if mcu_oled_enabled:
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_MCU_OLED_CONFIG,
+            async_get_mcu_oled_config,
+            schema=vol.Schema({vol.Optional(CONF_MAC): cv.string}),
+            supports_response=SupportsResponse.ONLY,
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_MCU_OLED_CONFIG,
+            async_set_mcu_oled_config,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Optional(ATTR_MAIN): cv.boolean,
+                    vol.Optional(ATTR_WIFI_PASSWORD): cv.boolean,
+                    vol.Optional(ATTR_WIFI_2G): cv.boolean,
+                    vol.Optional(ATTR_WIFI_5G): cv.boolean,
+                    vol.Optional(ATTR_LAN): cv.boolean,
+                    vol.Optional(ATTR_VPN): cv.boolean,
+                    vol.Optional(ATTR_CUSTOM): cv.boolean,
+                    vol.Optional(ATTR_CONTENT): cv.string,
+                }
+            ),
+        )
+    else:
+        for service in [
+            SERVICE_GET_MCU_OLED_CONFIG,
+            SERVICE_SET_MCU_OLED_CONFIG,
         ]:
             if hass.services.has_service(DOMAIN, service):
                 hass.services.async_remove(DOMAIN, service)

@@ -27,7 +27,7 @@ Included features:
 - AdGuard Home switches (Optional).
 - Optional cellular signal/network sensors.
 - Optional SMS services for sending, viewing and managing text messages in the inbox.
-- Optional repeater mode support for WiFi scan, connect/disconnect, saved networks, and repeater state.
+- Optional repeater mode support for WiFi scan, open/secured connect and disconnect actions, saved networks, and repeater state.
 - Fan support (status, RPM, and temperature threshold control).
 - Firewall management (DMZ, port forwarding, rules, and WAN access control).
 - Automatic cleanup of stale discovered devices.

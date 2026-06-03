@@ -31,6 +31,7 @@ class RouterStatus:
     flash_total: int = 0
     flash_free: int = 0
     network: list[dict[str, Any]] = field(default_factory=list)
+    mcu: dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class WifiInterfaceInfo:

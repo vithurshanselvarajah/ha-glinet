@@ -169,6 +169,47 @@ async def test_repeater_advanced_methods_use_expected_payloads() -> None:
     ]
 
 
+async def test_repeater_scan_and_connect_use_documented_payloads() -> None:
+    session = FakeSession(
+        [
+            {"result": {"res": [{"ssid": "SecuredNet"}]}},
+            {"result": None},
+        ]
+    )
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    assert await client.repeater.scan({"refresh": True}) == [{"ssid": "SecuredNet"}]
+    assert await client.repeater.connect(
+        {
+            "ssid": "SecuredNet",
+            "key": "secret-pass",
+            "remember": True,
+            "manual": False,
+            "protocol": "dhcp",
+            "disguise": False,
+            "auto_portal": False,
+        }
+    ) == {}
+
+    assert [request["json"]["params"] for request in session.requests] == [
+        ["sid-1", "repeater", "scan", {"refresh": True}],
+        [
+            "sid-1",
+            "repeater",
+            "connect",
+            {
+                "ssid": "SecuredNet",
+                "key": "secret-pass",
+                "remember": True,
+                "manual": False,
+                "protocol": "dhcp",
+                "disguise": False,
+                "auto_portal": False,
+            },
+        ],
+    ]
+
+
 async def test_get_wifi_interfaces_returns_models() -> None:
     session = FakeSession(
         [

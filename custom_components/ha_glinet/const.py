@@ -31,6 +31,8 @@ FEATURE_ZEROTIER = "zerotier"
 FEATURE_ADGUARD = "adguard"
 FEATURE_LED = "led"
 FEATURE_FIREWALL = "firewall"
+FEATURE_MCU_BATTERY = "mcu_battery"
+FEATURE_MCU_OLED = "mcu_oled"
 FEATURE_PARENTAL_CONTROL = "parental_control"
 FEATURE_OPTIONS = [
     FEATURE_CELLULAR,
@@ -43,6 +45,8 @@ FEATURE_OPTIONS = [
     FEATURE_OVPN_SERVER,
     FEATURE_ZEROTIER,
     FEATURE_FIREWALL,
+    FEATURE_MCU_BATTERY,
+    FEATURE_MCU_OLED,
     FEATURE_PARENTAL_CONTROL,
 ]
 
@@ -59,10 +63,15 @@ SERVICE_REMOVE_SAVED_NETWORK = "remove_saved_network"
 SERVICE_SET_FAN_TEMPERATURE = "set_fan_temperature"
 
 SERVICE_ADD_FIREWALL_RULE = "add_firewall_rule"
+SERVICE_GET_FIREWALL_RULES = "get_firewall_rules"
 SERVICE_REMOVE_FIREWALL_RULE = "remove_firewall_rule"
 SERVICE_ADD_PORT_FORWARD = "add_port_forward"
 SERVICE_REMOVE_PORT_FORWARD = "remove_port_forward"
 SERVICE_SET_DMZ = "set_dmz"
+SERVICE_GET_MCU_BATTERY_CONFIG = "get_mcu_battery_config"
+SERVICE_SET_MCU_BATTERY_CONFIG = "set_mcu_battery_config"
+SERVICE_GET_MCU_OLED_CONFIG = "get_mcu_oled_config"
+SERVICE_SET_MCU_OLED_CONFIG = "set_mcu_oled_config"
 SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE = "parental_control_set_temporary_override"
 SERVICE_PARENTAL_CONTROL_SET_FILTERING_MODE = "parental_control_set_filtering_mode"
 SERVICE_PARENTAL_CONTROL_UPDATE_SIGNATURES = "parental_control_update_signatures"
@@ -81,12 +90,27 @@ ATTR_REMEMBER = "remember"
 ATTR_BSSID = "bssid"
 ATTR_ALL_BAND = "all_band"
 ATTR_DFS = "dfs"
+ATTR_REFRESH = "refresh"
 ATTR_TEMPERATURE = "temperature"
 
 ATTR_ENABLED = "enabled"
 ATTR_DEST_IP = "dest_ip"
 ATTR_RULE_ID = "rule_id"
 ATTR_REMOVE_ALL = "remove_all"
+ATTR_CAPACITY = "capacity"
+ATTR_CAPACITY_ENABLED = "capacity_enabled"
+ATTR_TEMP_HIGH = "temp_high"
+ATTR_TEMP_HIGH_ENABLED = "temp_high_enabled"
+ATTR_TEMP_LOW = "temp_low"
+ATTR_TEMP_LOW_ENABLED = "temp_low_enabled"
+ATTR_MAIN = "main"
+ATTR_WIFI_PASSWORD = "wifi_password"
+ATTR_WIFI_2G = "wifi_2g"
+ATTR_WIFI_5G = "wifi_5g"
+ATTR_LAN = "lan"
+ATTR_VPN = "vpn"
+ATTR_CUSTOM = "custom"
+ATTR_CONTENT = "content"
 ATTR_SRC = "src"
 ATTR_SRC_IP = "src_ip"
 ATTR_SRC_MAC = "src_mac"

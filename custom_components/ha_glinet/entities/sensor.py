@@ -23,6 +23,7 @@ from ..const import (
     DOMAIN,
     FEATURE_CELLULAR,
     FEATURE_FIREWALL,
+    FEATURE_MCU_BATTERY,
     FEATURE_OVPN_SERVER,
     FEATURE_REPEATER,
     FEATURE_SMS,
@@ -165,6 +166,44 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda hub: len(hub._port_forwards),
+    ),
+    HubSensorEntityDescription(
+        key="battery_temperature",
+        name="Battery temperature",
+        has_entity_name=True,
+        icon="mdi:thermometer",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_fn=lambda hub: _mcu_value(hub, "temperature"),
+    ),
+    HubSensorEntityDescription(
+        key="battery_charge",
+        name="Battery charge",
+        has_entity_name=True,
+        icon="mdi:battery",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_fn=lambda hub: _mcu_value(hub, "charge_percent"),
+        extra_attributes_fn=lambda hub: {
+            "charge_count": _mcu_value(hub, "charge_cnt"),
+            "fast_charge": _mcu_value(hub, "fastcharge"),
+            "abnormal_type": _mcu_value(hub, "abnormal_type"),
+        },
+    ),
+    HubSensorEntityDescription(
+        key="battery_charging_status",
+        name="Battery charging status",
+        has_entity_name=True,
+        icon="mdi:battery-charging",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_class=SensorDeviceClass.ENUM,
+        options=["not_charging", "charging"],
+        value_fn=lambda hub: _battery_charging_status(hub),
     ),
     HubSensorEntityDescription(
         key="cellular_signal",
@@ -443,6 +482,9 @@ FEATURE_SENSOR_MAP: dict[str, str] = {
     "ovpn_server_users": FEATURE_OVPN_SERVER,
     "firewall_rules": FEATURE_FIREWALL,
     "port_forwards": FEATURE_FIREWALL,
+    "battery_temperature": FEATURE_MCU_BATTERY,
+    "battery_charge": FEATURE_MCU_BATTERY,
+    "battery_charging_status": FEATURE_MCU_BATTERY,
 }
 
 
@@ -595,6 +637,22 @@ def _calc_usage_percent(total: Any, free: Any) -> float | None:
         return None
     value = 100 * (1 - free / total)
     return value if 0 <= value <= 100 else None
+
+
+def _mcu_value(hub: GLinetHub, key: str) -> Any:
+    status = hub.router_status
+    if status is None:
+        return None
+    return status.mcu.get(key)
+
+
+def _battery_charging_status(hub: GLinetHub) -> str | None:
+    value = _mcu_value(hub, "charging_status")
+    if value == 1:
+        return "charging"
+    if value == 0:
+        return "not_charging"
+    return None
 
 
 def _resolve_uptime(seconds_uptime: float, last_value: datetime | None) -> datetime:

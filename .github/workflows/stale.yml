@@ -10,42 +10,6 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - name: Auto-label pinned issues
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          OWNER_AND_REPO="${{ github.repository }}"
-          OWNER="${OWNER_AND_REPO%/*}"
-          REPO="${OWNER_AND_REPO#*/}"
-          
-          echo "Fetching pinned issues for $OWNER/$REPO..."
-          
-          PINNED_NUMBERS=$(gh api graphql -f query='
-            query($owner: String!, $name: String!) {
-              repository(owner: $owner, name: $name) {
-                pinnedIssues(first: 3) {
-                  nodes {
-                    issue {
-                      number
-                    }
-                  }
-                }
-              }
-            }
-          ' -f owner="$OWNER" -f name="$REPO" --jq '.data.repository.pinnedIssues.nodes[].issue.number')
-          
-          if [ -z "$PINNED_NUMBERS" ]; then
-            echo "No pinned issues found."
-            exit 0
-          fi
-          
-          gh label create "pinned" --color "F9D0C4" --description "Pinned issue" 2>/dev/null || true
-          
-          for number in $PINNED_NUMBERS; do
-            echo "Auto-labeling pinned issue #$number with 'pinned' label..."
-            gh issue edit "$number" --repo "${{ github.repository }}" --add-label "pinned"
-          done
-
       - uses: actions/stale@v10
         with:
           stale-issue-message: 'This issue has been automatically marked as stale because it has not had recent activity. It will be closed in 7 days if no further activity occurs. Thank you for your contributions!'
@@ -53,4 +17,4 @@ jobs:
           days-before-stale: 14
           days-before-close: 7
           stale-issue-label: 'stale'
-          exempt-issue-labels: 'pinned,security,feature'
+          exempt-issue-labels: 'Announcement,security,feature'
