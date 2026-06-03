@@ -22,21 +22,38 @@ async def test_firewall_module_methods_use_expected_payloads() -> None:
             {"result": {"res": [{"id": "rule-1"}]}},
             {"result": {"ok": True}},
             {"result": {"ok": True}},
+            {"result": {"ok": True}},
+            {"result": [{"name": "ACL"}]},
+            {"result": {"ok": True}},
+            {"result": {"ok": True}},
+            {"result": {"ok": True}},
+            {"result": {"zones": ["lan", "wan"]}},
             {"result": {"enabled": True, "dest_ip": "192.168.8.50"}},
             {"result": {"ok": True}},
             {"result": {"res": [{"id": "pf-1"}]}},
             {"result": {"ok": True}},
             {"result": {"ok": True}},
+            {"result": {"ok": True}},
             {"result": {"enable_ping": True}},
             {"result": {"ok": True}},
             {"result": {"zones": ["lan", "wan"]}},
+            {"result": []},
+            {"result": []},
         ]
     )
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
 
     assert await client.firewall.get_rule_list() == {"res": [{"id": "rule-1"}]}
     assert await client.firewall.add_rule({"name": "Allow SSH"}) == {"ok": True}
+    assert await client.firewall.set_rule({"id": "rule-1", "name": "Allow SSH"}) == {
+        "ok": True
+    }
     assert await client.firewall.remove_rule({"id": "rule-1"}) == {"ok": True}
+    assert await client.firewall.get_acl_rule_list() == [{"name": "ACL"}]
+    assert await client.firewall.add_acl_rule({"name": "ACL"}) == {"ok": True}
+    assert await client.firewall.edit_acl_rule({"id": "acl-1"}) == {"ok": True}
+    assert await client.firewall.delete_acl_rule({"id": "acl-1"}) == {"ok": True}
+    assert await client.firewall.get_acl_zone_list() == {"zones": ["lan", "wan"]}
     assert await client.firewall.get_dmz() == {
         "enabled": True,
         "dest_ip": "192.168.8.50",
@@ -44,23 +61,35 @@ async def test_firewall_module_methods_use_expected_payloads() -> None:
     assert await client.firewall.set_dmz(True, "192.168.8.50") == {"ok": True}
     assert await client.firewall.get_port_forward_list() == {"res": [{"id": "pf-1"}]}
     assert await client.firewall.add_port_forward({"name": "Web"}) == {"ok": True}
+    assert await client.firewall.set_port_forward({"id": "pf-1"}) == {"ok": True}
     assert await client.firewall.remove_port_forward({"id": "pf-1"}) == {"ok": True}
     assert await client.firewall.get_wan_access() == {"enable_ping": True}
     assert await client.firewall.set_wan_access({"enable_ping": False}) == {"ok": True}
     assert await client.firewall.get_zone_list() == {"zones": ["lan", "wan"]}
+    assert await client.firewall.order_acl_rule(["acl-1"]) == []
+    assert await client.firewall.order_port_forward(["pf-1"]) == []
 
     assert [request["json"]["params"] for request in session.requests] == [
         ["sid-1", "firewall", "get_rule_list", {}],
         ["sid-1", "firewall", "add_rule", {"name": "Allow SSH"}],
+        ["sid-1", "firewall", "set_rule", {"id": "rule-1", "name": "Allow SSH"}],
         ["sid-1", "firewall", "remove_rule", {"id": "rule-1"}],
+        ["sid-1", "firewall", "get_acl_rule_list", {}],
+        ["sid-1", "firewall", "add_acl_rule", {"name": "ACL"}],
+        ["sid-1", "firewall", "edit_acl_rule", {"id": "acl-1"}],
+        ["sid-1", "firewall", "delete_acl_rule", {"id": "acl-1"}],
+        ["sid-1", "firewall", "get_acl_zone_list", {}],
         ["sid-1", "firewall", "get_dmz", {}],
         ["sid-1", "firewall", "set_dmz", {"enabled": True, "dest_ip": "192.168.8.50"}],
         ["sid-1", "firewall", "get_port_forward_list", {}],
         ["sid-1", "firewall", "add_port_forward", {"name": "Web"}],
+        ["sid-1", "firewall", "set_port_forward", {"id": "pf-1"}],
         ["sid-1", "firewall", "remove_port_forward", {"id": "pf-1"}],
         ["sid-1", "firewall", "get_wan_access", {}],
         ["sid-1", "firewall", "set_wan_access", {"enable_ping": False}],
         ["sid-1", "firewall", "get_zone_list", {}],
+        ["sid-1", "firewall", "order_acl_rule", {"id_list": ["acl-1"]}],
+        ["sid-1", "firewall", "order_port_forward", {"id_list": ["pf-1"]}],
     ]
 
 
@@ -159,7 +188,6 @@ async def test_hub_firewall_mutations_call_api_and_refresh() -> None:
 
     await hub.add_firewall_rule({"name": "Allow SSH"})
     await hub.remove_firewall_rule(rule_id="rule-1")
-    await hub.remove_firewall_rule(remove_all=True)
     await hub.add_port_forward({"name": "Web"})
     await hub.remove_port_forward(rule_id="pf-1")
     await hub.remove_port_forward(remove_all=True)
@@ -169,7 +197,6 @@ async def test_hub_firewall_mutations_call_api_and_refresh() -> None:
     assert api_calls == [
         ("add_rule", {"name": "Allow SSH"}),
         ("remove_rule", {"id": "rule-1"}),
-        ("remove_rule", {"all": True}),
         ("add_port_forward", {"name": "Web"}),
         ("remove_port_forward", {"id": "pf-1"}),
         ("remove_port_forward", {"all": True}),
@@ -179,12 +206,28 @@ async def test_hub_firewall_mutations_call_api_and_refresh() -> None:
     assert refreshes == [
         "firewall_rules",
         "firewall_rules",
-        "firewall_rules",
         "port_forwards",
         "port_forwards",
         "port_forwards",
         "dmz",
         "wan_access",
+    ]
+
+
+async def test_hub_get_firewall_rule_summaries_returns_names_and_ids() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+
+    async def fetch_firewall_rules() -> None:
+        hub._firewall_rules = [
+            {"id": "rule-1", "name": "Allow SSH", "target": "ACCEPT"},
+            {"id": "rule-2", "target": "DROP"},
+        ]
+
+    hub.fetch_firewall_rules = fetch_firewall_rules
+
+    assert await hub.get_firewall_rule_summaries() == [
+        {"id": "rule-1", "name": "Allow SSH"},
+        {"id": "rule-2", "name": None},
     ]
 
 
