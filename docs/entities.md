@@ -59,6 +59,9 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 | WAN status | `system/get_status` | Current status of the WAN interface (Online, Up, Down). |
 | Firewall rules | Optional `firewall/get_rules` | Count of active custom firewall rules. |
 | Port forwards | Optional `firewall/get_port_forwards` | Count of active port forwarding rules. |
+| Battery temperature | Optional `system/get_status` MCU data | Battery temperature in Celsius when the MCU battery feature is enabled. |
+| Battery charge | Optional `system/get_status` MCU data | Battery percentage, with charge count, fast-charge, and abnormal type attributes. |
+| Battery charging status | Optional `system/get_status` MCU data | Enum sensor: `charging` when `charging_status` is 1, `not_charging` when it is 0. |
 | Connected clients | `clients/get_list` | Count of currently online tracked clients. |
 | WireGuard server users | `wg-server/get_status` | Count of currently online WireGuard server peers. |
 | OpenVPN server users | `ovpn-server/get_status` | Count of currently online OpenVPN server users. |
@@ -120,6 +123,7 @@ These sensors are created only when the router reports bandwidth fields in the c
 | Fan status | Optional `fan/get_status` | Binary sensor showing if the fan is currently active. |
 | Repeater connected | Optional `repeater/get_status` | Binary sensor showing if the repeater is connected or WAN available. Attributes include SSID, BSSID, signal, WiFi generation, EAP, and bare mode when reported. |
 | Repeater bare mode | Optional `repeater/get_status` | Binary sensor showing if repeater bare mode is active. |
+| Battery abnormal | Optional `system/get_status` MCU data | Diagnostic binary sensor showing the MCU `abnormal` flag when the MCU battery feature is enabled. |
 | Parental control group override | Optional `parental-control/get_status` | One diagnostic binary sensor per parental group showing whether a temporary brief/override is active. |
 | Fan speed | Optional `fan/get_status` | Diagnostic sensor showing current fan speed in RPM. |
 | Fan threshold temperature | Optional `fan/get_config` | Diagnostic sensor showing the current temperature threshold. |

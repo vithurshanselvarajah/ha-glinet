@@ -111,8 +111,12 @@ Adds a custom firewall rule.
 
 ### `remove_firewall_rule`
 Removes a firewall rule.
-- **`rule_id`** (Optional): The ID of the rule to remove.
-- **`remove_all`** (Optional): If true, removes all custom rules.
+- **`rule_id`**: The ID of the rule to remove.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+### `get_firewall_rules`
+Returns configured firewall rules as action response data.
+- **Response**: `rules`, each containing `id` and `name`.
 - **`mac`** (Optional): Target a specific router by MAC address.
 
 ### `add_port_forward`
@@ -137,6 +141,32 @@ Removes a port forwarding rule.
 Configures DMZ (DeMilitarized Zone) settings.
 - **`enabled`**: Whether DMZ is enabled.
 - **`dest_ip`** (Optional): The internal IP address to expose.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+### `get_mcu_battery_config`
+Returns MCU battery warning configuration as action response data.
+- **Response**: Router `capacity`, `temp_high`, and `temp_low` warning config.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+### `set_mcu_battery_config`
+Sets MCU battery warning configuration.
+- **`capacity_enabled`**: Whether low-capacity warning is enabled.
+- **`capacity`**: Low-capacity warning percentage.
+- **`temp_high_enabled`**: Whether high-temperature warning is enabled.
+- **`temp_high`**: High-temperature warning threshold in Celsius.
+- **`temp_low_enabled`**: Whether low-temperature warning is enabled.
+- **`temp_low`**: Low-temperature warning threshold in Celsius.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+### `get_mcu_oled_config`
+Returns MCU OLED screen display configuration as action response data.
+- **Response**: Router `screen_display` config.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+### `set_mcu_oled_config`
+Updates MCU OLED screen display sections. Omitted fields keep their current router values.
+- **`main`**, **`wifi_password`**, **`wifi_2g`**, **`wifi_5g`**, **`lan`**, **`vpn`**, **`custom`** (Optional): Display toggles.
+- **`content`** (Optional): Custom display command/content.
 - **`mac`** (Optional): Target a specific router by MAC address.
 
 ### `parental_control_set_temporary_override`
@@ -173,7 +203,7 @@ Enables or bypasses schedules for a parental control group.
 - **`enabled`**: Whether schedules should be enforced.
 - **`mac`** (Optional): Target a specific router by MAC address.
 
-> Note: Firewall, repeater, SMS, and parental/access services are only registered when the corresponding support is enabled for at least one router.
+> Note: Firewall, repeater, SMS, MCU battery, MCU OLED, and parental/access services are only registered when the corresponding support is enabled for at least one router.
 
 ## Internal Logic
 

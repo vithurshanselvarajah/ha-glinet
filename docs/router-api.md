@@ -44,6 +44,7 @@ sid, module-name, function-name, optional parameters
 - `zerotier`: ZeroTier config and state.
 - `adguardhome`: AdGuard Home config and state.
 - `firewall`: Firewall rules, port forwarding, and DMZ management.
+- `mcu`: Optional battery warning config and OLED screen display config. Battery live status is reported by `system/get_status` under `mcu`.
 - `parental-control`: Parental control config, status, group updates, filtering mode, brief/temporary overrides, and signature updates.
 - `black_white_list`: Access control blacklist/whitelist config and single-MAC updates.
 - `fan`: Optional fan status, speed, and threshold control.
@@ -74,6 +75,6 @@ Core APIs:
 
 Optional APIs:
 
-- LED, cellular, SMS, AdGuard Home, parental/access control, and client cache clear calls are optional.
+- LED, cellular, SMS, AdGuard Home, firewall, MCU, parental/access control, and client cache clear calls are optional.
 - Unsupported optional APIs are logged at debug level and do not fail setup.
 - Entities for optional features are created only when useful data is available or the feature is enabled in options.

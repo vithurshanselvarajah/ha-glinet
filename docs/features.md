@@ -83,11 +83,14 @@ When adding the GL.iNet integration or modifying it via the **Configure** menu, 
     - **Repeater**: Enables WiFi station mode management, scanning, and saved network control.
     - **SMS**: Enables the text message inbox sensor and SMS sending/management actions.
     - **Tailscale / WireGuard / OpenVPN / ZeroTier**: Enables monitoring and toggling of VPN connections and servers.
+    - **Firewall**: Enables firewall/port-forward counters, firewall switches, and firewall rule actions.
+    - **MCU Battery**: Enables battery status sensors and MCU battery warning config actions.
+    - **MCU OLED**: Enables MCU OLED config actions.
     - **Parental & Access Control**: Enables per-client internet access switches, per-client parental group selectors, router/group parental controls, and advanced parental/access actions.
 
 ## Optional Router Support
 
-GL.iNet firmware varies by model and firmware generation. The integration treats WireGuard, cellular, repeater, SMS, Tailscale, ZeroTier, and Parental & Access Control as optional modules. During setup you can choose which of these optional features to enable, and unsupported or unavailable APIs are skipped without failing setup.
+GL.iNet firmware varies by model and firmware generation. The integration treats WireGuard, cellular, repeater, SMS, Tailscale, ZeroTier, firewall, MCU battery, MCU OLED, and Parental & Access Control as optional modules. During setup you can choose which of these optional features to enable, and unsupported or unavailable APIs are skipped without failing setup.
 
 If you disable all optional features, the integration still registers core router status sensors and entities. 
 
@@ -106,4 +109,5 @@ Furthermore, disabling unused features (via the Options Flow) completely removes
 The integration dynamically manages its footprint based on your selections in the **Configure** menu:
 - **Entity Cleanup**: When a feature is disabled, the integration automatically removes any associated entities from the Home Assistant Entity Registry.
 - **Firewall Cleanup**: Disabling the firewall feature also removes port forwarding entities, avoiding orphaned `port_forwards` sensors.
+- **MCU Cleanup**: Disabling MCU Battery removes battery sensors. Disabling MCU OLED removes OLED actions.
 - **Action Cleanup**: Services (Actions) are registered at the domain level. If a feature (like SMS) is disabled across all configured routers, the corresponding services are automatically removed from Home Assistant to keep the UI clean.
