@@ -6,7 +6,7 @@ from homeassistant.components.binary_sensor import BinarySensorDeviceClass, Bina
 from homeassistant.const import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from ..const import FEATURE_PARENTAL_CONTROL, FEATURE_REPEATER
+from ..const import FEATURE_MCU_BATTERY, FEATURE_PARENTAL_CONTROL, FEATURE_REPEATER
 from ..hub import GLinetHub
 from ..models import ParentalGroup
 
@@ -33,6 +33,8 @@ async def async_setup_entry(
             GLinetParentalControlGroupOverrideBinarySensor(hub, group)
             for group in hub.parental_groups.values()
         )
+    if hub.feature_enabled(FEATURE_MCU_BATTERY):
+        entities.append(GLinetBatteryAbnormalBinarySensor(hub))
     async_add_entities(entities, True)
 
 
@@ -127,6 +129,39 @@ class FanRunningBinarySensor(CoordinatorEntity[GLinetHub], BinarySensorEntity):
         if self._hub.fan_temperature_threshold is not None:
             attrs["temperature_threshold"] = self._hub.fan_temperature_threshold
         return attrs if attrs else None
+
+
+class GLinetBatteryAbnormalBinarySensor(CoordinatorEntity[GLinetHub], BinarySensorEntity):
+    _attr_has_entity_name = True
+    _attr_name = "Battery abnormal"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:battery-alert"
+
+    def __init__(self, hub: GLinetHub) -> None:
+        super().__init__(hub)
+        self._hub = hub
+        self._attr_device_info = hub.device_info
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_binary_sensor/{self._hub.device_mac}/battery_abnormal"
+
+    @property
+    def is_on(self) -> bool | None:
+        status = self._hub.router_status
+        if status is None or "abnormal" not in status.mcu:
+            return None
+        return bool(status.mcu.get("abnormal"))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        status = self._hub.router_status
+        if status is None:
+            return None
+        attrs: dict[str, Any] = {}
+        if "abnormal_type" in status.mcu:
+            attrs["abnormal_type"] = status.mcu.get("abnormal_type")
+        return attrs or None
 
 
 class GLinetParentalControlGroupOverrideBinarySensor(

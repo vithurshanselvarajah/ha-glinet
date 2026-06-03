@@ -234,9 +234,14 @@ remove_firewall_rule:
     rule_id:
       selector:
         text:
-    remove_all:
+
+get_firewall_rules:
+  name: Get firewall rules
+  description: Return configured firewall rule names and IDs.
+  fields:
+    mac:
       selector:
-        boolean:
+        text:
 
 add_port_forward:
   name: Add port forward
@@ -295,6 +300,88 @@ set_dmz:
       selector:
         boolean:
     dest_ip:
+      selector:
+        text:
+
+get_mcu_battery_config:
+  name: Get MCU battery config
+  description: Return MCU battery warning configuration.
+  fields:
+    mac:
+      selector:
+        text:
+
+set_mcu_battery_config:
+  name: Set MCU battery config
+  description: Configure MCU battery temperature and capacity warnings.
+  fields:
+    mac:
+      selector:
+        text:
+    capacity_enabled:
+      selector:
+        boolean:
+    capacity:
+      selector:
+        number:
+          min: 1
+          max: 100
+          unit_of_measurement: "%"
+          mode: box
+    temp_high_enabled:
+      selector:
+        boolean:
+    temp_high:
+      selector:
+        number:
+          mode: box
+          unit_of_measurement: "°C"
+    temp_low_enabled:
+      selector:
+        boolean:
+    temp_low:
+      selector:
+        number:
+          mode: box
+          unit_of_measurement: "°C"
+
+get_mcu_oled_config:
+  name: Get MCU OLED config
+  description: Return MCU OLED screen display configuration.
+  fields:
+    mac:
+      selector:
+        text:
+
+set_mcu_oled_config:
+  name: Set MCU OLED config
+  description: Configure MCU OLED screen display sections.
+  fields:
+    mac:
+      selector:
+        text:
+    main:
+      selector:
+        boolean:
+    wifi_password:
+      selector:
+        boolean:
+    wifi_2g:
+      selector:
+        boolean:
+    wifi_5g:
+      selector:
+        boolean:
+    lan:
+      selector:
+        boolean:
+    vpn:
+      selector:
+        boolean:
+    custom:
+      selector:
+        boolean:
+    content:
       selector:
         text:
 

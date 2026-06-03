@@ -30,6 +30,8 @@ from .const import (
     FEATURE_ADGUARD,
     FEATURE_CELLULAR,
     FEATURE_FIREWALL,
+    FEATURE_MCU_BATTERY,
+    FEATURE_MCU_OLED,
     FEATURE_OVPN_CLIENT,
     FEATURE_OVPN_SERVER,
     FEATURE_PARENTAL_CONTROL,
@@ -62,6 +64,8 @@ FEATURE_OPTIONS = [
     {"label": "ZeroTier (Requires Network ID setup on router)", "value": FEATURE_ZEROTIER},
     {"label": "AdGuard Home", "value": FEATURE_ADGUARD},
     {"label": "Firewall", "value": FEATURE_FIREWALL},
+    {"label": "MCU Battery", "value": FEATURE_MCU_BATTERY},
+    {"label": "MCU OLED", "value": FEATURE_MCU_OLED},
     {"label": "Parental & Access Control", "value": FEATURE_PARENTAL_CONTROL},
 ]
 DEFAULT_ENABLED_FEATURES = [
@@ -75,6 +79,8 @@ DEFAULT_ENABLED_FEATURES = [
     FEATURE_OVPN_SERVER,
     FEATURE_ADGUARD,
     FEATURE_FIREWALL,
+    FEATURE_MCU_BATTERY,
+    FEATURE_MCU_OLED,
     FEATURE_PARENTAL_CONTROL,
 ]
 DEFAULT_WAN_INTERFACES = ["wan", "wwan", "tethering", "modem_0001", "secondwan"]

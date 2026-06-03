@@ -59,6 +59,7 @@ class SystemModule(BaseModule):
             flash_total=_get("flash_total", 0),
             flash_free=_get("flash_free", 0),
             network=status.get("network", []),
+            mcu=dict(status.get("mcu") or sys_info.get("mcu") or {}),
         )
 
     async def get_load(self) -> dict[str, Any]:
