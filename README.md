@@ -124,7 +124,7 @@ For support, questions, or community discussion, join our Discord:
 [![Discord Banner](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Metvr5hC3m)
 
 ### Why Rebuild?
-Simply put, I use this integration in my own home and wanted specific features that might not align with everyone else's needs. Maintaining my own fork allows me to iterate quickly and tailor the features.
+Simply put, I use this integration in my own home and wanted specific features that might not align with everyone else's needs. Maintaining my own integration allows me to iterate quickly and tailor the features.
 
 ### Special Thanks
 * **HarvsG** for the original [ha-glinet4-integration](https://github.com/HarvsG/ha-glinet4-integration) project which inspired this version.
