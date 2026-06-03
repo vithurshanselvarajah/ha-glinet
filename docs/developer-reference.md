@@ -13,15 +13,17 @@ The integration is cleanly separated into two distinct layers:
 The API client is highly modular.
 
 ### Modules (`api/modules/`)
-Instead of a single monolithic client class, the API is broken down into specific feature modules (e.g., `wifi.py`, `modem.py`, `vpn.py`). Each module extends `BaseModule` and implements the RPC methods relevant to its domain. 
+Instead of a single monolithic client class, the API is broken down into specific feature modules. Each module extends `BaseModule` and implements the RPC methods relevant to its domain. Current modules include: `system`, `wifi`, `clients`, `modem`, `mcu`, `wg_client`, `wg_server`, `ovpn_client`, `ovpn_server`, `tailscale`, `repeater`, `fan`, `firewall`, `led`, `macclone`, `diag`, `adguard`, `parental_control`, and `black_white_list`.
 
-When adding a new router endpoint (e.g., parental controls), you should:
+When adding a new router endpoint, you should:
 1. Create a new module file in `api/modules/`.
 2. Inherit from `BaseModule` and implement your API calls.
-3. Attach the module to the main `GLinetApiClient` class in `api/client.py` via a `@property` so it can be accessed like `client.parental.get_status()`.
+3. Attach the module to the main `GLinetApiClient` class in `api/client.py` as an instance attribute so it can be accessed like `client.my_feature.get_status()`.
 
-### Models (`api/models.py`)
-All complex data returned from the router should be parsed into strongly-typed `dataclass` models rather than raw dictionaries. This ensures type safety and autocompletion downstream in Home Assistant. 
+### Models
+The integration uses two layers of data models:
+- **`api/models.py`**: Strongly-typed `dataclass` models for raw API response fields. These are returned directly from API module calls.
+- **`models.py`** (integration layer): Higher-level dataclasses used by the hub and entities, e.g., `ClientDeviceInfo`, `RepeaterStatus`, `WireGuardClient`, `ParentalGroup`. These aggregate, transform, or combine data from one or more API responses.
 
 ## The Integration Layer
 
@@ -45,11 +47,12 @@ All entities inherit from `CoordinatorEntity[GLinetHub]`. Entities should **neve
 
 ### Adding a New Sensor
 To add a new sensor for an existing API endpoint:
-1. **Models:** Update `api/models.py` if the new field isn't captured in the dataclass.
-2. **Hub:** Update `hub.py` to fetch, store, and expose the new data point.
-3. **Entities:** Add your sensor to `entities/sensor.py`.
-4. **Diagnostics:** Update `diagnostics.py` to include the new data point in the export.
-5. **Tests:** Update your mock tests in `tests/` to ensure the new sensor state works correctly.
+1. **API Models:** Update `api/models.py` if the new field isn't captured in the raw API dataclass.
+2. **Hub Models:** Update `models.py` if the new field needs a higher-level model or transformation.
+3. **Hub:** Update `hub.py` to fetch, store, and expose the new data point.
+4. **Entities:** Add your sensor to `entities/sensor.py`.
+5. **Diagnostics:** Update `diagnostics.py` to include the new data point in the export.
+6. **Tests:** Update your mock tests in `tests/` to ensure the new sensor state works correctly.
 
 ### Tooling
 The project relies on standard Python development tools:

@@ -9,6 +9,7 @@ The following capabilities are always available regardless of optional feature s
 - **Config Flow & Discovery**: Easy setup with DHCP discovery support.
 - **Router Device Metadata**: Model, firmware version, and MAC address.
 - **System Monitoring**: CPU temperature, load averages (1m, 5m, 15m), memory usage, flash usage, and uptime sensors.
+- **WAN Status Sensors**: Per-interface WAN status sensors (e.g., Ethernet, Repeater, Cellular, Tethering). Each sensor reports `Up`, `Down`, or `Unknown` for its interface. Configurable via the **WAN Status Monitors** option.
 - **WiFi Controls**: Switches to enable/disable each configured WiFi interface.
 - **System LED**: Switch to toggle the router's physical status LED.
 - **Reboot Control**: Button to restart the router immediately.
@@ -48,6 +49,7 @@ When adding the GL.iNet integration or modifying it via the **Configure** menu, 
 - **Consider Home**: The grace period in seconds before a device is marked as "Away". Prevents devices from flickering when they briefly drop off the network.
 - **Discover unknown devices**: When enabled, adds all newly discovered devices to the Home Assistant device registry rather than only known/tracked ones. Toggling this off automatically cleans up untracked devices.
 - **Auto-cleanup unknown devices (min)**: The inactivity period in minutes after which an untracked device is automatically removed from the registry. Set to `0` to disable.
+- **WAN Status Monitors**: Select which WAN interface/protocol combinations to monitor (e.g., `Ethernet 1 IPv4`, `Cellular IPv4`). Defaults to all detected interfaces for both IPv4 and IPv6. Deselect individual entries to hide those sensors and reduce polling overhead.
 - **Enabled Features**: Select which optional modules to activate for this router instance.
 
 ## Authentication & Session Management

@@ -17,7 +17,7 @@
 
 1. The config flow validates the router URL and password.
 2. `GLinetHub` authenticates and stores router metadata.
-3. The hub sequentially fetches system, internet, client, WiFi, fan, LED, WireGuard, OpenVPN, Tailscale, ZeroTier, AdGuard Home, cellular, and SMS state. Using a sequential loop instead of concurrent task execution acts as a native rate-limiter, ensuring the router's lighttpd/nginx server is not overwhelmed with JSON-RPC payloads.
+3. The hub sequentially fetches system status, per-interface WAN status (kmwan), client list, WiFi, fan, LED, WireGuard, OpenVPN, Tailscale, ZeroTier, AdGuard Home, cellular, firewall, parental control, SMS, and repeater state. Using a sequential loop instead of concurrent task execution acts as a native rate-limiter, ensuring the router's lighttpd/nginx server is not overwhelmed with JSON-RPC payloads.
 4. Home Assistant entities read their values from the strongly-typed dataclasses in the hub.
 5. Mutating entities and services call the bundled API client, then refresh affected hub state.
 

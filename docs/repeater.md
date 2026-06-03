@@ -18,7 +18,7 @@ To enable this feature, check the **Repeater** option under **Enabled Features**
 | --- | --- | --- |
 | **Repeater state** | Current repeater connection state (e.g., `connected`, `connecting`, `disconnected`, `initializing`, `wan_available`). | `repeater/get_status` |
 | **Repeater SSID** | SSID of the connected external WiFi network. Available while connecting, connected, or WAN available. | `repeater/get_status` |
-| **Repeater signal** | Signal strength percentage of the repeater connection. Available while connecting, connected, or WAN available. | `repeater/get_status` |
+| **Repeater signal** | Signal strength in dBm of the repeater connection. Available while connecting, connected, or WAN available. | `repeater/get_status` |
 | **Repeater channel** | Enum sensor indicating the connected WiFi band. Converts the raw channel number to a band key: `2_4ghz` (channels 1–14) or `5ghz` (channels 36–177). | `repeater/get_status` |
 | **Repeater IP address** | The IP address assigned to the repeater interface. Available only when connected or WAN available. | `repeater/get_status` |
 | **Repeater gateway** | The gateway IP address of the repeater interface. Available only when connected or WAN available. | `repeater/get_status` |

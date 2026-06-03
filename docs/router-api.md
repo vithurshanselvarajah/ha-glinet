@@ -30,8 +30,8 @@ sid, module-name, function-name, optional parameters
 ## Implemented Modules
 
 - `system`: router info, status, reboot.
-- `edgerouter`: internet/WAN status.
-- `clients`: client list and optional cache clear.
+- `edgerouter`: per-interface WAN status (`get_kmwan_status`) used to build per-interface WAN status sensors.
+- `clients`: client list (`get_online`).
 - `wifi`: interface config and enable/disable.
 - `wg-client` / `vpn-client`: Optional WireGuard client support across older and newer firmware.
 - `ovpn-client` / `vpn-client`: Hybrid OpenVPN client support. Discovers profiles via `ovpn-client` and manages state via the unified `vpn-client` tunnel API.

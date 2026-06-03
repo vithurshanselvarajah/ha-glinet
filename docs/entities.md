@@ -7,7 +7,7 @@ For entities related to optional features, visit their respective pages:
 | Optional Feature | Wiki Page |
 | --- | --- |
 | Cellular sensors | [Cellular](https://github.com/vithurshanselvarajah/ha-glinet/wiki/cellular) |
-| Repeater sensors, switches & selects | [Repeater](https://github.com/vithurshanselvarajah/ha-glinet/wiki/repeater) |
+| Repeater sensors, switches, selects & binary sensors | [Repeater](https://github.com/vithurshanselvarajah/ha-glinet/wiki/repeater) |
 | SMS sensor | [SMS](https://github.com/vithurshanselvarajah/ha-glinet/wiki/sms) |
 | Tailscale switch | [Tailscale](https://github.com/vithurshanselvarajah/ha-glinet/wiki/tailscale) |
 | WireGuard client switches | [WireGuard Client](https://github.com/vithurshanselvarajah/ha-glinet/wiki/wireguard-client) |
@@ -18,7 +18,8 @@ For entities related to optional features, visit their respective pages:
 | AdGuard Home switches | [AdGuard Home](https://github.com/vithurshanselvarajah/ha-glinet/wiki/adguard-home) |
 | Firewall sensors & switches | [Firewall](https://github.com/vithurshanselvarajah/ha-glinet/wiki/firewall) |
 | Battery sensors & binary sensor | [MCU Battery](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-battery) |
-| Parental control sensors, switches & selects | [Parental & Access Control](https://github.com/vithurshanselvarajah/ha-glinet/wiki/parental-control) |
+| MCU OLED (services only — no entities) | [MCU OLED](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-oled) |
+| Parental control sensors, switches, selects & binary sensors | [Parental & Access Control](https://github.com/vithurshanselvarajah/ha-glinet/wiki/parental-control) |
 
 ---
 
@@ -27,7 +28,7 @@ For entities related to optional features, visit their respective pages:
 | Entity | Source | Notes |
 | --- | --- | --- |
 | **Reboot** | `system/reboot` | Reboots the router immediately. |
-| **Fan test** | `fan/test_fan` | Diagnostic button to run the fan at full speed for 10 seconds. Available on routers with an active fan. |
+| **Fan test** | `fan/set_test` | Diagnostic button to run the fan at full speed for 10 seconds. Available on routers with an active fan. |
 
 ---
 
@@ -73,8 +74,8 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 
 | Entity | Source | Notes |
 | --- | --- | --- |
-| **WAN status** | `system/get_status` | Current status of the WAN interface (Online, Up, Down). |
-| **Connected clients** | `clients/get_list` | Count of currently online tracked clients. |
+| **WAN status (per interface)** | `edgerouter/get_status` | One sensor per detected WAN interface (e.g., Ethernet 1, Ethernet 2, Repeater, Cellular, Tethering). Reports `Up`, `Down`, or `Unknown`. Specific interfaces and protocols (IPv4/IPv6) can be configured via the **WAN Status Monitors** option in the options flow. |
+| **Connected clients** | `clients/get_online` | Count of currently online tracked clients. |
 
 ### Client Bandwidth
 
@@ -102,3 +103,6 @@ These sensors are created only when the router reports bandwidth fields in the c
 | Entity | Source | Notes |
 | --- | --- | --- |
 | **Fan status** | `fan/get_status` | `True` when the fan is currently running. Available on routers with a fan. |
+| **Repeater connected** | `repeater/get_status` | `True` when the repeater is connected or WAN is available. Available when the Repeater feature is enabled. Attributes include SSID, BSSID, signal, WiFi generation, EAP, and bare mode. |
+| **Repeater bare mode** | `repeater/get_status` | Diagnostic sensor. `True` when repeater bare mode is active. Available when the Repeater feature is enabled. |
+| **Parental control group override** | `parental-control/get_status` | One diagnostic binary sensor per parental group. `True` when a temporary override is currently active for that group. Available when the Parental & Access Control feature is enabled. |
