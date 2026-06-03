@@ -2,123 +2,130 @@
 
 Unified GL.iNet support for Home Assistant.
 
-This project is inspired by [HarvsG/ha-glinet4-integration](https://github.com/HarvsG/ha-glinet4-integration), a completely rebuilt Home Assistant custom component for GL.iNet routers running 4.x firmware. This repository keeps that idea moving as a bundled integration plus router API client, with automated tests, docs and a significantly expanded feature set
+[![GitHub Release](https://img.shields.io/github/v/release/vithurshanselvarajah/ha-glinet?style=flat-square)](https://github.com/vithurshanselvarajah/ha-glinet/releases)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg?style=flat-square)](https://github.com/hacs/integration)
+[![License](https://img.shields.io/github/license/vithurshanselvarajah/ha-glinet?style=flat-square)](LICENSE)
+[![Discord](https://img.shields.io/badge/Discord-7289DA?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/Metvr5hC3m)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-## What It Does
+This project is a custom Home Assistant integration for GL.iNet routers running 4.x firmware. It includes a full API client, automated tests, detailed documentation, and an expanded set of features.
 
-`ha-glinet` connects Home Assistant to a GL.iNet router over the local network using the router JSON-RPC API at `/rpc`.
+---
 
-Included features:
+## Quick Links
+- [User Documentation & Feature Details](https://github.com/vithurshanselvarajah/ha-glinet/wiki)
+- [Installation Guide](#installation)
+- [Setup & Configuration](#setup)
+- [Join our Discord](https://discord.gg/Metvr5hC3m)
 
-- Config flow setup with DHCP discovery.
-- Robust session management with proactive token renewal and automatic retries.
-- Router reboot button.
-- Connected device trackers.
-- WAN IP address sensor.
-- Connected client count sensor.
-- Per-client real-time bandwidth (upload/download) and IP address sensors.
-- System sensors for CPU temperature, load, memory, flash use, and uptime.
-- WiFi interface switches.
-- System LED switch.
-- WireGuard client and server support.
-- OpenVPN client and server support (with location selection).
-- Tailscale switch.
-- ZeroTier switch (Requires Network ID setup on router).
-- AdGuard Home switches (Optional).
-- Optional cellular signal/network sensors.
-- Optional SMS services for sending, viewing and managing text messages in the inbox.
-- Optional repeater mode support for WiFi scan, open/secured connect and disconnect actions, saved networks, and repeater state.
-- Fan support (status, RPM, and temperature threshold control).
-- Firewall management (DMZ, port forwarding, rules, and WAN access control).
-- Automatic cleanup of stale discovered devices.
-- **Downloadable Diagnostics**: Provides a sanitized JSON snapshot for easier troubleshooting.
+---
 
+## Features
+The integration connects to your router over the local network using the GL.iNet JSON-RPC API. Here is a breakdown of what it can do:
 
-During integration setup you can choose which optional GL.iNet features to enable, including WireGuard, cellular, repeater, SMS, Tailscale, ZeroTier, and Firewall. Unsupported choices are skipped gracefully.
+### Router Control & Diagnostics
+* **Easy Setup**: Supports config flow and automatically finds your router via DHCP.
+* **Reliable Connection**: Keeps your login session alive automatically and retries if the connection drops.
+* **Toggles**: Control the router's system LED, reboot it, or turn individual WiFi bands on and off.
+* **Diagnostics**: Monitors CPU temperature, system load, memory, flash usage, uptime, and lets you download a sanitized diagnostic snapshot.
 
-If no optional features are selected, the integration still exposes basic router sensors and device trackers; only optional modules are disabled.
+### Connected Devices & Traffic
+* **Presence Tracking**: Tracks connected clients as Home Assistant device trackers (and automatically cleans up stale entries).
+* **Traffic Stats**: Monitors the total client count and tracks real-time upload/download speeds and IP addresses per client.
+* **WAN Info**: Keeps track of the external WAN IP address.
 
-## Why rebuild it? 
+### VPN & Ad-Blocking Toggles
+* **Standard VPNs**: Easily toggle WireGuard and OpenVPN clients/servers (including choosing locations for OpenVPN).
+* **Mesh Networks**: Toggles Tailscale and ZeroTier (requires network ID setup on the router).
+* **AdGuard**: Turn the built-in AdGuard Home instance on and off.
 
-Simply put, I use this integration in my own home and wanted specific features that might not align with everyone else's needs. By creating my own version, I can maintain the project freely and implement modifications as I see fit, rather than depending on external reviews and maintenance schedules. 
+### Cellular, SMS & Hardware Controls
+* **Cellular Support**: Optional sensors for cellular signal strength and network status.
+* **SMS Gateway**: Read, send, and manage text messages from your router's SIM card in Home Assistant.
+* **Repeater Mode**: Scan for nearby WiFi networks, connect (open or secured), disconnect, save networks, and track the current repeater status.
+* **Smart Fan**: Monitor fan status, speed (RPM), and set temperature thresholds.
+* **Firewall Controls**: Manage DMZ, port forwarding, custom rules, and WAN access.
+
+During setup, you can select which optional features (like VPN, Cellular, Repeater, SMS, and Firewall) to enable. Unsupported features on your router model will be skipped gracefully.
+
+---
 
 ## Installation
 
-### via HACS (Custom Repository)
-
+### Using HACS (Recommended)
 1. Open **HACS** in your Home Assistant instance.
-2. Click the three dots in the upper right corner and select **Custom repositories**.
-3. Enter `https://github.com/vithurshanselvarajah/ha-glinet` in the Repository field.
-4. Select **Integration** as the category and click **Add**.
-5. Once the repository is added, search for **GL-INet** in the HACS Integrations list.
-6. Click **Download** and restart Home Assistant once the download is complete.
+2. Click the menu in the top-right corner and select **Custom repositories**.
+3. Add `https://github.com/vithurshanselvarajah/ha-glinet` as an **Integration** repository.
+4. Search for **GL-INet** in the HACS Integrations list.
+5. Click **Download**, then restart Home Assistant once complete.
 
-### Direct (Manual) Installation
-
-1. Download the latest source code or release ZIP file from this repository.
+### Manual Installation
+1. Download the latest source code or release ZIP.
 2. Extract the `custom_components/ha_glinet` directory.
 3. Copy the `ha_glinet` folder into your Home Assistant's `config/custom_components/` directory.
 4. Restart Home Assistant.
 
+---
+
 ## Setup
 
-1. In Home Assistant, go to **Settings > Devices & services**.
-2. Click **Add Integration** in the bottom right.
+1. In Home Assistant, navigate to **Settings > Devices & services**.
+2. Click **Add Integration** in the bottom-right corner.
 3. Search for **GL-INet** and select it.
 4. Enter your router's URL (default: `http://192.168.8.1`) and admin password.
-5. Configure setup options like **Consider Home**, **Update Interval**, and **Enabled Features**. 
-6. Choose the optional GL.iNet features you want enabled for this router.
-*Note: You can use an HTTPS URL if your router is configured for it and Home Assistant can verify the certificate.*
+5. Select setup options like **Consider Home** (for trackers), **Update Interval**, and select which optional features to enable.
 
-## Project Layout
+---
 
-- `custom_components/ha_glinet/api`: bundled GL.iNet API client code.
-- `custom_components/ha_glinet/entities`: Home Assistant entity implementations.
-- `custom_components/ha_glinet`: integration bootstrap, config flow, hub, services, and shared models.
-- `docs`: architecture, feature, API, service, and release documentation.
-- `tests`: unit tests with mocked API/session behavior.
-
-## Documentation
+## Wiki & Documentation
 
 Detailed documentation lives in the project [Wiki](https://github.com/vithurshanselvarajah/ha-glinet/wiki).
 
 ### For End Users
-- [Feature Matrix](https://github.com/vithurshanselvarajah/ha-glinet/wiki/features) - A high-level overview of supported features and actions.
-- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/entities) - Detailed list of all sensors, switches, buttons, and trackers.
-- [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet/wiki/services) - Guide on using Home Assistant services to control your router (e.g., sending SMS, connecting to WiFi).
+* [Feature Matrix](https://github.com/vithurshanselvarajah/ha-glinet/wiki/features) — What features are supported on each model.
+* [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/entities) — A list of all sensors, switches, and trackers created by the integration.
+* [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet/wiki/services) — How to call services to control the router (e.g. sending SMS or connecting to repeater WiFi).
 
 ### For Developers
-- [Developer Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/developer-reference) - Start here! Contribution guide, codebase structure, and tooling.
-- [Architecture](https://github.com/vithurshanselvarajah/ha-glinet/wiki/architecture) - How the integration interacts with Home Assistant and the router.
-- [Runtime State & Poller (Hub)](https://github.com/vithurshanselvarajah/ha-glinet/wiki/hub) - Details on the `GLinetHub` and `DataUpdateCoordinator`.
-- [Router API Notes](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api) - Notes on the GL.iNet JSON-RPC API and authentication.
-- [Modem API Coverage](https://github.com/vithurshanselvarajah/ha-glinet/wiki/modem-api) - Details on the optional cellular modem API.
-- [CI and Release Workflows](https://github.com/vithurshanselvarajah/ha-glinet/wiki/ci-release) - How automated testing and releases work.
+* [Developer Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/developer-reference) — Code style, structure, and development tools.
+* [Architecture](https://github.com/vithurshanselvarajah/ha-glinet/wiki/architecture) — How components and update poller work together.
+* [Runtime Hub](https://github.com/vithurshanselvarajah/ha-glinet/wiki/hub) — Details about state polling and coordinators.
+* [Router API Details](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api) — Notes on GL.iNet RPC calls.
+* [Modem API](https://github.com/vithurshanselvarajah/ha-glinet/wiki/modem-api) — Cellular modem API structure.
+* [CI & Releases](https://github.com/vithurshanselvarajah/ha-glinet/wiki/ci-release) — Testing and release workflows.
 
-## Development Checks
+<details>
+<summary><b>Developer Quick Start</b> (Click to expand)</summary>
 
-Run:
+### Project Layout
+* `custom_components/ha_glinet/api`: Bundled GL.iNet API client code.
+* `custom_components/ha_glinet/entities`: Home Assistant entity implementations.
+* `custom_components/ha_glinet`: Integration bootstrap, config flow, hub, services, and shared models.
+* `docs`: Raw markdown files for the documentation wiki.
+* `tests`: Unit tests with mocked API/session behavior.
 
+### Development Checks
+Run the following commands locally to verify code style and tests:
 ```powershell
 py -m pytest -q
 ruff check custom_components tests
 py -m compileall -q custom_components tests
 ```
+</details>
 
-CI runs those checks automatically for pushes and pull requests.
+---
 
-## Support
+## Support & Contribution
 
-If you are using this project, please consider leaving a **star** ⭐. It helps me gauge interest in the project and decide how much of my own resources I should allocate to its continued development.
+If you find this project useful, please consider leaving a star. It helps gauge interest and prioritize development!
 
-For support, questions, or community discussion, join our Discord channel:
+For support, questions, or community discussion, join our Discord:
 
-[![Discord](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Metvr5hC3m)
+[![Discord Banner](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Metvr5hC3m)
 
-## Ownership
+### Why Rebuild?
+Simply put, I use this integration in my own home and wanted specific features that might not align with everyone else's needs. Maintaining my own fork allows me to iterate quickly and tailor the features.
 
-Maintained by Vithurshan Selvarajah.
-
-## Special Thanks 
-
-HarvsG for his original project to act as inspiration & GL-INet for both their amazing hardware and API documentation
+### Special Thanks
+* **HarvsG** for the original [ha-glinet4-integration](https://github.com/HarvsG/ha-glinet4-integration) project which inspired this version.
+* **GL.iNet** for their amazing hardware and detailed API documentation.
