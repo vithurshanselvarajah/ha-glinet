@@ -1,21 +1,43 @@
 # Entity Reference (`entities/`)
 
-This integration exposes entities from data fetched through the GL.iNet JSON-RPC API.
+This page documents the **core** entities exposed by the GL.iNet integration. Core entities are always registered regardless of your optional feature selection.
+
+For entities related to optional features, visit their respective pages:
+
+| Optional Feature | Wiki Page |
+| --- | --- |
+| Cellular sensors | [Cellular](https://github.com/vithurshanselvarajah/ha-glinet/wiki/cellular) |
+| Repeater sensors, switches & selects | [Repeater](https://github.com/vithurshanselvarajah/ha-glinet/wiki/repeater) |
+| SMS sensor | [SMS](https://github.com/vithurshanselvarajah/ha-glinet/wiki/sms) |
+| Tailscale switch | [Tailscale](https://github.com/vithurshanselvarajah/ha-glinet/wiki/tailscale) |
+| WireGuard client switches | [WireGuard Client](https://github.com/vithurshanselvarajah/ha-glinet/wiki/wireguard-client) |
+| WireGuard server sensor & switch | [WireGuard Server](https://github.com/vithurshanselvarajah/ha-glinet/wiki/wireguard-server) |
+| OpenVPN client switches & location select | [OpenVPN Client](https://github.com/vithurshanselvarajah/ha-glinet/wiki/openvpn-client) |
+| OpenVPN server sensor & switch | [OpenVPN Server](https://github.com/vithurshanselvarajah/ha-glinet/wiki/openvpn-server) |
+| ZeroTier switch | [ZeroTier](https://github.com/vithurshanselvarajah/ha-glinet/wiki/zerotier) |
+| AdGuard Home switches | [AdGuard Home](https://github.com/vithurshanselvarajah/ha-glinet/wiki/adguard-home) |
+| Firewall sensors & switches | [Firewall](https://github.com/vithurshanselvarajah/ha-glinet/wiki/firewall) |
+| Battery sensors & binary sensor | [MCU Battery](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-battery) |
+| Parental control sensors, switches & selects | [Parental & Access Control](https://github.com/vithurshanselvarajah/ha-glinet/wiki/parental-control) |
+
+---
 
 ## Buttons
 
 | Entity | Source | Notes |
 | --- | --- | --- |
-| Reboot | `system/reboot` | Reboots the router immediately. |
-| Fan test | Optional `fan/test_fan` | Diagnostic button to run the fan at full speed for 10 seconds. |
+| **Reboot** | `system/reboot` | Reboots the router immediately. |
+| **Fan test** | `fan/test_fan` | Diagnostic button to run the fan at full speed for 10 seconds. Available on routers with an active fan. |
+
+---
 
 ## Device Trackers
 
-Device trackers are created from online devices returned by the router API **only if the device is already known to Home Assistant** through another integration (e.g., the Mobile App, ESPHome, Zigbee, etc.). 
+Device trackers are created from online devices returned by the router API **only if the device is already known to Home Assistant** through another integration (e.g., the Mobile App, ESPHome, Zigbee, etc.).
 
 This behavior prevents the integration from automatically adding every guest device, transient client, or unknown IoT device on your network as a new tracker entity.
 
-However, you can enable the **Discovery unknown devices** option during integration setup or in the options flow. When enabled, the integration will track every device seen by the router, regardless of its status in the Home Assistant device registry. This is useful for monitoring all network activity, but may result in many entities being created.
+However, you can enable the **Discover unknown devices** option during integration setup or in the options flow. When enabled, the integration tracks every device seen by the router, regardless of its status in the Home Assistant device registry.
 
 The tracker monitors:
 
@@ -25,15 +47,11 @@ The tracker monitors:
 - Interface type
 - Last activity timestamp
 
-Tracked devices use a `consider_home` logic (default 180s) to prevent entities from flickering to "Away" during brief client sleep cycles or router re-polls. Unhelpful tracker entities can be managed via the standard entity settings:
-
-1. Open **Settings**.
-2. Open **Devices & services**.
-3. Select the GL-INet integration or the tracked device.
-4. Open the entity.
-5. Use the entity settings menu to disable or delete it.
+Tracked devices use a `consider_home` logic (default 180s) to prevent entities from flickering to "Away" during brief client sleep cycles or router re-polls. Unhelpful tracker entities can be managed via the standard entity settings in **Settings → Devices & services**.
 
 If a device uses randomized MAC addresses, Home Assistant may see each randomized address as a separate tracker. Disable private/random MAC addressing for that WiFi network when you want stable tracking.
+
+---
 
 ## Sensors
 
@@ -41,123 +59,46 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 
 | Entity | Source | Notes |
 | --- | --- | --- |
-| CPU temperature | `system/get_status` | Diagnostic sensor, when supported by the router. |
-| Load avg (1m) | `system/get_status` | Diagnostic sensor. |
-| Load avg (5m) | `system/get_status` | Diagnostic sensor. |
-| Load avg (15m) | `system/get_status` | Diagnostic sensor. |
-| Memory usage | `system/get_status` | Calculated from total/free memory. |
-| Flash usage | `system/get_status` | Calculated from total/free flash. |
-| Uptime | `system/get_status` | Timestamp sensor. |
-| Fan speed | Optional `fan/get_status` | Diagnostic sensor showing current fan speed in RPM. |
-| Fan threshold temperature | Optional `fan/get_config` | Diagnostic sensor showing the current temperature threshold. |
+| **CPU temperature** | `system/get_status` | Diagnostic sensor. Available when supported by the router. |
+| **Load avg (1m)** | `system/get_status` | Diagnostic sensor. |
+| **Load avg (5m)** | `system/get_status` | Diagnostic sensor. |
+| **Load avg (15m)** | `system/get_status` | Diagnostic sensor. |
+| **Memory usage** | `system/get_status` | Calculated from total/free memory. |
+| **Flash usage** | `system/get_status` | Calculated from total/free flash. |
+| **Uptime** | `system/get_status` | Timestamp sensor. |
+| **Fan speed** | `fan/get_status` | Diagnostic sensor showing current fan RPM. Available on routers with a fan. |
+| **Fan threshold temperature** | `fan/get_config` | Diagnostic sensor showing the current fan temperature threshold. Available on routers with a fan. |
 
 ### Internet and Traffic
 
 | Entity | Source | Notes |
 | --- | --- | --- |
-| WAN IP | Optional `modem/get_status` | The IP address assigned to the cellular internet interface. Hidden when unavailable. |
-| WAN status | `system/get_status` | Current status of the WAN interface (Online, Up, Down). |
-| Firewall rules | Optional `firewall/get_rules` | Count of active custom firewall rules. |
-| Port forwards | Optional `firewall/get_port_forwards` | Count of active port forwarding rules. |
-| Battery temperature | Optional `system/get_status` MCU data | Battery temperature in Celsius when the MCU battery feature is enabled. |
-| Battery charge | Optional `system/get_status` MCU data | Battery percentage, with charge count, fast-charge, and abnormal type attributes. |
-| Battery charging status | Optional `system/get_status` MCU data | Enum sensor: `charging` when `charging_status` is 1, `not_charging` when it is 0. |
-| Connected clients | `clients/get_list` | Count of currently online tracked clients. |
-| WireGuard server users | `wg-server/get_status` | Count of currently online WireGuard server peers. |
-| OpenVPN server users | `ovpn-server/get_status` | Count of currently online OpenVPN server users. |
-
-### Cellular and SMS
-
-| Entity | Source | Notes |
-| --- | --- | --- |
-| Cellular signal | Optional `modem/get_status` | Signal value when the router exposes modem status. |
-| Cellular RSSI | Optional `modem/get_status` | Received Signal Strength Indicator in dBm. |
-| Cellular RSRP | Optional `modem/get_status` | Reference Signal Received Power in dBm. |
-| Cellular RSRQ | Optional `modem/get_status` | Reference Signal Received Quality in dB. |
-| Cellular SINR | Optional `modem/get_status` | Signal-to-Interference-plus-Noise Ratio in dB. |
-| Cellular band | Optional `modem/get_status` | The active frequency band/service type. |
-| Cellular network | Optional `modem/get_status` | Operator/network/mode when available. |
-| Cellular APN | Optional `modem/get_status` | The Access Point Name used for the cellular connection. |
-| Text messages | Optional `sms/get_list` | Count of messages. Attributes include `message_count`, `incoming_count`, `outgoing_count`, and a `messages` list with details like `id`, `phone_number`, `direction`, `status`, `text`, and `timestamp`. |
-
-### Repeater (WiFi Station)
-
-| Entity | Source | Notes |
-| --- | --- | --- |
-| Repeater state | Optional `repeater/get_status` | Current repeater connection state. |
-| Repeater SSID | Optional `repeater/get_status` | SSID of the connected external network. Available while connecting, connected, or WAN available. |
-| Repeater signal | Optional `repeater/get_status` | Signal strength of the repeater connection. Available while connecting, connected, or WAN available. |
-| Repeater channel | Optional `repeater/get_status` | Enum sensor showing the WiFi band. Available while connecting, connected, or WAN available. See [Channel-to-band mapping](#channel-to-band-mapping) below. |
-| Repeater IP address | Optional `repeater/get_status` | IP address assigned to the repeater interface. Available only when connected or WAN available. |
-| Repeater gateway | Optional `repeater/get_status` | Default gateway of the repeater interface. Available only when connected or WAN available. |
-| Repeater DNS | Optional `repeater/get_status` | Primary DNS server. Additional servers are listed in the `dns_servers` attribute. Available only when connected or WAN available. |
-| Repeater BSSID | Optional `repeater/get_status` | MAC address of the connected access point. Available while connecting, connected, or WAN available. |
-
-The **Repeater state** sensor remains available whenever the repeater feature is enabled so it can report states including `initializing` and `wan_available`. Connection detail sensors become unavailable when the repeater is off or failed, which avoids stale SSID/IP/DNS values after a disconnect.
-
-#### Channel-to-band mapping
-
-The **Repeater channel** sensor uses `SensorDeviceClass.ENUM` with a `channel_to_band()` helper (defined in `utils.py`) that converts the raw WiFi channel number into a band key:
-
-| Channel range | Band key | Displayed as |
-| --- | --- | --- |
-| 1 – 14 | `2_4ghz` | 2.4 GHz |
-| 36 – 177 | `5ghz` | 5 GHz |
-
-The raw channel number and band key are also exposed as `channel` and `band` extra state attributes.
+| **WAN status** | `system/get_status` | Current status of the WAN interface (Online, Up, Down). |
+| **Connected clients** | `clients/get_list` | Count of currently online tracked clients. |
 
 ### Client Bandwidth
 
-Each tracked client includes real-time sensors attached to the client device (listed under the **Diagnostic** category):
+Each tracked client includes real-time diagnostic sensors attached to the client device:
 
-- Download rate
-- Upload rate
-- IP address
+- **Download rate** — current download bandwidth.
+- **Upload rate** — current upload bandwidth.
+- **IP address** — current IP address of the client.
 
-These sensors are created only when the router reports bandwidth fields in the client list. Rates are calculated based on delta changes between polls if explicit rate fields are missing.
+These sensors are created only when the router reports bandwidth fields in the client list. Rates are calculated from delta changes between polls when explicit rate fields are missing.
 
-### Fan
-
-| Entity | Source | Notes |
-| --- | --- | --- |
-| Fan status | Optional `fan/get_status` | Binary sensor showing if the fan is currently active. |
-| Repeater connected | Optional `repeater/get_status` | Binary sensor showing if the repeater is connected or WAN available. Attributes include SSID, BSSID, signal, WiFi generation, EAP, and bare mode when reported. |
-| Repeater bare mode | Optional `repeater/get_status` | Binary sensor showing if repeater bare mode is active. |
-| Battery abnormal | Optional `system/get_status` MCU data | Diagnostic binary sensor showing the MCU `abnormal` flag when the MCU battery feature is enabled. |
-| Parental control group override | Optional `parental-control/get_status` | One diagnostic binary sensor per parental group showing whether a temporary brief/override is active. |
-| Fan speed | Optional `fan/get_status` | Diagnostic sensor showing current fan speed in RPM. |
-| Fan threshold temperature | Optional `fan/get_config` | Diagnostic sensor showing the current temperature threshold. |
-
-## Selects
-
-| Entity | Source | Notes |
-| --- | --- | --- |
-| WiFi network | `hub.scanned_networks` | Choose a saved or available WiFi SSID for repeater mode. Groups options by "Known" and "Available". |
-| Repeater band | Optional `repeater/get_config` | Controls the locked wireless band used for repeater scanning and connection. |
-| OpenVPN location | `ovpn-client/get_config` | Choose the server location for an active OpenVPN client profile. |
-| Parental control group | Optional `parental-control/get_config` | One select per tracked client device. Options are `None` plus router parental control group names. The entity is attached to the client MAC device. |
+---
 
 ## Switches
 
 | Entity | Source | Notes |
 | --- | --- | --- |
-| WiFi interface switches | `wifi/get_config`, `wifi/set_config` | One switch per WiFi interface reported by the router. |
-| WireGuard client switches | `wg-client` and `vpn-client` APIs | One switch per WireGuard client config returned by the router. Newer firmware uses `vpn-client`; older firmware uses `wg-client`. |
-| WG Server | `wg-server/start`, `wg-server/stop` | Toggle the WireGuard server on or off. |
-| Tailscale | `tailscale/get_status`, `tailscale/set_config` | Created when Tailscale is configured. |
-| ZeroTier | `zerotier/get_status`, `zerotier/set_config` | Created when ZeroTier is configured. Requires Network ID setup on router. |
-| AdGuard Home | `adguardhome/get_config`, `adguardhome/set_config` | Toggle AdGuard Home on or off. |
-| AdGuard Home DNS | `adguardhome/get_config`, `adguardhome/set_config` | Toggle AdGuard Home DNS redirection. |
-| System LED | `led/get_config`, `led/set_config` | Toggle the system status LED. |
-| Repeater auto-switch | `repeater/get_config` | Toggle whether the router automatically switches between saved networks. |
-| Repeater bare mode | `repeater/enter_bare_mode`, `repeater/exit_bare_mode` | Toggle bare mode for the active repeater connection. |
-| Repeater smart reconnect | `repeater/set_config` | Toggle smart reconnection logic. |
-| OpenVPN client switches | `ovpn-client` API | One switch per OpenVPN client config returned by the router. |
-| OpenVPN Server | `ovpn-server` API | Toggle the OpenVPN server on or off. |
-| Firewall DMZ | `firewall/set_dmz` | Toggle the DMZ (DeMilitarized Zone) feature. |
-| WAN Ping Access | `firewall/set_wan_access` | Toggle whether the router responds to ICMP echo requests from the WAN. |
-| WAN HTTPS Access | `firewall/set_wan_access` | Toggle remote HTTPS management access from the WAN. |
-| WAN SSH Access | `firewall/set_wan_access` | Toggle remote SSH management access from the WAN. |
-| Parental control | Optional `parental-control/set_config` | Global parental control toggle on the router device. |
-| Parental control group | Optional `parental-control/set_group` | One switch per parental control group to enable or disable the group. |
-| Internet access | Optional `black_white_list/set_single_mac` | One switch per tracked client device. Turning it off blocks internet access for that client MAC; turning it on restores access. |
+| **WiFi interface switches** | `wifi/get_config`, `wifi/set_config` | One switch per WiFi interface reported by the router. |
+| **System LED** | `led/get_config`, `led/set_config` | Toggle the system status LED. |
+
+---
+
+## Binary Sensors
+
+| Entity | Source | Notes |
+| --- | --- | --- |
+| **Fan status** | `fan/get_status` | `True` when the fan is currently running. Available on routers with a fan. |
