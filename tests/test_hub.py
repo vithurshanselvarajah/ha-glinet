@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from custom_components.ha_glinet.const import (
     CONF_ADD_ALL_DEVICES,
+    CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
     CONF_WAN_STATUS_MONITORS,
     FEATURE_REPEATER,
@@ -932,6 +933,44 @@ async def test_stop_wg_server(monkeypatch) -> None:
 
     await hub.stop_wg_server()
     assert "stop" in called
+
+
+async def test_cleanup_stale_devices_removes_known_device_entities(monkeypatch) -> None:
+    import custom_components.ha_glinet.hub as hub_module
+
+    hub = GLinetHub.__new__(GLinetHub)
+    mac = "aa:bb:cc:dd:ee:ff"
+    device = ClientDeviceInfo(mac)
+    device.apply_update({"online": False})
+    device._last_activity = hub_module.utcnow() - hub_module.timedelta(minutes=10)
+    device.is_known = True  # Known device should also be cleaned up
+    hub._devices = {mac: device}
+    hub._settings = {CONF_CLEANUP_DEVICES: 5}
+    hub._entry = SimpleNamespace(entry_id="entry")
+    hub.hass = object()
+
+    tracker = SimpleNamespace(entity_id="device_tracker.phone", unique_id=mac)
+    entity_registry = MagicMock()
+    device_registry = MagicMock()
+    device_registry.async_get_device.return_value = SimpleNamespace(
+        id="device-id",
+        config_entries={"entry"},
+    )
+
+    monkeypatch.setattr(hub_module.er, "async_get", lambda _: entity_registry)
+    monkeypatch.setattr(
+        hub_module.er,
+        "async_entries_for_config_entry",
+        lambda *_: [tracker],
+    )
+    monkeypatch.setattr(hub_module.dr, "async_get", lambda _: device_registry)
+
+    await hub._async_cleanup_stale_devices()
+
+    assert hub._devices == {}
+    entity_registry.async_remove.assert_called_once_with("device_tracker.phone")
+    device_registry.async_remove_device.assert_called_once_with("device-id")
+
 
 async def _noop() -> None:
     return None
