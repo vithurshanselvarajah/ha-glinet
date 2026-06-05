@@ -827,8 +827,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
         for mac, device in self._devices.items():
             if not device.is_connected and (now - device.last_activity) > stale_limit:
-                if not device.is_known:
-                    to_remove.append(mac)
+                to_remove.append(mac)
 
         if not to_remove:
             return
