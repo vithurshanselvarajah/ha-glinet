@@ -76,6 +76,8 @@ def pytest_configure() -> None:
         device_tracker.CONF_CONSIDER_HOME = "consider_home"
         device_tracker.DEFAULT_CONSIDER_HOME = types.SimpleNamespace(total_seconds=lambda: 180)
         device_tracker.DOMAIN = "device_tracker"
+        device_tracker.SourceType = types.SimpleNamespace(ROUTER="router")
+        device_tracker.ScannerEntity = object
 
         const = types.ModuleType("homeassistant.const")
         const.CONF_HOST = "host"
