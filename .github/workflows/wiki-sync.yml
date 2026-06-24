@@ -22,7 +22,7 @@ jobs:
     if: always() && format('refs/heads/{0}', github.event.repository.default_branch) == github.ref && github.event_name != 'gollum'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Sync docs folder to wiki
         uses: newrelic/wiki-sync-action@v1.0.1
         with:
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           token: ${{ secrets.WIKI_SYNC_SECRET }}
           ref: ${{ github.event.repository.default_branch }}
