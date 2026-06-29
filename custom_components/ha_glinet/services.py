@@ -758,7 +758,7 @@ async def async_register_services(hass: HomeAssistant) -> None:
                 {
                     vol.Optional(CONF_MAC): cv.string,
                     vol.Required(ATTR_METHOD): cv.string,
-                    vol.Optional(ATTR_BODY): vol.Any(dict, list, None),
+                    vol.Optional(ATTR_BODY): object,
                 }
             ),
             supports_response=SupportsResponse.ONLY,
