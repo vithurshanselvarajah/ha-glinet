@@ -71,33 +71,7 @@ data:
 
 ---
 
-### Example 2: Ping an IP address (`diag/ping` with parameters)
-This sends a ping request to check connectivity to an external host (e.g., Google DNS `8.8.8.8`).
-
-**Service Call YAML:**
-```yaml
-action: ha_glinet.playground
-data:
-  method: "diag/ping"
-  body:
-    addr: "8.8.8.8"
-```
-
-**Returned Response Data:**
-```json
-{
-  "res": [
-    "PING 8.8.8.8 (8.8.8.8): 56 data bytes",
-    "64 bytes from 8.8.8.8: seq=0 ttl=118 time=12.4 ms",
-    "--- 8.8.8.8 ping statistics ---",
-    "1 packets transmitted, 1 packets received, 0% packet loss"
-  ]
-}
-```
-
----
-
-### Example 3: Retrieve Firewall Zone List (`firewall/get_zone_list`)
+### Example 2: Retrieve Firewall Zone List (`firewall/get_zone_list`)
 This fetches the lists of defined network security zones on your router.
 
 **Service Call YAML:**
@@ -129,7 +103,7 @@ data:
 
 ---
 
-### Example 4: Toggle Status LED Configuration (`led/set_config` with boolean body)
+### Example 3: Toggle Status LED Configuration (`led/set_config` with boolean body)
 This toggles the router's physical front LED panel on or off.
 
 **Service Call YAML (Turn off LED):**
@@ -150,7 +124,7 @@ data:
 
 ---
 
-### Example 5: Get VPN Status (`vpn-client/get_status` on 4.8+ firmware)
+### Example 4: Get VPN Status (`vpn-client/get_status` on 4.8+ firmware)
 This retrieves the connection state of active VPN tunnels on newer GL.iNet firmware.
 
 **Service Call YAML:**
@@ -176,7 +150,7 @@ data:
 
 ---
 
-### Example 6: Request Challenge Salt (`challenge` unauthenticated top-level call)
+### Example 5: Request Challenge Salt (`challenge` unauthenticated top-level call)
 This calls the unauthenticated top-level `challenge` method to query authentication algorithms and salt for a user.
 
 **Service Call YAML:**
