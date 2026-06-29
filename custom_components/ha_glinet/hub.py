@@ -1377,6 +1377,14 @@ class GLinetHub(DataUpdateCoordinator[None]):
             raise RuntimeError("GL-INet API client has not been initialized")
         return self._api
 
+    async def custom_request(
+        self, method: str, body: dict[str, Any] | list[Any] | None = None
+    ) -> dict[str, Any] | list[Any] | None:
+        return await self._invoke_api(
+            lambda: self.router_api.custom_call(method, body)
+        )
+
+
     @property
     def router_host(self) -> str:
         return self._host

@@ -481,3 +481,30 @@ parental_control_set_group_schedules:
       selector:
         boolean:
       required: true
+
+playground:
+  name: API Playground
+  description: Send a custom JSON-RPC or ubus API request to the GL-INet router. Returns the raw response.
+  fields:
+    mac:
+      name: Router MAC
+      description: Target router MAC address (optional).
+      selector:
+        text:
+      required: false
+    method:
+      name: Method
+      description: The JSON-RPC or ubus method to call. Use 'module/method' (e.g. 'system/get_info') for ubus calls, or a top-level RPC method (e.g. 'challenge').
+      selector:
+        text:
+      required: true
+      example: "system/get_info"
+    body:
+      name: Body
+      description: Optional parameters or body for the request.
+      selector:
+        object:
+      required: false
+      example:
+        delay: 0
+

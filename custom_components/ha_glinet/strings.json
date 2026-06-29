@@ -466,5 +466,23 @@
         "enabled": { "name": "Enabled" },
         "dest_ip": { "name": "Destination IP" }
       }
+    },
+    "playground": {
+      "name": "API Playground",
+      "description": "Send a custom JSON-RPC or ubus request to the router.",
+      "fields": {
+        "mac": {
+          "name": "MAC address",
+          "description": "Optional MAC of the target router."
+        },
+        "method": {
+          "name": "Method",
+          "description": "The JSON-RPC or ubus method (e.g. system/get_info)."
+        },
+        "body": {
+          "name": "Body",
+          "description": "Optional parameters or body for the request."
+        }
+      }
     }
   }}

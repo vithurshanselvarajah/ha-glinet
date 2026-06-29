@@ -211,4 +211,27 @@ class GLinetApiClient:
     def logged_in(self) -> bool:
         return self._logged_in
 
+    async def custom_call(
+        self, method: str, params: dict[str, Any] | list[Any] | None = None
+    ) -> dict[str, Any] | list[Any]:
+        if params is None:
+            params = {}
+        if "/" in method:
+            module, _, sub_method = method.partition("/")
+            payload = self._build_sid_payload("call", [module, sub_method, params], self.sid)
+        elif method == "call":
+            if isinstance(params, list):
+                payload = self._build_sid_payload("call", params, self.sid)
+            else:
+                payload = self._build_sid_payload("call", [params], self.sid)
+        elif method in ("challenge", "login"):
+            payload = self._build_payload(method, params if isinstance(params, dict) else {})
+        else:
+            if isinstance(params, list):
+                payload = self._build_sid_payload(method, params, self.sid)
+            else:
+                payload = self._build_sid_payload(method, [params], self.sid)
+        return await self._send_request(payload)
+
+
 

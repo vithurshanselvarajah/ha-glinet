@@ -28,6 +28,8 @@ These pages cover configuration, entities, and services for optional modules tha
 - [MCU Battery](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-battery) - Monitor battery status and configure high/low temperature warnings.
 - [MCU OLED](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-oled) - Configure what is displayed on the router's OLED screen.
 - [Parental & Access Control](https://github.com/vithurshanselvarajah/ha-glinet/wiki/parental-control) - Manage internet access blocks and parental group rules per client.
+- [API Playground](https://github.com/vithurshanselvarajah/ha-glinet/wiki/playground) - Send custom JSON-RPC or ubus commands and inspect the response.
+
 
 ## For Developers
 

@@ -35,6 +35,7 @@ from .const import (
     FEATURE_OVPN_CLIENT,
     FEATURE_OVPN_SERVER,
     FEATURE_PARENTAL_CONTROL,
+    FEATURE_PLAYGROUND,
     FEATURE_REPEATER,
     FEATURE_SMS,
     FEATURE_TAILSCALE,
@@ -67,6 +68,7 @@ FEATURE_OPTIONS = [
     {"label": "MCU Battery", "value": FEATURE_MCU_BATTERY},
     {"label": "MCU OLED", "value": FEATURE_MCU_OLED},
     {"label": "Parental & Access Control", "value": FEATURE_PARENTAL_CONTROL},
+    {"label": "API Playground", "value": FEATURE_PLAYGROUND},
 ]
 DEFAULT_ENABLED_FEATURES = [
     FEATURE_CELLULAR,

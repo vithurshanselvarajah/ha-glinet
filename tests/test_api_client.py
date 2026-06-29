@@ -348,3 +348,40 @@ async def test_wireguard_state_uses_legacy_module_for_old_firmware() -> None:
 
     assert await client.wg_client.get_wireguard_state() == [{"status": 1, "peer_id": 7}]
     assert session.requests[0]["json"]["params"] == ["sid-1", "wg-client", "get_status", {}]
+
+
+async def test_custom_call_sends_expected_payloads() -> None:
+    session = FakeSession(
+        [
+            {"result": {"ok": True}},
+            {"result": {"challenge": "123"}},
+            {"result": {"result": 0}},
+        ]
+    )
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    assert await client.custom_call("system/get_info", {"arg": 1}) == {"ok": True}
+    assert await client.custom_call("challenge", {"username": "root"}) == {"challenge": "123"}
+    assert await client.custom_call("call", ["system", "reboot", {"delay": 0}]) == {"result": 0}
+
+    assert [request["json"] for request in session.requests] == [
+        {
+            "method": "call",
+            "jsonrpc": "2.0",
+            "params": ["sid-1", "system", "get_info", {"arg": 1}],
+            "id": 0,
+        },
+        {
+            "method": "challenge",
+            "jsonrpc": "2.0",
+            "params": {"username": "root"},
+            "id": 0,
+        },
+        {
+            "method": "call",
+            "jsonrpc": "2.0",
+            "params": ["sid-1", "system", "reboot", {"delay": 0}],
+            "id": 0,
+        },
+    ]
+
