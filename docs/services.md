@@ -14,8 +14,24 @@ For full parameter details, visit the optional feature page for each service gro
 | `get_mcu_battery_config`, `set_mcu_battery_config` | [MCU Battery](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-battery) |
 | `get_mcu_oled_config`, `set_mcu_oled_config` | [MCU OLED](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-oled) |
 | `parental_control_set_temporary_override`, `parental_control_set_filtering_mode`, `parental_control_update_signatures`, `access_control_set_mode`, `access_control_set_device_block`, `parental_control_set_group_schedules` | [Parental & Access Control](https://github.com/vithurshanselvarajah/ha-glinet/wiki/parental-control) |
+| `playground` | [API Playground](https://github.com/vithurshanselvarajah/ha-glinet/wiki/playground) |
 
 ---
+
+## API Playground
+
+### `playground`
+
+Sends a custom JSON-RPC or ubus request to the GL-INet router and waits to return the raw JSON response. This service is only available if **API Playground** is enabled in the configuration flow options.
+
+For a full guide, request-routing rules, and multiple examples, see the dedicated [API Playground Documentation](playground.md) (or [Wiki page](https://github.com/vithurshanselvarajah/ha-glinet/wiki/playground)).
+
+- **`method`**: The RPC or ubus method. Use a slash to call ubus objects, e.g. `system/get_info`, or specify top-level RPC methods (like `challenge`).
+- **`body`** (Optional): A JSON/YAML dictionary containing parameters/arguments for the request.
+- **`mac`** (Optional): Target a specific router by MAC address.
+
+---
+
 
 ## Fan Control
 
@@ -40,3 +56,4 @@ All services accept an optional **`mac`** parameter. When multiple GL.iNet route
 | --- | --- |
 | `async_register_services` | Entry point during integration setup to register all domain services. |
 | `_get_hub` | Helper to find the active `GLinetHub` instance matching the provided MAC address. |
+
