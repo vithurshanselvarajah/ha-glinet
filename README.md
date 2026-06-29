@@ -54,10 +54,8 @@ During setup, you can select which optional features (like VPN, Cellular, Repeat
 
 ### Using HACS (Recommended)
 1. Open **HACS** in your Home Assistant instance.
-2. Click the menu in the top-right corner and select **Custom repositories**.
-3. Add `https://github.com/vithurshanselvarajah/ha-glinet` as an **Integration** repository.
-4. Search for **GL-INet** in the HACS Integrations list.
-5. Click **Download**, then restart Home Assistant once complete.
+2. Go to **Integrations** and search for **GL‑INet**.
+3. Click **Download**, then restart Home Assistant once complete.
 
 ### Manual Installation
 1. Download the latest source code or release ZIP.
