@@ -6,6 +6,7 @@ from typing import Any
 from custom_components.ha_glinet.const import (
     ATTR_ALL_BAND,
     ATTR_BLOCK,
+    ATTR_BODY,
     ATTR_BSSID,
     ATTR_DEST,
     ATTR_DEST_IP,
@@ -13,6 +14,7 @@ from custom_components.ha_glinet.const import (
     ATTR_DFS,
     ATTR_ENABLED,
     ATTR_GROUP_ID,
+    ATTR_METHOD,
     ATTR_MODE,
     ATTR_NAME,
     ATTR_PASSWORD,
@@ -29,6 +31,7 @@ from custom_components.ha_glinet.const import (
     DOMAIN,
     FEATURE_FIREWALL,
     FEATURE_PARENTAL_CONTROL,
+    FEATURE_PLAYGROUND,
     FEATURE_REPEATER,
     FEATURE_SMS,
     SERVICE_ACCESS_CONTROL_SET_DEVICE_BLOCK,
@@ -43,6 +46,7 @@ from custom_components.ha_glinet.const import (
     SERVICE_PARENTAL_CONTROL_SET_GROUP_SCHEDULES,
     SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE,
     SERVICE_PARENTAL_CONTROL_UPDATE_SIGNATURES,
+    SERVICE_PLAYGROUND,
     SERVICE_REFRESH_SMS,
     SERVICE_REMOVE_FIREWALL_RULE,
     SERVICE_REMOVE_PORT_FORWARD,
@@ -496,3 +500,56 @@ async def test_register_services_does_not_register_repeater_when_not_enabled() -
     assert SERVICE_DISCONNECT_WIFI not in registered
     assert SERVICE_GET_SAVED_NETWORKS not in registered
     assert SERVICE_REMOVE_SAVED_NETWORK not in registered
+
+
+async def test_register_services_records_playground_service_when_enabled() -> None:
+    entry = DummyEntry(data={CONF_ENABLED_FEATURES: [FEATURE_PLAYGROUND]})
+    hass = DummyHass([entry])
+
+    await async_register_services(hass)
+
+    registered = {service for service, _ in hass.services.registrations}
+    assert SERVICE_PLAYGROUND in registered
+
+
+async def test_register_services_removes_playground_service_when_disabled() -> None:
+    entry = DummyEntry(data={CONF_ENABLED_FEATURES: [FEATURE_PLAYGROUND]})
+    hass = DummyHass([entry])
+    await async_register_services(hass)
+    assert hass.services.has_service(DOMAIN, SERVICE_PLAYGROUND)
+
+    entry.data[CONF_ENABLED_FEATURES] = []
+    await async_register_services(hass)
+
+    assert not hass.services.has_service(DOMAIN, SERVICE_PLAYGROUND)
+
+
+async def test_playground_service_handler_calls_hub_method() -> None:
+    calls = []
+
+    class Hub:
+        device_mac = "00:11:22:33:44:55"
+
+        def feature_enabled(self, feature: str) -> bool:
+            return feature == FEATURE_PLAYGROUND
+
+        async def custom_request(
+            self,
+            method: str,
+            body: dict[str, Any] | list[Any] | None = None,
+        ) -> dict[str, Any] | list[Any] | None:
+            calls.append((method, body))
+            return {"status": "ok"}
+
+    entry = DummyEntry(data={CONF_ENABLED_FEATURES: [FEATURE_PLAYGROUND]})
+    entry.runtime_data = Hub()
+    hass = DummyHass([entry])
+    await async_register_services(hass)
+
+    response = await hass.services.handlers[SERVICE_PLAYGROUND](
+        SimpleNamespace(data={ATTR_METHOD: "system/get_info", ATTR_BODY: {"test": 1}})
+    )
+
+    assert calls == [("system/get_info", {"test": 1})]
+    assert response == {"status": "ok"}
+
