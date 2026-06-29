@@ -34,6 +34,7 @@ FEATURE_FIREWALL = "firewall"
 FEATURE_MCU_BATTERY = "mcu_battery"
 FEATURE_MCU_OLED = "mcu_oled"
 FEATURE_PARENTAL_CONTROL = "parental_control"
+FEATURE_PLAYGROUND = "playground"
 FEATURE_OPTIONS = [
     FEATURE_CELLULAR,
     FEATURE_REPEATER,
@@ -48,7 +49,9 @@ FEATURE_OPTIONS = [
     FEATURE_MCU_BATTERY,
     FEATURE_MCU_OLED,
     FEATURE_PARENTAL_CONTROL,
+    FEATURE_PLAYGROUND,
 ]
+
 
 SERVICE_GET_SMS = "get_sms"
 SERVICE_REMOVE_SMS = "remove_sms"
@@ -78,9 +81,12 @@ SERVICE_PARENTAL_CONTROL_UPDATE_SIGNATURES = "parental_control_update_signatures
 SERVICE_ACCESS_CONTROL_SET_MODE = "access_control_set_mode"
 SERVICE_ACCESS_CONTROL_SET_DEVICE_BLOCK = "access_control_set_device_block"
 SERVICE_PARENTAL_CONTROL_SET_GROUP_SCHEDULES = "parental_control_set_group_schedules"
+SERVICE_PLAYGROUND = "playground"
 
 ATTR_MESSAGE_ID = "message_id"
 ATTR_SCOPE = "scope"
+ATTR_METHOD = "method"
+ATTR_BODY = "body"
 ATTR_RECIPIENT = "recipient"
 ATTR_TEXT = "text"
 

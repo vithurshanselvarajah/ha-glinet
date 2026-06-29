@@ -10,6 +10,7 @@ from homeassistant.helpers import config_validation as cv
 from .const import (
     ATTR_ALL_BAND,
     ATTR_BLOCK,
+    ATTR_BODY,
     ATTR_BSSID,
     ATTR_CAPACITY,
     ATTR_CAPACITY_ENABLED,
@@ -25,6 +26,7 @@ from .const import (
     ATTR_LAN,
     ATTR_MAIN,
     ATTR_MESSAGE_ID,
+    ATTR_METHOD,
     ATTR_MODE,
     ATTR_NAME,
     ATTR_PASSWORD,
@@ -59,6 +61,7 @@ from .const import (
     FEATURE_MCU_OLED,
     FEATURE_OPTIONS,
     FEATURE_PARENTAL_CONTROL,
+    FEATURE_PLAYGROUND,
     FEATURE_REPEATER,
     FEATURE_SMS,
     SERVICE_ACCESS_CONTROL_SET_DEVICE_BLOCK,
@@ -76,6 +79,7 @@ from .const import (
     SERVICE_PARENTAL_CONTROL_SET_GROUP_SCHEDULES,
     SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE,
     SERVICE_PARENTAL_CONTROL_UPDATE_SIGNATURES,
+    SERVICE_PLAYGROUND,
     SERVICE_REFRESH_SMS,
     SERVICE_REMOVE_FIREWALL_RULE,
     SERVICE_REMOVE_PORT_FORWARD,
@@ -135,10 +139,25 @@ async def async_register_services(hass: HomeAssistant) -> None:
         FEATURE_PARENTAL_CONTROL in _enabled_features_from_entry(entry)
         for entry in entries
     )
+    playground_enabled = any(
+        FEATURE_PLAYGROUND in _enabled_features_from_entry(entry) for entry in entries
+    )
 
     async def async_set_fan_temperature(call: ServiceCall) -> None:
         hub = _get_hub(hass, call.data)
         await hub.set_fan_temperature(call.data[ATTR_TEMPERATURE])
+
+    async def async_playground(call: ServiceCall) -> ServiceResponse:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_PLAYGROUND, SERVICE_PLAYGROUND)
+        method = call.data[ATTR_METHOD]
+        body = call.data.get(ATTR_BODY)
+        response = await hub.custom_request(method, body)
+        if response is None:
+            return {"error": "API invocation failed"}
+        if isinstance(response, dict):
+            return response
+        return {"result": response}
 
     async def async_send_sms(call: ServiceCall) -> None:
         hub = _get_hub(hass, call.data)
@@ -729,6 +748,24 @@ async def async_register_services(hass: HomeAssistant) -> None:
         ]:
             if hass.services.has_service(DOMAIN, service):
                 hass.services.async_remove(DOMAIN, service)
+
+    if playground_enabled:
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_PLAYGROUND,
+            async_playground,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Required(ATTR_METHOD): cv.string,
+                    vol.Optional(ATTR_BODY): vol.Any(dict, list, None),
+                }
+            ),
+            supports_response=SupportsResponse.ONLY,
+        )
+    else:
+        if hass.services.has_service(DOMAIN, SERVICE_PLAYGROUND):
+            hass.services.async_remove(DOMAIN, SERVICE_PLAYGROUND)
 
     hass.services.async_register(
         DOMAIN,
