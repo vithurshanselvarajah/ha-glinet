@@ -137,6 +137,7 @@ def pytest_configure() -> None:
             def __init__(self, *args, **kwargs):
                 self.hass = args[0]
                 self.data = None
+                self.update_interval = kwargs.get("update_interval")
 
             def __class_getitem__(cls, _):
                 return cls

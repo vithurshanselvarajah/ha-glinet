@@ -9,6 +9,7 @@ from custom_components.ha_glinet.const import (
     CONF_ADD_ALL_DEVICES,
     CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
+    CONF_SCAN_INTERVAL,
     CONF_WAN_STATUS_MONITORS,
     FEATURE_REPEATER,
     FEATURE_WG_CLIENT,
@@ -978,3 +979,79 @@ async def _noop() -> None:
 
 def _noop_arg(*args, **kwargs) -> None:
     return None
+
+
+def _make_entry(data: dict[str, Any] | None = None, options: dict[str, Any] | None = None):
+    entry = SimpleNamespace()
+    entry.data = data or {"host": "http://192.168.8.1", "password": "pass"}
+    entry.options = options or {}
+    entry.entry_id = "test_entry"
+    entry.unique_id = "aa:bb:cc:dd:ee:ff"
+    return entry
+
+
+def test_hub_uses_configured_scan_interval() -> None:
+    from datetime import timedelta
+
+    entry = _make_entry(data={
+        "host": "http://192.168.8.1",
+        "password": "pass",
+        CONF_SCAN_INTERVAL: 60,
+    })
+    hub = GLinetHub(MagicMock(), entry)
+    assert hub.update_interval == timedelta(seconds=60)
+
+
+def test_hub_defaults_scan_interval_when_not_configured() -> None:
+    from datetime import timedelta
+
+    entry = _make_entry(data={
+        "host": "http://192.168.8.1",
+        "password": "pass",
+    })
+    hub = GLinetHub(MagicMock(), entry)
+    assert hub.update_interval == timedelta(seconds=30)
+
+
+def test_hub_scan_interval_from_options_overrides_data() -> None:
+    from datetime import timedelta
+
+    entry = _make_entry(
+        data={
+            "host": "http://192.168.8.1",
+            "password": "pass",
+            CONF_SCAN_INTERVAL: 30,
+        },
+        options={CONF_SCAN_INTERVAL: 120},
+    )
+    hub = GLinetHub(MagicMock(), entry)
+    assert hub.update_interval == timedelta(seconds=120)
+
+
+def test_apply_option_updates_changes_scan_interval() -> None:
+    from datetime import timedelta
+
+    entry = _make_entry(data={
+        "host": "http://192.168.8.1",
+        "password": "pass",
+        CONF_SCAN_INTERVAL: 30,
+    })
+    hub = GLinetHub(MagicMock(), entry)
+    assert hub.update_interval == timedelta(seconds=30)
+
+    hub.apply_option_updates({CONF_SCAN_INTERVAL: 90})
+    assert hub.update_interval == timedelta(seconds=90)
+
+
+def test_apply_option_updates_without_scan_interval_keeps_default() -> None:
+    from datetime import timedelta
+
+    entry = _make_entry(data={
+        "host": "http://192.168.8.1",
+        "password": "pass",
+    })
+    hub = GLinetHub(MagicMock(), entry)
+    assert hub.update_interval == timedelta(seconds=30)
+
+    hub.apply_option_updates({"some_other_option": "value"})
+    assert hub.update_interval == timedelta(seconds=30)
