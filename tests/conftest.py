@@ -6,6 +6,7 @@ import sys
 import types
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from enum import IntFlag
 from typing import Any
 
 
@@ -137,6 +138,7 @@ def pytest_configure() -> None:
             def __init__(self, *args, **kwargs):
                 self.hass = args[0]
                 self.data = None
+                self.update_interval = kwargs.get("update_interval")
 
             def __class_getitem__(cls, _):
                 return cls
@@ -225,11 +227,22 @@ def pytest_configure() -> None:
             CONNECTIVITY="connectivity",
             RUNNING="running",
         )
+        update = types.ModuleType("homeassistant.components.update")
+
+        class _UpdateEntityFeature(IntFlag):
+            INSTALL = 1
+            RELEASE_NOTES = 2
+            PROGRESS = 4
+
+        update.UpdateEntity = object
+        update.UpdateEntityFeature = _UpdateEntityFeature
+        update.UpdateDeviceClass = types.SimpleNamespace(FIRMWARE="firmware")
         homeassistant.components = components
         homeassistant.components.sensor = sensor
         homeassistant.components.switch = switch
         homeassistant.components.select = select
         homeassistant.components.binary_sensor = binary_sensor
+        homeassistant.components.update = update
         homeassistant.config_entries = config_entries
         homeassistant.core = core
         homeassistant.const = const
@@ -262,6 +275,7 @@ def pytest_configure() -> None:
         sys.modules["homeassistant.components.switch"] = switch
         sys.modules["homeassistant.components.select"] = select
         sys.modules["homeassistant.components.binary_sensor"] = binary_sensor
+        sys.modules["homeassistant.components.update"] = update
 
 
 def pytest_pyfunc_call(pyfuncitem: Any) -> bool:

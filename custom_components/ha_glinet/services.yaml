@@ -385,6 +385,98 @@ set_mcu_oled_config:
       selector:
         text:
 
+kmwan_get_config:
+  name: Get KMWAN config
+  description: Return the current KMWAN multi-WAN configuration from the router.
+  fields:
+    mac:
+      selector:
+        text:
+
+kmwan_get_status:
+  name: Get KMWAN status
+  description: Return per-interface KMWAN link status from the router.
+  fields:
+    mac:
+      selector:
+        text:
+
+kmwan_set_config:
+  name: Set KMWAN config
+  description: Update the KMWAN multi-WAN configuration on the router.
+  fields:
+    mac:
+      selector:
+        text:
+    config:
+      selector:
+        object:
+      required: true
+
+kmwan_set_interface:
+  name: Set KMWAN interface
+  description: Update KMWAN detection settings for a single WAN interface.
+  fields:
+    mac:
+      selector:
+        text:
+    interface:
+      selector:
+        object:
+      required: true
+
+kmwan_set_sensitivity:
+  name: Set KMWAN sensitivity
+  description: Update the KMWAN detection sensitivity level and interval.
+  fields:
+    mac:
+      selector:
+        text:
+    sensitivity:
+      selector:
+        object:
+      required: true
+
+mwan3_get_config:
+  name: Get MWAN3 config
+  description: Return the current MWAN3 multi-WAN configuration from the router.
+  fields:
+    mac:
+      selector:
+        text:
+
+mwan3_get_status:
+  name: Get MWAN3 status
+  description: Return per-interface MWAN3 link status from the router.
+  fields:
+    mac:
+      selector:
+        text:
+
+mwan3_set_config:
+  name: Set MWAN3 config
+  description: Update the MWAN3 multi-WAN configuration on the router.
+  fields:
+    mac:
+      selector:
+        text:
+    config:
+      selector:
+        object:
+      required: true
+
+mwan3_set_interface:
+  name: Set MWAN3 interface
+  description: Update MWAN3 detection settings for a single WAN interface.
+  fields:
+    mac:
+      selector:
+        text:
+    interface:
+      selector:
+        object:
+      required: true
+
 parental_control_set_temporary_override:
   name: Set parental control temporary override
   description: Enable or disable a temporary brief rule for a parental control group.

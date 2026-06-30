@@ -16,6 +16,7 @@ The following capabilities are always available regardless of optional feature s
 - **Device Tracking**: Monitors connected clients — MAC address, name/alias, IP address, interface type, and last-seen timestamp. Includes a cleanup mechanism for stale offline devices.
 - **Connected Clients Count**: Sensor showing total currently active tracked clients.
 - **Client Diagnostics**: Per-client download rate, upload rate, and IP address sensors attached to each tracked client device.
+- **Firmware Updates**: Native Home Assistant firmware update entity with release notes when the router exposes them.
 - **Sanitized Diagnostics**: Safe diagnostic downloads masking sensitive data (MAC addresses, WiFi passwords, session IDs, and tokens).
 
 ## Optional Features
@@ -32,6 +33,8 @@ The integration treats several advanced capabilities as optional modules selecta
 - [OpenVPN Server](https://github.com/vithurshanselvarajah/ha-glinet/wiki/openvpn-server) - Manage the built-in OpenVPN server.
 - [ZeroTier](https://github.com/vithurshanselvarajah/ha-glinet/wiki/zerotier) - Enable or disable ZeroTier VPN connections.
 - [AdGuard Home](https://github.com/vithurshanselvarajah/ha-glinet/wiki/adguard-home) - Enable/disable AdGuard Home and DNS redirection.
+- [KMWAN](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api) - Read and update GL.iNet's KMWAN multi-WAN configuration through actions.
+- [MWAN3](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api) - Read and update MWAN3 multi-WAN configuration through actions.
 - [Firewall](https://github.com/vithurshanselvarajah/ha-glinet/wiki/firewall) - Manage firewall rules, port forwarding, and DMZ settings.
 - [MCU Battery](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-battery) - Monitor battery status and configure high/low temperature warnings.
 - [MCU OLED](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-oled) - Configure what is displayed on the router's OLED screen.
@@ -52,7 +55,7 @@ When adding the GL.iNet integration or modifying it via the **Configure** menu, 
 - **Discover unknown devices**: When enabled, adds all newly discovered devices to the Home Assistant device registry rather than only known/tracked ones. Toggling this off automatically cleans up untracked devices.
 - **Auto-cleanup unknown devices (min)**: The inactivity period in minutes after which an untracked device is automatically removed from the registry. Set to `0` to disable.
 - **WAN Status Monitors**: Select which WAN interface/protocol combinations to monitor (e.g., `Ethernet 1 IPv4`, `Cellular IPv4`). Defaults to all detected interfaces for both IPv4 and IPv6. Deselect individual entries to hide those sensors and reduce polling overhead.
-- **Enabled Features**: Select which optional modules to activate for this router instance.
+- **Enabled Features**: Select which optional modules to activate for this router instance, including optional WAN policy controls.
 
 ## Authentication & Session Management
 

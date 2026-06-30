@@ -30,6 +30,12 @@ For entities related to optional features, visit their respective pages:
 | **Reboot** | `system/reboot` | Reboots the router immediately. |
 | **Fan test** | `fan/set_test` | Diagnostic button to run the fan at full speed for 10 seconds. Available on routers with an active fan. |
 
+## Update Entity
+
+| Entity | Source | Notes |
+| --- | --- | --- |
+| **Firmware** | `upgrade/check_firmware_online`, `upgrade/get_config`, `upgrade/upgrade_online` | Native Home Assistant firmware update entity. Shows release notes when available and only exposes install when the router provides the required download metadata. |
+
 ---
 
 ## Device Trackers

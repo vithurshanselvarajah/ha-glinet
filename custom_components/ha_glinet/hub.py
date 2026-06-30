@@ -41,6 +41,7 @@ from .const import (
     CONF_ADD_ALL_DEVICES,
     CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
+    CONF_SCAN_INTERVAL,
     CONF_WAN_STATUS_MONITORS,
     DEFAULT_USERNAME,
     DOMAIN,
@@ -87,17 +88,19 @@ if TYPE_CHECKING:
     from homeassistant.helpers.entity_registry import RegistryEntry
 
 _LOGGER = logging.getLogger(__name__)
-SCAN_INTERVAL = timedelta(seconds=30)
+DEFAULT_SCAN_INTERVAL = 30
 T = TypeVar("T")
 
 
 class GLinetHub(DataUpdateCoordinator[None]):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+        settings = dict(entry.data) | dict(entry.options)
+        scan_seconds = int(settings.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=SCAN_INTERVAL,
+            update_interval=timedelta(seconds=scan_seconds),
         )
         self._entry = entry
         self._options = dict(entry.options)
@@ -135,6 +138,9 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._ovpn_server_users: list[dict[str, Any]] = []
         self._ovpn_raw_clients: dict[str, dict[str, Any]] = {}
         self._ovpn_client_status: dict[str, Any] = {}
+        self._upgrade_info: dict[str, Any] = {}
+        self._upgrade_config: dict[str, Any] = {}
+        self._upgrade_status: dict[str, Any] = {}
         self._zerotier_status: ZeroTierStatus | None = None
         self._led_enabled: bool | None = None
         self._adguard_status: AdGuardStatus | None = None
@@ -391,6 +397,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         tasks: list[Awaitable[Any]] = [
             self.fetch_system_status(),
             self.fetch_kmwan_status(),
+            self.fetch_upgrade_info(),
             self.fetch_connected_devices(),
             self.fetch_wifi_interfaces(),
             self.fetch_fan_status(),
@@ -564,6 +571,81 @@ class GLinetHub(DataUpdateCoordinator[None]):
     async def fetch_kmwan_status(self) -> None:
         response = await self._invoke_optional_api(self.router_api.system.get_kmwan_status)
         self._kmwan_status = response or {}
+
+    async def get_mwan3_config(self) -> dict[str, Any]:
+        response = await self._invoke_optional_api(self.router_api.mwan3.get_config)
+        return response or {}
+
+    async def get_mwan3_status(self) -> dict[str, Any]:
+        response = await self._invoke_optional_api(self.router_api.mwan3.get_status)
+        return response or {}
+
+    async def set_mwan3_config(self, config: dict[str, Any]) -> None:
+        await self._invoke_api(lambda: self.router_api.mwan3.set_config(config))
+        await self.fetch_kmwan_status()
+
+    async def set_mwan3_interface(self, interface: dict[str, Any]) -> None:
+        await self._invoke_api(lambda: self.router_api.mwan3.set_interface(interface))
+        await self.fetch_kmwan_status()
+
+    async def get_kmwan_config(self) -> dict[str, Any]:
+        response = await self._invoke_optional_api(self.router_api.kmwan.get_config)
+        return response or {}
+
+    async def get_kmwan_status(self) -> dict[str, Any]:
+        response = await self._invoke_optional_api(self.router_api.kmwan.get_status)
+        return response or {}
+
+    async def set_kmwan_config(self, config: dict[str, Any]) -> None:
+        await self._invoke_api(lambda: self.router_api.kmwan.set_config(config))
+        await self.fetch_kmwan_status()
+
+    async def set_kmwan_interface(self, interface: dict[str, Any]) -> None:
+        await self._invoke_api(lambda: self.router_api.kmwan.set_interface(interface))
+        await self.fetch_kmwan_status()
+
+    async def set_kmwan_sensitivity(self, sensitivity: dict[str, Any]) -> None:
+        await self._invoke_api(lambda: self.router_api.kmwan.set_sensitivity(sensitivity))
+        await self.fetch_kmwan_status()
+
+    async def fetch_upgrade_info(self) -> None:
+        if getattr(self, "_api", None) is None:
+            self._upgrade_info = {}
+            self._upgrade_config = {}
+            self._upgrade_status = {}
+            return
+        info = await self._invoke_optional_api(self.router_api.upgrade.check_firmware_online)
+        config = await self._invoke_optional_api(self.router_api.upgrade.get_config)
+        status = await self._invoke_optional_api(self.router_api.upgrade.get_online_upgrade_status)
+        self._upgrade_info = info or {}
+        self._upgrade_config = config or {}
+        self._upgrade_status = status or {}
+
+    async def upgrade_firmware(self, keep_config: bool, keep_package: bool) -> None:
+        params: dict[str, Any] = {
+            "keep_config": keep_config,
+            "keep_package": keep_package,
+        }
+        for key, aliases in {
+            "url": ("url", "download_url", "downloadUrl", "firmware_url"),
+            "id": ("id", "upgrade_id", "version_id"),
+            "size": ("size", "download_size"),
+            "sha256": ("sha256", "sha-256"),
+        }.items():
+            value = next(
+                (
+                    self._upgrade_info.get(alias)
+                    for alias in aliases
+                    if self._upgrade_info.get(alias) is not None
+                ),
+                None,
+            )
+            if value is not None:
+                params[key] = value
+        if "url" not in params or "id" not in params:
+            raise ValueError("Firmware download URL is unavailable")
+        await self._invoke_api(lambda: self.router_api.upgrade.upgrade_online(params))
+        await self.fetch_upgrade_info()
 
     async def fetch_firewall_rules(self) -> None:
         response = await self._invoke_optional_api(self.router_api.firewall.get_rule_list)
@@ -1354,6 +1436,8 @@ class GLinetHub(DataUpdateCoordinator[None]):
     def apply_option_updates(self, new_options: dict[str, Any]) -> bool:
         self._options.update(new_options)
         self._settings = dict(self._entry.data) | new_options
+        scan_seconds = int(self._settings.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+        self.update_interval = timedelta(seconds=scan_seconds)
         return True
 
     @property
@@ -1408,6 +1492,18 @@ class GLinetHub(DataUpdateCoordinator[None]):
     @property
     def firmware_version(self) -> str:
         return self._sw_version
+
+    @property
+    def upgrade_info(self) -> dict[str, Any]:
+        return self._upgrade_info
+
+    @property
+    def upgrade_config(self) -> dict[str, Any]:
+        return self._upgrade_config
+
+    @property
+    def upgrade_status(self) -> dict[str, Any]:
+        return self._upgrade_status
 
     @property
     def tracked_devices(self) -> dict[str, ClientDeviceInfo]:
