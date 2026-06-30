@@ -7,6 +7,7 @@ from .firewall import FirewallModule
 from .led import LedModule
 from .macclone import MacCloneModule
 from .mcu import McuModule
+from .mwan3 import Mwan3Module
 from .modem import ModemModule
 from .ovpn_client import OvpnClientModule
 from .ovpn_server import OvpnServerModule
@@ -29,6 +30,7 @@ __all__ = [
     "LedModule",
     "MacCloneModule",
     "McuModule",
+    "Mwan3Module",
     "ModemModule",
     "OvpnClientModule",
     "OvpnServerModule",

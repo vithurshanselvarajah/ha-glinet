@@ -568,6 +568,22 @@ class GLinetHub(DataUpdateCoordinator[None]):
         response = await self._invoke_optional_api(self.router_api.system.get_kmwan_status)
         self._kmwan_status = response or {}
 
+    async def get_mwan3_config(self) -> dict[str, Any]:
+        response = await self._invoke_optional_api(self.router_api.mwan3.get_config)
+        return response or {}
+
+    async def get_mwan3_status(self) -> dict[str, Any]:
+        response = await self._invoke_optional_api(self.router_api.mwan3.get_status)
+        return response or {}
+
+    async def set_mwan3_config(self, config: dict[str, Any]) -> None:
+        await self._invoke_api(lambda: self.router_api.mwan3.set_config(config))
+        await self.fetch_kmwan_status()
+
+    async def set_mwan3_interface(self, interface: dict[str, Any]) -> None:
+        await self._invoke_api(lambda: self.router_api.mwan3.set_interface(interface))
+        await self.fetch_kmwan_status()
+
     async def fetch_firewall_rules(self) -> None:
         response = await self._invoke_optional_api(self.router_api.firewall.get_rule_list)
         self._firewall_rules = (response or {}).get("res") or []

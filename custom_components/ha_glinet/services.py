@@ -12,6 +12,7 @@ from .const import (
     ATTR_BLOCK,
     ATTR_BODY,
     ATTR_BSSID,
+    ATTR_CONFIG,
     ATTR_CAPACITY,
     ATTR_CAPACITY_ENABLED,
     ATTR_CONTENT,
@@ -22,6 +23,7 @@ from .const import (
     ATTR_DFS,
     ATTR_DURATION,
     ATTR_ENABLED,
+    ATTR_INTERFACE,
     ATTR_GROUP_ID,
     ATTR_LAN,
     ATTR_MAIN,
@@ -57,6 +59,7 @@ from .const import (
     CONF_ENABLED_FEATURES,
     DOMAIN,
     FEATURE_FIREWALL,
+    FEATURE_MWAN3,
     FEATURE_MCU_BATTERY,
     FEATURE_MCU_OLED,
     FEATURE_OPTIONS,
@@ -75,6 +78,10 @@ from .const import (
     SERVICE_GET_MCU_OLED_CONFIG,
     SERVICE_GET_SAVED_NETWORKS,
     SERVICE_GET_SMS,
+    SERVICE_MWAN3_GET_CONFIG,
+    SERVICE_MWAN3_GET_STATUS,
+    SERVICE_MWAN3_SET_CONFIG,
+    SERVICE_MWAN3_SET_INTERFACE,
     SERVICE_PARENTAL_CONTROL_SET_FILTERING_MODE,
     SERVICE_PARENTAL_CONTROL_SET_GROUP_SCHEDULES,
     SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE,
@@ -125,6 +132,9 @@ async def async_register_services(hass: HomeAssistant) -> None:
     firewall_enabled = any(
         FEATURE_FIREWALL in _enabled_features_from_entry(entry) for entry in entries
     )
+    mwan3_enabled = any(
+        FEATURE_MWAN3 in _enabled_features_from_entry(entry) for entry in entries
+    )
     mcu_battery_enabled = any(
         FEATURE_MCU_BATTERY in _enabled_features_from_entry(entry) for entry in entries
     )
@@ -146,6 +156,26 @@ async def async_register_services(hass: HomeAssistant) -> None:
     async def async_set_fan_temperature(call: ServiceCall) -> None:
         hub = _get_hub(hass, call.data)
         await hub.set_fan_temperature(call.data[ATTR_TEMPERATURE])
+
+    async def async_mwan3_get_config(call: ServiceCall) -> ServiceResponse:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_MWAN3, SERVICE_MWAN3_GET_CONFIG)
+        return {"config": await hub.get_mwan3_config()}
+
+    async def async_mwan3_get_status(call: ServiceCall) -> ServiceResponse:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_MWAN3, SERVICE_MWAN3_GET_STATUS)
+        return {"status": await hub.get_mwan3_status()}
+
+    async def async_mwan3_set_config(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_MWAN3, SERVICE_MWAN3_SET_CONFIG)
+        await hub.set_mwan3_config(dict(call.data[ATTR_CONFIG]))
+
+    async def async_mwan3_set_interface(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        _ensure_feature_enabled(hub, FEATURE_MWAN3, SERVICE_MWAN3_SET_INTERFACE)
+        await hub.set_mwan3_interface(dict(call.data[ATTR_INTERFACE]))
 
     async def async_playground(call: ServiceCall) -> ServiceResponse:
         hub = _get_hub(hass, call.data)
@@ -598,6 +628,53 @@ async def async_register_services(hass: HomeAssistant) -> None:
             SERVICE_ADD_PORT_FORWARD,
             SERVICE_REMOVE_PORT_FORWARD,
             SERVICE_SET_DMZ,
+        ]:
+            if hass.services.has_service(DOMAIN, service):
+                hass.services.async_remove(DOMAIN, service)
+
+    if mwan3_enabled:
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_MWAN3_GET_CONFIG,
+            async_mwan3_get_config,
+            schema=vol.Schema({vol.Optional(CONF_MAC): cv.string}),
+            supports_response=SupportsResponse.ONLY,
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_MWAN3_GET_STATUS,
+            async_mwan3_get_status,
+            schema=vol.Schema({vol.Optional(CONF_MAC): cv.string}),
+            supports_response=SupportsResponse.ONLY,
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_MWAN3_SET_CONFIG,
+            async_mwan3_set_config,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Required(ATTR_CONFIG): object,
+                }
+            ),
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_MWAN3_SET_INTERFACE,
+            async_mwan3_set_interface,
+            schema=vol.Schema(
+                {
+                    vol.Optional(CONF_MAC): cv.string,
+                    vol.Required(ATTR_INTERFACE): object,
+                }
+            ),
+        )
+    else:
+        for service in [
+            SERVICE_MWAN3_GET_CONFIG,
+            SERVICE_MWAN3_GET_STATUS,
+            SERVICE_MWAN3_SET_CONFIG,
+            SERVICE_MWAN3_SET_INTERFACE,
         ]:
             if hass.services.has_service(DOMAIN, service):
                 hass.services.async_remove(DOMAIN, service)

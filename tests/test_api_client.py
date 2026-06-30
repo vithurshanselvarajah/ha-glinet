@@ -301,6 +301,32 @@ async def test_get_kmwan_status_uses_kmwan_endpoint() -> None:
     ]
 
 
+async def test_mwan3_methods_use_documented_payloads() -> None:
+    session = FakeSession(
+        [
+            {"result": {"mode": 1, "interfaces": []}},
+            {"result": {"interfaces": [{"interface": "wan", "status_v4": 0, "status_v6": 1}]}},
+            {"result": None},
+            {"result": None},
+        ]
+    )
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    assert await client.mwan3.get_config() == {"mode": 1, "interfaces": []}
+    assert await client.mwan3.get_status() == {
+        "interfaces": [{"interface": "wan", "status_v4": 0, "status_v6": 1}]
+    }
+    assert await client.mwan3.set_config({"mode": 0, "flush_track": False}) == {}
+    assert await client.mwan3.set_interface({"interface": "wan", "enable_check": True}) == {}
+
+    assert [request["json"]["params"] for request in session.requests] == [
+        ["sid-1", "mwan3", "get_config", {}],
+        ["sid-1", "mwan3", "get_status", {}],
+        ["sid-1", "mwan3", "set_config", {"mode": 0, "flush_track": False}],
+        ["sid-1", "mwan3", "set_interface", {"interface": "wan", "enable_check": True}],
+    ]
+
+
 async def test_get_modem_info_extracts_nested_fields() -> None:
     session = FakeSession(
         [
