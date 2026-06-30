@@ -28,6 +28,7 @@ from .modules import (
     LedModule,
     MacCloneModule,
     McuModule,
+    KmwanModule,
     Mwan3Module,
     ModemModule,
     OvpnClientModule,
@@ -99,6 +100,7 @@ class GLinetApiClient:
         self.system = SystemModule(self)
         self.modem = ModemModule(self)
         self.mcu = McuModule(self)
+        self.kmwan = KmwanModule(self)
         self.mwan3 = Mwan3Module(self)
         self.wifi = WifiModule(self)
         self.zerotier = ZeroTierModule(self)

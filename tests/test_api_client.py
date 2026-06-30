@@ -301,6 +301,40 @@ async def test_get_kmwan_status_uses_kmwan_endpoint() -> None:
     ]
 
 
+async def test_kmwan_methods_use_documented_payloads() -> None:
+    session = FakeSession(
+        [
+            {"result": {"mode": 1, "interfaces": []}},
+            {"result": {"interfaces": [{"interface": "wan", "status_v4": 0, "status_v6": 1}]}},
+            {"result": None},
+            {"result": None},
+            {"result": None},
+        ]
+    )
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    assert await client.kmwan.get_config() == {"mode": 1, "interfaces": []}
+    assert await client.kmwan.get_status() == {
+        "interfaces": [{"interface": "wan", "status_v4": 0, "status_v6": 1}]
+    }
+    assert await client.kmwan.set_config({"mode": 0, "interfaces": []}) == {}
+    assert await client.kmwan.set_interface({"interface": "wan", "enable_check": True}) == {}
+    assert await client.kmwan.set_sensitivity({"sensitivity": {"level": "custom", "val": 5}}) == {}
+
+    assert [request["json"]["params"] for request in session.requests] == [
+        ["sid-1", "kmwan", "get_config", {}],
+        ["sid-1", "kmwan", "get_status", {}],
+        ["sid-1", "kmwan", "set_config", {"mode": 0, "interfaces": []}],
+        ["sid-1", "kmwan", "set_interface", {"interface": "wan", "enable_check": True}],
+        [
+            "sid-1",
+            "kmwan",
+            "set_sensitivity",
+            {"sensitivity": {"level": "custom", "val": 5}},
+        ],
+    ]
+
+
 async def test_mwan3_methods_use_documented_payloads() -> None:
     session = FakeSession(
         [

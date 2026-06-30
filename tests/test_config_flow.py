@@ -13,6 +13,7 @@ from custom_components.ha_glinet.config_flow import (
 from custom_components.ha_glinet.const import (
     CONF_WAN_STATUS_MONITORS,
     DEFAULT_USERNAME,
+    FEATURE_KMWAN,
     FEATURE_REPEATER,
     FEATURE_MWAN3,
     FEATURE_WG_CLIENT,
@@ -80,6 +81,7 @@ async def test_process_user_input_defaults_enabled_features_when_missing(monkeyp
 
     assert result["data"][CONF_ENABLED_FEATURES] == DEFAULT_ENABLED_FEATURES
     assert FEATURE_WG_CLIENT in result["data"][CONF_ENABLED_FEATURES]
+    assert FEATURE_KMWAN not in result["data"][CONF_ENABLED_FEATURES]
     assert FEATURE_MWAN3 not in result["data"][CONF_ENABLED_FEATURES]
     assert result["data"][CONF_WAN_STATUS_MONITORS] == ["wan:ipv4", "wan:ipv6"]
 

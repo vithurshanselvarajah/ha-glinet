@@ -15,6 +15,7 @@ from custom_components.ha_glinet.const import (
     ATTR_DFS,
     ATTR_ENABLED,
     ATTR_INTERFACE,
+    ATTR_SENSITIVITY,
     ATTR_GROUP_ID,
     ATTR_METHOD,
     ATTR_MODE,
@@ -32,6 +33,7 @@ from custom_components.ha_glinet.const import (
     CONF_ENABLED_FEATURES,
     DOMAIN,
     FEATURE_FIREWALL,
+    FEATURE_KMWAN,
     FEATURE_MWAN3,
     FEATURE_PARENTAL_CONTROL,
     FEATURE_PLAYGROUND,
@@ -45,6 +47,11 @@ from custom_components.ha_glinet.const import (
     SERVICE_DISCONNECT_WIFI,
     SERVICE_GET_SAVED_NETWORKS,
     SERVICE_GET_SMS,
+    SERVICE_KMWAN_GET_CONFIG,
+    SERVICE_KMWAN_GET_STATUS,
+    SERVICE_KMWAN_SET_CONFIG,
+    SERVICE_KMWAN_SET_INTERFACE,
+    SERVICE_KMWAN_SET_SENSITIVITY,
     SERVICE_MWAN3_GET_CONFIG,
     SERVICE_MWAN3_GET_STATUS,
     SERVICE_MWAN3_SET_CONFIG,
@@ -259,6 +266,92 @@ async def test_mwan3_service_handlers_call_hub_methods() -> None:
         ("get_status", None),
         ("set_config", {"mode": 0, "interfaces": []}),
         ("set_interface", {"interface": "wan", "enable_check": True}),
+    ]
+
+
+async def test_register_services_records_kmwan_services_when_enabled() -> None:
+    entry = DummyEntry(data={CONF_ENABLED_FEATURES: [FEATURE_KMWAN]})
+    hass = DummyHass([entry])
+
+    await async_register_services(hass)
+
+    registered = {service for service, _ in hass.services.registrations}
+    assert SERVICE_KMWAN_GET_CONFIG in registered
+    assert SERVICE_KMWAN_GET_STATUS in registered
+    assert SERVICE_KMWAN_SET_CONFIG in registered
+    assert SERVICE_KMWAN_SET_INTERFACE in registered
+    assert SERVICE_KMWAN_SET_SENSITIVITY in registered
+
+
+async def test_register_services_removes_kmwan_services_when_feature_is_disabled() -> None:
+    entry = DummyEntry(data={CONF_ENABLED_FEATURES: [FEATURE_KMWAN]})
+    hass = DummyHass([entry])
+    await async_register_services(hass)
+    assert hass.services.has_service(DOMAIN, SERVICE_KMWAN_GET_CONFIG)
+
+    entry.data[CONF_ENABLED_FEATURES] = []
+    await async_register_services(hass)
+
+    assert not hass.services.has_service(DOMAIN, SERVICE_KMWAN_GET_CONFIG)
+    assert not hass.services.has_service(DOMAIN, SERVICE_KMWAN_GET_STATUS)
+    assert not hass.services.has_service(DOMAIN, SERVICE_KMWAN_SET_CONFIG)
+    assert not hass.services.has_service(DOMAIN, SERVICE_KMWAN_SET_INTERFACE)
+    assert not hass.services.has_service(DOMAIN, SERVICE_KMWAN_SET_SENSITIVITY)
+
+
+async def test_kmwan_service_handlers_call_hub_methods() -> None:
+    calls: list[tuple[str, Any]] = []
+
+    class Hub:
+        device_mac = "00:11:22:33:44:55"
+
+        def feature_enabled(self, feature: str) -> bool:
+            return feature == FEATURE_KMWAN
+
+        async def get_kmwan_config(self) -> dict[str, Any]:
+            calls.append(("get_config", None))
+            return {"mode": 1}
+
+        async def get_kmwan_status(self) -> dict[str, Any]:
+            calls.append(("get_status", None))
+            return {"interfaces": []}
+
+        async def set_kmwan_config(self, config: dict[str, Any]) -> None:
+            calls.append(("set_config", config))
+
+        async def set_kmwan_interface(self, interface: dict[str, Any]) -> None:
+            calls.append(("set_interface", interface))
+
+        async def set_kmwan_sensitivity(self, sensitivity: dict[str, Any]) -> None:
+            calls.append(("set_sensitivity", sensitivity))
+
+    entry = DummyEntry(data={CONF_ENABLED_FEATURES: [FEATURE_KMWAN]})
+    entry.runtime_data = Hub()
+    hass = DummyHass([entry])
+    await async_register_services(hass)
+
+    assert await hass.services.handlers[SERVICE_KMWAN_GET_CONFIG](SimpleNamespace(data={})) == {
+        "config": {"mode": 1}
+    }
+    assert await hass.services.handlers[SERVICE_KMWAN_GET_STATUS](SimpleNamespace(data={})) == {
+        "status": {"interfaces": []}
+    }
+    await hass.services.handlers[SERVICE_KMWAN_SET_CONFIG](
+        SimpleNamespace(data={ATTR_CONFIG: {"mode": 0, "interfaces": []}})
+    )
+    await hass.services.handlers[SERVICE_KMWAN_SET_INTERFACE](
+        SimpleNamespace(data={ATTR_INTERFACE: {"interface": "wan", "enable_check": True}})
+    )
+    await hass.services.handlers[SERVICE_KMWAN_SET_SENSITIVITY](
+        SimpleNamespace(data={ATTR_SENSITIVITY: {"level": "custom", "val": 5}})
+    )
+
+    assert calls == [
+        ("get_config", None),
+        ("get_status", None),
+        ("set_config", {"mode": 0, "interfaces": []}),
+        ("set_interface", {"interface": "wan", "enable_check": True}),
+        ("set_sensitivity", {"level": "custom", "val": 5}),
     ]
 
 
