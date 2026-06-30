@@ -13,6 +13,8 @@ For full parameter details, visit the optional feature page for each service gro
 | `add_firewall_rule`, `remove_firewall_rule`, `get_firewall_rules`, `add_port_forward`, `remove_port_forward`, `set_dmz` | [Firewall](https://github.com/vithurshanselvarajah/ha-glinet/wiki/firewall) |
 | `get_mcu_battery_config`, `set_mcu_battery_config` | [MCU Battery](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-battery) |
 | `get_mcu_oled_config`, `set_mcu_oled_config` | [MCU OLED](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-oled) |
+| `kmwan_get_config`, `kmwan_get_status`, `kmwan_set_config`, `kmwan_set_interface`, `kmwan_set_sensitivity` | [KMWAN](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api) |
+| `mwan3_get_config`, `mwan3_get_status`, `mwan3_set_config`, `mwan3_set_interface` | [MWAN3](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api) |
 | `parental_control_set_temporary_override`, `parental_control_set_filtering_mode`, `parental_control_update_signatures`, `access_control_set_mode`, `access_control_set_device_block`, `parental_control_set_group_schedules` | [Parental & Access Control](https://github.com/vithurshanselvarajah/ha-glinet/wiki/parental-control) |
 | `playground` | [API Playground](https://github.com/vithurshanselvarajah/ha-glinet/wiki/playground) |
 
@@ -56,4 +58,3 @@ All services accept an optional **`mac`** parameter. When multiple GL.iNet route
 | --- | --- |
 | `async_register_services` | Entry point during integration setup to register all domain services. |
 | `_get_hub` | Helper to find the active `GLinetHub` instance matching the provided MAC address. |
-

@@ -14,8 +14,8 @@ from custom_components.ha_glinet.const import (
     CONF_WAN_STATUS_MONITORS,
     DEFAULT_USERNAME,
     FEATURE_KMWAN,
-    FEATURE_REPEATER,
     FEATURE_MWAN3,
+    FEATURE_REPEATER,
     FEATURE_WG_CLIENT,
 )
 

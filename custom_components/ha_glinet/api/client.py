@@ -25,18 +25,19 @@ from .modules import (
     DiagModule,
     FanModule,
     FirewallModule,
+    KmwanModule,
     LedModule,
     MacCloneModule,
     McuModule,
-    KmwanModule,
-    Mwan3Module,
     ModemModule,
+    Mwan3Module,
     OvpnClientModule,
     OvpnServerModule,
     ParentalControlModule,
     RepeaterModule,
     SystemModule,
     TailscaleModule,
+    UpgradeModule,
     WgClientModule,
     WgServerModule,
     WifiModule,
@@ -111,6 +112,7 @@ class GLinetApiClient:
         self.ovpn_server = OvpnServerModule(self)
         self.tailscale = TailscaleModule(self)
         self.repeater = RepeaterModule(self)
+        self.upgrade = UpgradeModule(self)
         self.fan = FanModule(self)
         self.firewall = FirewallModule(self)
         self.led = LedModule(self)

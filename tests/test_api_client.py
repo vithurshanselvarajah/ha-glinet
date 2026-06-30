@@ -335,6 +335,65 @@ async def test_kmwan_methods_use_documented_payloads() -> None:
     ]
 
 
+async def test_upgrade_methods_use_documented_payloads() -> None:
+    session = FakeSession(
+        [
+            {
+                "result": {
+                    "current_version": "4.0.0",
+                    "version_new": "4.0.1",
+                    "release_note": "Fixes and improvements",
+                }
+            },
+            {"result": {"prompt": True, "upgrade_enable": False}},
+            {"result": {"status": 1, "status_msg": "downloading", "percent": 42.5}},
+            {"result": {"need_reboot_flag": True}},
+        ]
+    )
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    assert await client.upgrade.check_firmware_online() == {
+        "current_version": "4.0.0",
+        "version_new": "4.0.1",
+        "release_note": "Fixes and improvements",
+    }
+    assert await client.upgrade.get_config() == {"prompt": True, "upgrade_enable": False}
+    assert await client.upgrade.get_online_upgrade_status() == {
+        "status": 1,
+        "status_msg": "downloading",
+        "percent": 42.5,
+    }
+    assert await client.upgrade.upgrade_online(
+        {
+            "keep_config": True,
+            "keep_package": False,
+            "url": "http://example.invalid/fw.bin",
+            "id": "fw-1",
+            "size": 123,
+            "sha256": "abc123",
+        }
+    ) == {"need_reboot_flag": True}
+
+    assert [request["json"]["params"] for request in session.requests] == [
+        ["sid-1", "upgrade", "check_firmware_online", {}],
+        ["sid-1", "upgrade", "get_config", {}],
+        ["sid-1", "upgrade", "get_online_upgrade_status", {}],
+        [
+            "sid-1",
+            "upgrade",
+            "upgrade_online",
+            {
+                "keep_config": True,
+                "keep_package": False,
+                "url": "http://example.invalid/fw.bin",
+                "id": "fw-1",
+                "size": 123,
+                "sha256": "abc123",
+            },
+        ],
+    ]
+
+
 async def test_mwan3_methods_use_documented_payloads() -> None:
     session = FakeSession(
         [

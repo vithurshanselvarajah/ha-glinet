@@ -138,6 +138,9 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._ovpn_server_users: list[dict[str, Any]] = []
         self._ovpn_raw_clients: dict[str, dict[str, Any]] = {}
         self._ovpn_client_status: dict[str, Any] = {}
+        self._upgrade_info: dict[str, Any] = {}
+        self._upgrade_config: dict[str, Any] = {}
+        self._upgrade_status: dict[str, Any] = {}
         self._zerotier_status: ZeroTierStatus | None = None
         self._led_enabled: bool | None = None
         self._adguard_status: AdGuardStatus | None = None
@@ -394,6 +397,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         tasks: list[Awaitable[Any]] = [
             self.fetch_system_status(),
             self.fetch_kmwan_status(),
+            self.fetch_upgrade_info(),
             self.fetch_connected_devices(),
             self.fetch_wifi_interfaces(),
             self.fetch_fan_status(),
@@ -603,6 +607,45 @@ class GLinetHub(DataUpdateCoordinator[None]):
     async def set_kmwan_sensitivity(self, sensitivity: dict[str, Any]) -> None:
         await self._invoke_api(lambda: self.router_api.kmwan.set_sensitivity(sensitivity))
         await self.fetch_kmwan_status()
+
+    async def fetch_upgrade_info(self) -> None:
+        if getattr(self, "_api", None) is None:
+            self._upgrade_info = {}
+            self._upgrade_config = {}
+            self._upgrade_status = {}
+            return
+        info = await self._invoke_optional_api(self.router_api.upgrade.check_firmware_online)
+        config = await self._invoke_optional_api(self.router_api.upgrade.get_config)
+        status = await self._invoke_optional_api(self.router_api.upgrade.get_online_upgrade_status)
+        self._upgrade_info = info or {}
+        self._upgrade_config = config or {}
+        self._upgrade_status = status or {}
+
+    async def upgrade_firmware(self, keep_config: bool, keep_package: bool) -> None:
+        params: dict[str, Any] = {
+            "keep_config": keep_config,
+            "keep_package": keep_package,
+        }
+        for key, aliases in {
+            "url": ("url", "download_url", "downloadUrl", "firmware_url"),
+            "id": ("id", "upgrade_id", "version_id"),
+            "size": ("size", "download_size"),
+            "sha256": ("sha256", "sha-256"),
+        }.items():
+            value = next(
+                (
+                    self._upgrade_info.get(alias)
+                    for alias in aliases
+                    if self._upgrade_info.get(alias) is not None
+                ),
+                None,
+            )
+            if value is not None:
+                params[key] = value
+        if "url" not in params or "id" not in params:
+            raise ValueError("Firmware download URL is unavailable")
+        await self._invoke_api(lambda: self.router_api.upgrade.upgrade_online(params))
+        await self.fetch_upgrade_info()
 
     async def fetch_firewall_rules(self) -> None:
         response = await self._invoke_optional_api(self.router_api.firewall.get_rule_list)
@@ -1449,6 +1492,18 @@ class GLinetHub(DataUpdateCoordinator[None]):
     @property
     def firmware_version(self) -> str:
         return self._sw_version
+
+    @property
+    def upgrade_info(self) -> dict[str, Any]:
+        return self._upgrade_info
+
+    @property
+    def upgrade_config(self) -> dict[str, Any]:
+        return self._upgrade_config
+
+    @property
+    def upgrade_status(self) -> dict[str, Any]:
+        return self._upgrade_status
 
     @property
     def tracked_devices(self) -> dict[str, ClientDeviceInfo]:

@@ -1,0 +1,128 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from homeassistant.components.update import (
+    UpdateDeviceClass,
+    UpdateEntity,
+    UpdateEntityFeature,
+)
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from .hub import GLinetHub
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+
+async def async_setup_entry(
+    _: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    hub: GLinetHub = entry.runtime_data
+    async_add_entities([GLinetFirmwareUpdateEntity(hub)], True)
+
+
+def _short_release_summary(release_notes: str | None) -> str | None:
+    if not release_notes:
+        return None
+    lines = [line.strip() for line in release_notes.splitlines() if line.strip()]
+    if not lines:
+        return None
+    summary = lines[0]
+    return summary[:255]
+
+
+class GLinetFirmwareUpdateEntity(CoordinatorEntity[GLinetHub], UpdateEntity):
+    _attr_has_entity_name = True
+    _attr_device_class = UpdateDeviceClass.FIRMWARE
+    _attr_icon = "mdi:package-up"
+    _attr_name = "Firmware"
+
+    def __init__(self, hub: GLinetHub) -> None:
+        super().__init__(hub)
+        self._hub = hub
+        self._attr_device_info = hub.device_info
+
+    @property
+    def unique_id(self) -> str:
+        return f"glinet_update/{self._hub.device_mac}/firmware"
+
+    @property
+    def title(self) -> str:
+        return "Firmware"
+
+    @property
+    def installed_version(self) -> str | None:
+        return self._hub.firmware_version or None
+
+    @property
+    def latest_version(self) -> str | None:
+        info = self._hub.upgrade_info
+        latest = info.get("version_new") or info.get("new_version")
+        if latest:
+            return str(latest)
+        return self.installed_version
+
+    @property
+    def release_notes(self) -> str | None:
+        info = self._hub.upgrade_info
+        notes = info.get("release_note") or info.get("release_notes")
+        return str(notes) if notes else None
+
+    @property
+    def release_summary(self) -> str | None:
+        return _short_release_summary(self.release_notes)
+
+    @property
+    def auto_update(self) -> bool:
+        return bool(self._hub.upgrade_config.get("upgrade_enable"))
+
+    @property
+    def supported_features(self) -> UpdateEntityFeature:
+        features = UpdateEntityFeature.RELEASE_NOTES
+        if self._firmware_install_payload() is not None:
+            features |= UpdateEntityFeature.INSTALL
+        return features
+
+    @property
+    def in_progress(self) -> bool:
+        status = self._hub.upgrade_status.get("status")
+        return status in {1, 6}
+
+    @property
+    def update_percentage(self) -> int | None:
+        percent = self._hub.upgrade_status.get("percent")
+        if percent is None:
+            return None
+        try:
+            return int(float(percent))
+        except (TypeError, ValueError):
+            return None
+
+    def _firmware_install_payload(self) -> dict[str, Any] | None:
+        info = self._hub.upgrade_info
+        payload: dict[str, Any] = {
+            "keep_config": True,
+            "keep_package": True,
+        }
+        for key, aliases in {
+            "url": ("url", "download_url", "downloadUrl", "firmware_url"),
+            "id": ("id", "upgrade_id", "version_id"),
+            "size": ("size", "download_size"),
+            "sha256": ("sha256", "sha-256"),
+        }.items():
+            value = next(
+                (info.get(alias) for alias in aliases if info.get(alias) is not None),
+                None,
+            )
+            if value is not None:
+                payload[key] = value
+        if "url" not in payload or "id" not in payload:
+            return None
+        return payload
+
+    async def async_install(self, version: str, backup: bool, **kwargs: Any) -> None:
+        keep_package = bool(kwargs.get("keep_package", True))
+        await self._hub.upgrade_firmware(backup, keep_package)

@@ -8,7 +8,15 @@ if TYPE_CHECKING:
 
     from .hub import GLinetHub
 
-PLATFORMS = ["binary_sensor", "button", "device_tracker", "select", "sensor", "switch"]
+PLATFORMS = [
+    "binary_sensor",
+    "button",
+    "device_tracker",
+    "select",
+    "sensor",
+    "switch",
+    "update",
+]
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

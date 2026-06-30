@@ -28,6 +28,7 @@ The integration connects to your router over the local network using the GL.iNet
 * **Reliable Connection**: Keeps your login session alive automatically and retries if the connection drops.
 * **Toggles**: Control the router's system LED, reboot it, or turn individual WiFi bands on and off.
 * **Diagnostics**: Monitors CPU temperature, system load, memory, flash usage, uptime, and lets you download a sanitized diagnostic snapshot.
+* **Firmware Updates**: Exposes the router firmware through Home Assistant's native update entity, including release notes when available.
 
 ### Connected Devices & Traffic
 * **Presence Tracking**: Tracks connected clients as Home Assistant device trackers (and automatically cleans up stale entries).
@@ -45,6 +46,7 @@ The integration connects to your router over the local network using the GL.iNet
 * **Repeater Mode**: Scan for nearby WiFi networks, connect (open or secured), disconnect, save networks, and track the current repeater status.
 * **Smart Fan**: Monitor fan status, speed (RPM), and set temperature thresholds.
 * **Firewall Controls**: Manage DMZ, port forwarding, custom rules, and WAN access.
+* **WAN Policy**: Optional KMWAN and MWAN3 actions for reading and updating multi-WAN configuration without adding cluttered entities.
 
 During setup, you can select which optional features (like VPN, Cellular, Repeater, SMS, and Firewall) to enable. Unsupported features on your router model will be skipped gracefully.
 
@@ -71,7 +73,7 @@ During setup, you can select which optional features (like VPN, Cellular, Repeat
 2. Click **Add Integration** in the bottom-right corner.
 3. Search for **GL-INet** and select it.
 4. Enter your router's URL (default: `http://192.168.8.1`) and admin password.
-5. Select setup options like **Consider Home** (for trackers), **Update Interval**, and select which optional features to enable.
+5. Select setup options like **Consider Home** (for trackers), **Update Interval**, and select which optional features to enable, including WAN policy controls if you want them.
 
 ---
 
