@@ -41,6 +41,7 @@ from .const import (
     CONF_ADD_ALL_DEVICES,
     CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
+    CONF_SCAN_INTERVAL,
     CONF_WAN_STATUS_MONITORS,
     DEFAULT_USERNAME,
     DOMAIN,
@@ -87,17 +88,19 @@ if TYPE_CHECKING:
     from homeassistant.helpers.entity_registry import RegistryEntry
 
 _LOGGER = logging.getLogger(__name__)
-SCAN_INTERVAL = timedelta(seconds=30)
+DEFAULT_SCAN_INTERVAL = 30
 T = TypeVar("T")
 
 
 class GLinetHub(DataUpdateCoordinator[None]):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+        settings = dict(entry.data) | dict(entry.options)
+        scan_seconds = int(settings.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=SCAN_INTERVAL,
+            update_interval=timedelta(seconds=scan_seconds),
         )
         self._entry = entry
         self._options = dict(entry.options)
@@ -1354,6 +1357,8 @@ class GLinetHub(DataUpdateCoordinator[None]):
     def apply_option_updates(self, new_options: dict[str, Any]) -> bool:
         self._options.update(new_options)
         self._settings = dict(self._entry.data) | new_options
+        scan_seconds = int(self._settings.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+        self.update_interval = timedelta(seconds=scan_seconds)
         return True
 
     @property
