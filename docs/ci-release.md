@@ -4,7 +4,7 @@ The repository has two GitHub Actions workflows.
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every push, pull request, manual dispatch, and reusable workflow call.
+`.github/workflows/ci.yml` runs on pull requests and as a reusable workflow call.
 
 It performs:
 
@@ -16,13 +16,12 @@ It performs:
 
 ## Release
 
-`.github/workflows/release.yml` runs on every push but only publishes when the commit message or manual input requests it.
+`.github/workflows/release.yml` runs only on `main` and publishes releases when a stable release is requested.
 
 Release triggers:
 
 - Stable release: push to `main` with `release:` anywhere in the head commit message.
-- Beta release: push to any branch with `beta:` anywhere in the head commit message.
-- Manual run: choose `release` or `beta` from the workflow dispatch input.
+- Manual run: trigger workflow dispatch on `main`.
 
 The workflow reads the version from `custom_components/ha_glinet/manifest.json`.
 
@@ -30,12 +29,6 @@ Stable releases create:
 
 ```text
 v<manifest-version>
-```
-
-Beta releases create:
-
-```text
-v<manifest-version>-beta.<github-run-number>
 ```
 
 The release job runs CI first, builds a HACS-friendly zip containing `custom_components/ha_glinet`, asks GitHub Models to generate release notes via `actions/ai-inference`, then publishes a GitHub release. If GitHub Models is not available, the workflow falls back to commit-based release notes.

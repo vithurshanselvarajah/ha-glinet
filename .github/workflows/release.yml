@@ -3,17 +3,8 @@ name: Release
 on:
   push:
     branches:
-      - "**"
+      - main
   workflow_dispatch:
-    inputs:
-      channel:
-        description: Release channel
-        required: true
-        default: beta
-        type: choice
-        options:
-          - beta
-          - release
 
 permissions:
   contents: write
@@ -25,7 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_release: ${{ steps.mode.outputs.should_release }}
-      channel: ${{ steps.mode.outputs.channel }}
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
       artifact_name: ${{ steps.version.outputs.artifact_name }}
@@ -36,28 +26,20 @@ jobs:
         env:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message || '' }}
           EVENT_NAME: ${{ github.event_name }}
-          INPUT_CHANNEL: ${{ inputs.channel || '' }}
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
 
           should_release=false
-          channel=
           lc_message="${COMMIT_MESSAGE,,}"
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             should_release=true
-            channel="$INPUT_CHANNEL"
           elif [[ "$lc_message" == *"release:"* && "$REF_NAME" == "main" ]]; then
             should_release=true
-            channel=release
-          elif [[ "$lc_message" == *"beta:"* ]]; then
-            should_release=true
-            channel=beta
           fi
 
           echo "should_release=$should_release" >> "$GITHUB_OUTPUT"
-          echo "channel=$channel" >> "$GITHUB_OUTPUT"
 
       - name: Check out repository
         if: steps.mode.outputs.should_release == 'true'
@@ -69,7 +51,6 @@ jobs:
         if: steps.mode.outputs.should_release == 'true'
         id: version
         env:
-          CHANNEL: ${{ steps.mode.outputs.channel }}
           RUN_NUMBER: ${{ github.run_number }}
           SHA_SHORT: ${{ github.sha }}
         run: |
@@ -82,13 +63,8 @@ jobs:
           PY
           )"
 
-          if [[ "$CHANNEL" == "release" ]]; then
-            tag="v${version}"
-            artifact_name="ha_glinet-${version}.zip"
-          else
-            tag="v${version}-beta.${RUN_NUMBER}"
-            artifact_name="ha_glinet-${version}-beta.${RUN_NUMBER}.zip"
-          fi
+          tag="v${version}"
+          artifact_name="ha_glinet-${version}.zip"
 
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -103,7 +79,7 @@ jobs:
       contents: read
 
   release:
-    name: Publish ${{ needs.prepare.outputs.channel }}
+    name: Publish release
     needs:
       - prepare
       - test
@@ -207,7 +183,7 @@ jobs:
           prompt: |
             Create release notes for ha-glinet.
 
-            Channel: ${{ needs.prepare.outputs.channel }}
+            Channel: release
             Version: ${{ needs.prepare.outputs.version }}
             Tag: ${{ needs.prepare.outputs.tag }}
 
@@ -217,7 +193,6 @@ jobs:
       - name: Write release notes
         env:
           AI_NOTES_FILE: ${{ steps.ai_changelog.outputs.response-file }}
-          CHANNEL: ${{ needs.prepare.outputs.channel }}
           VERSION: ${{ needs.prepare.outputs.version }}
           TAG: ${{ needs.prepare.outputs.tag }}
           COMMITS: ${{ steps.commits.outputs.commits }}
@@ -228,7 +203,7 @@ jobs:
           {
             echo "# ha-glinet ${VERSION}"
             echo
-            echo "Channel: ${CHANNEL}"
+            echo "Channel: release"
             echo
             if [[ -n "${AI_NOTES_FILE:-}" && -s "$AI_NOTES_FILE" ]]; then
               cat "$AI_NOTES_FILE"
@@ -257,20 +232,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.prepare.outputs.tag }}
-          CHANNEL: ${{ needs.prepare.outputs.channel }}
           ARTIFACT_NAME: ${{ needs.prepare.outputs.artifact_name }}
         run: |
           set -euo pipefail
 
-          prerelease_flag=
           title="ha-glinet ${TAG}"
-          if [[ "$CHANNEL" == "beta" ]]; then
-            prerelease_flag="--prerelease"
-            title="ha-glinet ${TAG} beta"
-          fi
 
           gh release create "$TAG" \
             "dist/${ARTIFACT_NAME}" \
             --title "$title" \
-            --notes-file release-notes.md \
-            $prerelease_flag
+            --notes-file release-notes.md
