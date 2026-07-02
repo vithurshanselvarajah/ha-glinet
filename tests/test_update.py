@@ -19,6 +19,7 @@ class FakeHub:
         self.device_mac = "00:11:22:33:44:55"
         self.device_info = {}
         self.firmware_version = "4.0.0"
+        self._model = "x3000"
         self.upgrade_info = info
         self.upgrade_config = config
         self.upgrade_status = status
@@ -39,7 +40,8 @@ def _make_entity(
 def test_update_entity_exposes_release_notes_and_install_when_download_url_exists() -> None:
     entity = _make_entity(
         {
-            "version_new": "4.0.1",
+            "current_version": "4.0.1",
+            "version_new": "4.0.0",
             "release_note": "### Fixes\n* Better stability",
             "url": "http://example.invalid/fw.bin",
             "id": "fw-1",
@@ -54,8 +56,8 @@ def test_update_entity_exposes_release_notes_and_install_when_download_url_exist
     assert entity.title == "Firmware"
     assert entity.installed_version == "4.0.0"
     assert entity.latest_version == "4.0.1"
-    assert entity.release_summary == "### Fixes"
-    assert entity.release_notes == "### Fixes\n* Better stability"
+    assert entity.release_summary == "https://dl.gl-inet.com/router/x3000/stable"
+    assert entity.release_notes == "https://dl.gl-inet.com/router/x3000/stable"
     assert entity.auto_update is True
     assert entity.in_progress is True
     assert entity.update_percentage == 42
