@@ -405,11 +405,12 @@ class GLinetHub(DataUpdateCoordinator[None]):
         ]
         now = utcnow()
         run_upgrade_check = False
-        if self._last_upgrade_check is None:
+        last_upgrade_check = getattr(self, "_last_upgrade_check", None)
+        if last_upgrade_check is None:
             run_upgrade_check = True
         else:
             try:
-                if (now - self._last_upgrade_check).total_seconds() >= 86400:
+                if (now - last_upgrade_check).total_seconds() >= 86400:
                     run_upgrade_check = True
             except (TypeError, AttributeError):
                 run_upgrade_check = True
