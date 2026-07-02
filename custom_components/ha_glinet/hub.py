@@ -411,7 +411,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             try:
                 if (now - self._last_upgrade_check).total_seconds() >= 86400:
                     run_upgrade_check = True
-            except Exception:
+            except (TypeError, AttributeError):
                 run_upgrade_check = True
         if run_upgrade_check:
             tasks.insert(2, self.fetch_upgrade_info())

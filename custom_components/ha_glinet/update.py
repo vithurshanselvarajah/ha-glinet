@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+
 from homeassistant.components.update import (
     UpdateDeviceClass,
     UpdateEntity,
