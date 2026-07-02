@@ -141,6 +141,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._upgrade_info: dict[str, Any] = {}
         self._upgrade_config: dict[str, Any] = {}
         self._upgrade_status: dict[str, Any] = {}
+        self._last_upgrade_check: datetime | None = None
         self._zerotier_status: ZeroTierStatus | None = None
         self._led_enabled: bool | None = None
         self._adguard_status: AdGuardStatus | None = None
@@ -397,12 +398,23 @@ class GLinetHub(DataUpdateCoordinator[None]):
         tasks: list[Awaitable[Any]] = [
             self.fetch_system_status(),
             self.fetch_kmwan_status(),
-            self.fetch_upgrade_info(),
             self.fetch_connected_devices(),
             self.fetch_wifi_interfaces(),
             self.fetch_fan_status(),
             self.fetch_led_status(),
         ]
+        now = utcnow()
+        run_upgrade_check = False
+        if self._last_upgrade_check is None:
+            run_upgrade_check = True
+        else:
+            try:
+                if (now - self._last_upgrade_check).total_seconds() >= 86400:
+                    run_upgrade_check = True
+            except Exception:
+                run_upgrade_check = True
+        if run_upgrade_check:
+            tasks.insert(2, self.fetch_upgrade_info())
 
         if self.feature_enabled(FEATURE_WG_CLIENT):
             tasks.append(self.fetch_wireguard_clients())
@@ -500,6 +512,9 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
         for task in tasks:
             await task
+
+        if run_upgrade_check:
+            self._last_upgrade_check = utcnow()
 
         if self.feature_enabled(FEATURE_SMS):
             await self.fetch_sms_messages()
