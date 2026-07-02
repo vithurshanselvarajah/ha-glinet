@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import timedelta
-
 from custom_components.ha_glinet.models import (
     ClientDeviceInfo,
     DeviceInterfaceType,
