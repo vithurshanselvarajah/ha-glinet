@@ -28,7 +28,7 @@ The integration connects to your router over the local network using the GL.iNet
 * **Reliable Connection**: Keeps your login session alive automatically and retries if the connection drops.
 * **Toggles**: Control the router's system LED, reboot it, or turn individual WiFi bands on and off.
 * **Diagnostics**: Monitors CPU temperature, system load, memory, flash usage, uptime, and lets you download a sanitized diagnostic snapshot.
-* **Firmware Updates**: Exposes the router firmware through Home Assistant's native update entity, including release notes when available.
+- **Firmware Updates**: Exposes the router firmware through Home Assistant's native update entity, including a model-specific GL.iNet stable release URL for release notes.
 
 ### Connected Devices & Traffic
 * **Presence Tracking**: Tracks connected clients as Home Assistant device trackers (and automatically cleans up stale entries).

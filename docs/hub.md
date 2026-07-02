@@ -19,7 +19,7 @@ The `GLinetHub` class inherits from `DataUpdateCoordinator` and manages communic
 | --- | --- |
 | `fetch_system_status` | Updates CPU temperature, load averages, memory, flash statistics, uptime, and MCU battery data. |
 | `fetch_kmwan_status` | Updates per-interface WAN status (Ethernet, Repeater, Cellular, Tethering) via the `edgerouter` API. |
-| `fetch_upgrade_info` | Pulls the latest firmware check data, release notes, upgrade config, and live upgrade status for the update entity. |
+| `fetch_upgrade_info` | Pulls the latest firmware check data from the router, using fields such as `current_version`, `current_compile_time`, and `current_type`, along with release notes, upgrade config, and live upgrade status for the update entity. This refresh is performed once every 24 hours rather than on every polling cycle. |
 | `fetch_connected_devices` | Polls the client list and calculates traffic rates for tracked devices. |
 | `fetch_wifi_interfaces` | Retrieves configuration and status for all WiFi radios (2.4GHz, 5GHz, etc.). |
 | `fetch_fan_status` | Retrieves current fan speed, running state, and temperature threshold. |
