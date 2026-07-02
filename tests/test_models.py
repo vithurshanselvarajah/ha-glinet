@@ -43,23 +43,68 @@ def test_client_device_falls_back_to_mac_when_name_is_missing() -> None:
     assert device.interface_type == DeviceInterfaceType.UNKNOWN
 
 
-def test_client_device_extracts_bandwidth_from_common_keys() -> None:
+def test_client_device_ignores_non_rx_tx_bandwidth_keys() -> None:
     device = ClientDeviceInfo("aa:bb:cc:dd:ee:ff")
 
     device.apply_update(
         {
             "online": True,
             "rx_bytes": 1000,
-            "tx": 2000,
+            "tx_bytes": 2000,
             "download_speed": 300,
             "up_speed": 400,
         }
     )
 
-    assert device.rx_bytes == 1000
-    assert device.tx_bytes == 2000
-    assert device.rx_rate == 300
-    assert device.tx_rate == 400
+    assert device.rx_rate is None
+    assert device.tx_rate is None
+
+
+def test_client_device_uses_rx_tx_as_explicit_rate() -> None:
+    device = ClientDeviceInfo("aa:bb:cc:dd:ee:ff")
+
+    device.apply_update(
+        {
+            "online": True,
+            "rx": 2,
+            "tx": 21,
+        }
+    )
+
+    assert device.rx_rate == 2
+    assert device.tx_rate == 21
+
+
+def test_client_device_prefers_rx_tx_over_rx_rate_tx_rate() -> None:
+    device = ClientDeviceInfo("aa:bb:cc:dd:ee:ff")
+
+    device.apply_update(
+        {
+            "online": True,
+            "rx": 7,
+            "tx": 11,
+            "rx_rate": 100,
+            "tx_rate": 200,
+        }
+    )
+
+    assert device.rx_rate == 7
+    assert device.tx_rate == 11
+
+
+def test_client_device_ignores_rx_rate_tx_rate_keys() -> None:
+    device = ClientDeviceInfo("aa:bb:cc:dd:ee:ff")
+
+    device.apply_update(
+        {
+            "online": True,
+            "rx_rate": 100,
+            "tx_rate": 200,
+        }
+    )
+
+    assert device.rx_rate is None
+    assert device.tx_rate is None
 
 
 def test_sms_message_direction_incoming() -> None:
@@ -109,15 +154,42 @@ def test_sms_message_status_label() -> None:
     assert msg.status_label == "Unknown (999)"
 
 
-def test_client_device_computes_rates_from_byte_deltas() -> None:
+def test_client_device_ignores_byte_deltas_when_rx_tx_are_missing() -> None:
     device = ClientDeviceInfo("aa:bb:cc:dd:ee:ff")
     device.apply_update({"online": True, "rx_bytes": 1000, "tx_bytes": 2000})
-    device._last_traffic_update = device._last_traffic_update - timedelta(seconds=10)
 
-    device.apply_update({"online": True, "rx_bytes": 1300, "tx_bytes": 2600})
+    assert device.rx_rate is None
+    assert device.tx_rate is None
 
-    assert device.rx_rate == 30
-    assert device.tx_rate == 60
+
+def test_client_device_preserves_explicit_zero_rate() -> None:
+    device = ClientDeviceInfo("aa:bb:cc:dd:ee:ff")
+
+    device.apply_update(
+        {
+            "online": True,
+            "rx": 0,
+            "tx": 0,
+        }
+    )
+
+    assert device.rx_rate == 0
+    assert device.tx_rate == 0
+
+
+def test_client_device_ignores_byte_counters_when_rx_tx_are_missing() -> None:
+    device = ClientDeviceInfo("aa:bb:cc:dd:ee:ff")
+
+    device.apply_update(
+        {
+            "online": True,
+            "rx_bytes": 1000,
+            "tx_bytes": 2000,
+        }
+    )
+
+    assert device.rx_rate is None
+    assert device.tx_rate is None
 
 
 def test_client_device_consider_home_keeps_recent_device_connected() -> None:

@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Any
 
 
@@ -46,20 +45,6 @@ def get_first_bool(data: dict[str, Any], keys: tuple[str, ...]) -> bool | None:
             if lowered in {"0", "false", "off", "disabled", "disable"}:
                 return False
     return None
-
-
-def calculate_rate(
-    prev_val: int | None,
-    curr_val: int | None,
-    prev_time: datetime | None,
-    curr_time: datetime,
-) -> int | None:
-    if prev_val is None or curr_val is None or prev_time is None:
-        return None
-    elapsed = (curr_time - prev_time).total_seconds()
-    if elapsed <= 0 or curr_val < prev_val:
-        return None
-    return int((curr_val - prev_val) / elapsed)
 
 
 def _candidate_dicts(data: Any, nested: tuple[str, ...]) -> list[dict[str, Any]]:
