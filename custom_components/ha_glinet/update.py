@@ -60,16 +60,18 @@ class GLinetFirmwareUpdateEntity(CoordinatorEntity[GLinetHub], UpdateEntity):
     @property
     def latest_version(self) -> str | None:
         info = self._hub.upgrade_info
-        latest = info.get("version_new") or info.get("new_version")
+        latest = info.get("current_version")
         if latest:
             return str(latest)
         return self.installed_version
 
     @property
     def release_notes(self) -> str | None:
-        info = self._hub.upgrade_info
-        notes = info.get("release_note") or info.get("release_notes")
-        return str(notes) if notes else None
+        model = getattr(self._hub, "_model", "") or ""
+        model = str(model).lower()
+        if not model:
+            return None
+        return f"https://dl.gl-inet.com/router/{model}/stable"
 
     @property
     def release_summary(self) -> str | None:
