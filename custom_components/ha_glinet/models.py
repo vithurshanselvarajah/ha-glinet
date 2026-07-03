@@ -460,6 +460,8 @@ class ClientDeviceInfo:
 
         if self._connected:
             self._connected = (now - self._last_activity).total_seconds() < consider_home
+        
+        if not self._connected:
             self._ip_address = None
 
     @property
