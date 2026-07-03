@@ -65,8 +65,7 @@ class GLinetFirmwareUpdateEntity(CoordinatorEntity[GLinetHub], UpdateEntity):
             return str(latest)
         return self.installed_version
 
-    @property
-    def release_notes(self) -> str | None:
+    async def async_release_notes(self) -> str | None:
         model = getattr(self._hub, "_model", "") or ""
         model = str(model).lower()
         if not model:
@@ -75,7 +74,7 @@ class GLinetFirmwareUpdateEntity(CoordinatorEntity[GLinetHub], UpdateEntity):
 
     @property
     def release_summary(self) -> str | None:
-        return _short_release_summary(self.release_notes)
+        return None
 
     @property
     def auto_update(self) -> bool:
