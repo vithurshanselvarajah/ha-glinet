@@ -301,6 +301,125 @@ async def test_get_kmwan_status_uses_kmwan_endpoint() -> None:
     ]
 
 
+async def test_kmwan_methods_use_documented_payloads() -> None:
+    session = FakeSession(
+        [
+            {"result": {"mode": 1, "interfaces": []}},
+            {"result": {"interfaces": [{"interface": "wan", "status_v4": 0, "status_v6": 1}]}},
+            {"result": None},
+            {"result": None},
+            {"result": None},
+        ]
+    )
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    assert await client.kmwan.get_config() == {"mode": 1, "interfaces": []}
+    assert await client.kmwan.get_status() == {
+        "interfaces": [{"interface": "wan", "status_v4": 0, "status_v6": 1}]
+    }
+    assert await client.kmwan.set_config({"mode": 0, "interfaces": []}) == {}
+    assert await client.kmwan.set_interface({"interface": "wan", "enable_check": True}) == {}
+    assert await client.kmwan.set_sensitivity({"sensitivity": {"level": "custom", "val": 5}}) == {}
+
+    assert [request["json"]["params"] for request in session.requests] == [
+        ["sid-1", "kmwan", "get_config", {}],
+        ["sid-1", "kmwan", "get_status", {}],
+        ["sid-1", "kmwan", "set_config", {"mode": 0, "interfaces": []}],
+        ["sid-1", "kmwan", "set_interface", {"interface": "wan", "enable_check": True}],
+        [
+            "sid-1",
+            "kmwan",
+            "set_sensitivity",
+            {"sensitivity": {"level": "custom", "val": 5}},
+        ],
+    ]
+
+
+async def test_upgrade_methods_use_documented_payloads() -> None:
+    session = FakeSession(
+        [
+            {
+                "result": {
+                    "current_version": "4.0.0",
+                    "version_new": "4.0.1",
+                    "release_note": "Fixes and improvements",
+                }
+            },
+            {"result": {"prompt": True, "upgrade_enable": False}},
+            {"result": {"status": 1, "status_msg": "downloading", "percent": 42.5}},
+            {"result": {"need_reboot_flag": True}},
+        ]
+    )
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    assert await client.upgrade.check_firmware_online() == {
+        "current_version": "4.0.0",
+        "version_new": "4.0.1",
+        "release_note": "Fixes and improvements",
+    }
+    assert await client.upgrade.get_config() == {"prompt": True, "upgrade_enable": False}
+    assert await client.upgrade.get_online_upgrade_status() == {
+        "status": 1,
+        "status_msg": "downloading",
+        "percent": 42.5,
+    }
+    assert await client.upgrade.upgrade_online(
+        {
+            "keep_config": True,
+            "keep_package": False,
+            "url": "http://example.invalid/fw.bin",
+            "id": "fw-1",
+            "size": 123,
+            "sha256": "abc123",
+        }
+    ) == {"need_reboot_flag": True}
+
+    assert [request["json"]["params"] for request in session.requests] == [
+        ["sid-1", "upgrade", "check_firmware_online", {}],
+        ["sid-1", "upgrade", "get_config", {}],
+        ["sid-1", "upgrade", "get_online_upgrade_status", {}],
+        [
+            "sid-1",
+            "upgrade",
+            "upgrade_online",
+            {
+                "keep_config": True,
+                "keep_package": False,
+                "url": "http://example.invalid/fw.bin",
+                "id": "fw-1",
+                "size": 123,
+                "sha256": "abc123",
+            },
+        ],
+    ]
+
+
+async def test_mwan3_methods_use_documented_payloads() -> None:
+    session = FakeSession(
+        [
+            {"result": {"mode": 1, "interfaces": []}},
+            {"result": {"interfaces": [{"interface": "wan", "status_v4": 0, "status_v6": 1}]}},
+            {"result": None},
+            {"result": None},
+        ]
+    )
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    assert await client.mwan3.get_config() == {"mode": 1, "interfaces": []}
+    assert await client.mwan3.get_status() == {
+        "interfaces": [{"interface": "wan", "status_v4": 0, "status_v6": 1}]
+    }
+    assert await client.mwan3.set_config({"mode": 0, "flush_track": False}) == {}
+    assert await client.mwan3.set_interface({"interface": "wan", "enable_check": True}) == {}
+
+    assert [request["json"]["params"] for request in session.requests] == [
+        ["sid-1", "mwan3", "get_config", {}],
+        ["sid-1", "mwan3", "get_status", {}],
+        ["sid-1", "mwan3", "set_config", {"mode": 0, "flush_track": False}],
+        ["sid-1", "mwan3", "set_interface", {"interface": "wan", "enable_check": True}],
+    ]
+
+
 async def test_get_modem_info_extracts_nested_fields() -> None:
     session = FakeSession(
         [

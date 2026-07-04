@@ -19,6 +19,7 @@ The `GLinetHub` class inherits from `DataUpdateCoordinator` and manages communic
 | --- | --- |
 | `fetch_system_status` | Updates CPU temperature, load averages, memory, flash statistics, uptime, and MCU battery data. |
 | `fetch_kmwan_status` | Updates per-interface WAN status (Ethernet, Repeater, Cellular, Tethering) via the `edgerouter` API. |
+| `fetch_upgrade_info` | Pulls the latest firmware check data from the router, using fields such as `current_version`, `current_compile_time`, and `current_type`, along with release notes, upgrade config, and live upgrade status for the update entity. This refresh is performed once every 24 hours rather than on every polling cycle. |
 | `fetch_connected_devices` | Polls the client list and calculates traffic rates for tracked devices. |
 | `fetch_wifi_interfaces` | Retrieves configuration and status for all WiFi radios (2.4GHz, 5GHz, etc.). |
 | `fetch_fan_status` | Retrieves current fan speed, running state, and temperature threshold. |
@@ -64,6 +65,9 @@ The `GLinetHub` class inherits from `DataUpdateCoordinator` and manages communic
 | `set_wan_access` | Updates WAN ping/HTTPS/SSH access settings. |
 | `set_fan_temperature` | Sets the fan activation temperature threshold. |
 | `test_fan` | Runs the fan at full speed for a short diagnostic test. |
+| `get_kmwan_config` / `get_kmwan_status` / `set_kmwan_config` / `set_kmwan_interface` / `set_kmwan_sensitivity` | Reads and updates KMWAN configuration through the optional WAN policy services. |
+| `get_mwan3_config` / `get_mwan3_status` / `set_mwan3_config` / `set_mwan3_interface` | Reads and updates MWAN3 configuration through the optional WAN policy services. |
+| `upgrade_firmware` | Starts a firmware update using the router's latest online firmware metadata when available. |
 | `send_sms` | Sends an SMS message using the first available SMS-capable modem bus. |
 | `remove_sms` | Deletes SMS messages by scope or specific message ID. |
 | `scan_wifi_networks` | Triggers a site survey and updates the list of available SSIDs. |

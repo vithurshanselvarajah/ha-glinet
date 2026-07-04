@@ -6,7 +6,7 @@ from enum import IntEnum, StrEnum
 
 from homeassistant.util import dt as dt_util
 
-from .utils import calculate_rate, get_first_int
+from .utils import get_first_int
 
 
 class RepeaterState(IntEnum):
@@ -431,11 +431,8 @@ class ClientDeviceInfo:
         self._last_activity = dt_util.utcnow() - timedelta(days=1)
         self._connected = False
         self._interface_type = DeviceInterfaceType.UNKNOWN
-        self._rx_bytes: int | None = None
-        self._tx_bytes: int | None = None
         self._rx_rate: int | None = None
         self._tx_rate: int | None = None
-        self._last_traffic_update: datetime | None = None
         self._is_known = True
 
     def apply_update(self, dev_info: dict | None = None, consider_home: int = 0) -> None:
@@ -458,43 +455,13 @@ class ClientDeviceInfo:
                 self._interface_type = interface_types[type_index]
             else:
                 self._interface_type = DeviceInterfaceType.UNKNOWN
-            previous_rx_bytes = self._rx_bytes
-            previous_tx_bytes = self._tx_bytes
-            previous_traffic_update = self._last_traffic_update
-            self._rx_bytes = get_first_int(
-                dev_info,
-                ("rx_bytes", "bytes_rx", "rx", "download", "down"),
-            )
-            self._tx_bytes = get_first_int(
-                dev_info,
-                ("tx_bytes", "bytes_tx", "tx", "upload", "up"),
-            )
-            explicit_rx_rate = get_first_int(
-                dev_info,
-                ("rx_rate", "rx_speed", "rx_bps", "download_speed", "down_speed", "down_rate"),
-            )
-            explicit_tx_rate = get_first_int(
-                dev_info,
-                ("tx_rate", "tx_speed", "tx_bps", "upload_speed", "up_speed", "up_rate"),
-            )
-            self._rx_rate = explicit_rx_rate or calculate_rate(
-                previous_rx_bytes,
-                self._rx_bytes,
-                previous_traffic_update,
-                now,
-            )
-            self._tx_rate = explicit_tx_rate or calculate_rate(
-                previous_tx_bytes,
-                self._tx_bytes,
-                previous_traffic_update,
-                now,
-            )
-            if self._rx_bytes is not None or self._tx_bytes is not None:
-                self._last_traffic_update = now
-            return
+            self._rx_rate = get_first_int(dev_info, ("rx",))
+            self._tx_rate = get_first_int(dev_info, ("tx",))
 
         if self._connected:
             self._connected = (now - self._last_activity).total_seconds() < consider_home
+        
+        if not self._connected:
             self._ip_address = None
 
     @property

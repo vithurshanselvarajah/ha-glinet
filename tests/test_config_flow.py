@@ -6,6 +6,7 @@ from typing import Any
 from custom_components.ha_glinet.config_flow import (
     CONF_ENABLED_FEATURES,
     DEFAULT_ENABLED_FEATURES,
+    FEATURE_OPTIONS,
     SetupHub,
     _wan_monitor_options,
     process_user_input,
@@ -13,6 +14,8 @@ from custom_components.ha_glinet.config_flow import (
 from custom_components.ha_glinet.const import (
     CONF_WAN_STATUS_MONITORS,
     DEFAULT_USERNAME,
+    FEATURE_KMWAN,
+    FEATURE_MWAN3,
     FEATURE_REPEATER,
     FEATURE_WG_CLIENT,
 )
@@ -79,7 +82,16 @@ async def test_process_user_input_defaults_enabled_features_when_missing(monkeyp
 
     assert result["data"][CONF_ENABLED_FEATURES] == DEFAULT_ENABLED_FEATURES
     assert FEATURE_WG_CLIENT in result["data"][CONF_ENABLED_FEATURES]
+    assert FEATURE_KMWAN not in result["data"][CONF_ENABLED_FEATURES]
+    assert FEATURE_MWAN3 not in result["data"][CONF_ENABLED_FEATURES]
     assert result["data"][CONF_WAN_STATUS_MONITORS] == ["wan:ipv4", "wan:ipv6"]
+
+
+def test_feature_options_include_kmwan_and_mwan3_labels() -> None:
+    labels = {option["value"]: option["label"] for option in FEATURE_OPTIONS}
+
+    assert labels["kmwan"] == "KMWan"
+    assert labels["mwan3"] == "MWan3"
 
 
 def test_wan_monitor_options_use_friendly_known_interface_names() -> None:

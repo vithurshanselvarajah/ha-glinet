@@ -33,6 +33,9 @@ sid, module-name, function-name, optional parameters
 - `edgerouter`: per-interface WAN status (`get_kmwan_status`) used to build per-interface WAN status sensors.
 - `clients`: client list (`get_online`).
 - `wifi`: interface config and enable/disable.
+- `kmwan`: GL.iNet KMWAN config, interface status, and sensitivity settings.
+- `mwan3`: GL.iNet MWAN3 config, interface status, and per-interface detection settings.
+- `upgrade`: Firmware update check, online status, and online firmware upgrade calls. The integration uses the firmware release note from `check_firmware_online` to populate Home Assistant's native update entity when available.
 - `wg-client` / `vpn-client`: Optional WireGuard client support across older and newer firmware.
 - `ovpn-client` / `vpn-client`: Hybrid OpenVPN client support. Discovers profiles via `ovpn-client` and manages state via the unified `vpn-client` tunnel API.
 - `wg-server`: Optional WireGuard server status and control.

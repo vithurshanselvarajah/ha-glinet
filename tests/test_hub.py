@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import types
+from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -9,12 +10,13 @@ from custom_components.ha_glinet.const import (
     CONF_ADD_ALL_DEVICES,
     CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
+    CONF_SCAN_INTERVAL,
     CONF_WAN_STATUS_MONITORS,
     FEATURE_REPEATER,
     FEATURE_WG_CLIENT,
     FEATURE_WG_SERVER,
 )
-from custom_components.ha_glinet.hub import GLinetHub
+from custom_components.ha_glinet.hub import GLinetHub, utcnow
 from custom_components.ha_glinet.models import ClientDeviceInfo, RepeaterState, RepeaterStatus
 
 
@@ -166,6 +168,7 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
     hub._saved_networks = [{"ssid": "old"}]
     hub._entry = types.SimpleNamespace(entry_id="test_entry")
     hub._host = "192.168.8.1"
+    hub._last_upgrade_check = None
     hub.hass = object()
 
     called: list[str] = []
@@ -242,6 +245,7 @@ async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
     hub._settings = {CONF_ENABLED_FEATURES: []}
     hub._entry = types.SimpleNamespace(entry_id="test_entry")
     hub._host = "192.168.8.1"
+    hub._last_upgrade_check = None
     hub.hass = object()
 
     called: list[str] = []
@@ -292,6 +296,7 @@ async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> No
     hub._settings = {CONF_ENABLED_FEATURES: [FEATURE_WG_CLIENT, FEATURE_WG_SERVER]}
     hub._entry = types.SimpleNamespace(entry_id="test_entry")
     hub._host = "192.168.8.1"
+    hub._last_upgrade_check = None
     hub.hass = object()
 
     called: list[str] = []
@@ -334,6 +339,98 @@ async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> No
 
     assert "wg_client" in called
     assert "wg_server" in called
+
+
+async def test_fetch_all_data_skips_upgrade_info_within_a_day(monkeypatch) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {CONF_ENABLED_FEATURES: []}
+    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._host = "192.168.8.1"
+    hub.hass = object()
+    hub._last_upgrade_check = utcnow() - timedelta(hours=12)
+
+    called: list[str] = []
+
+    async def fake_fetch_system_status() -> None:
+        called.append("system")
+
+    async def fake_fetch_kmwan_status() -> None:
+        called.append("kmwan")
+
+    async def fake_fetch_connected_devices() -> None:
+        called.append("clients")
+
+    async def fake_fetch_wifi_interfaces() -> None:
+        called.append("wifi")
+
+    async def fake_fetch_fan_status() -> None:
+        called.append("fan")
+
+    async def fake_fetch_led_status() -> None:
+        called.append("led")
+
+    async def fake_fetch_upgrade_info() -> None:
+        called.append("upgrade")
+
+    hub.fetch_system_status = fake_fetch_system_status
+    hub.fetch_kmwan_status = fake_fetch_kmwan_status
+    hub.fetch_connected_devices = fake_fetch_connected_devices
+    hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
+    hub.fetch_fan_status = fake_fetch_fan_status
+    hub.fetch_led_status = fake_fetch_led_status
+    hub.fetch_upgrade_info = fake_fetch_upgrade_info
+    hub.refresh_session_token = _noop
+
+    await hub.fetch_all_data()
+
+    assert "upgrade" not in called
+    assert called == ["system", "kmwan", "clients", "wifi", "fan", "led"]
+
+
+async def test_fetch_all_data_runs_upgrade_info_after_a_day(monkeypatch) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {CONF_ENABLED_FEATURES: []}
+    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._host = "192.168.8.1"
+    hub.hass = object()
+    hub._last_upgrade_check = utcnow() - timedelta(days=2)
+
+    called: list[str] = []
+
+    async def fake_fetch_system_status() -> None:
+        called.append("system")
+
+    async def fake_fetch_kmwan_status() -> None:
+        called.append("kmwan")
+
+    async def fake_fetch_connected_devices() -> None:
+        called.append("clients")
+
+    async def fake_fetch_wifi_interfaces() -> None:
+        called.append("wifi")
+
+    async def fake_fetch_fan_status() -> None:
+        called.append("fan")
+
+    async def fake_fetch_led_status() -> None:
+        called.append("led")
+
+    async def fake_fetch_upgrade_info() -> None:
+        called.append("upgrade")
+
+    hub.fetch_system_status = fake_fetch_system_status
+    hub.fetch_kmwan_status = fake_fetch_kmwan_status
+    hub.fetch_connected_devices = fake_fetch_connected_devices
+    hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
+    hub.fetch_fan_status = fake_fetch_fan_status
+    hub.fetch_led_status = fake_fetch_led_status
+    hub.fetch_upgrade_info = fake_fetch_upgrade_info
+    hub.refresh_session_token = _noop
+
+    await hub.fetch_all_data()
+
+    assert "upgrade" in called
+    assert called[0:6] == ["system", "kmwan", "upgrade", "clients", "wifi", "fan"]
 
 
 async def test_scan_wifi_networks_stores_results(monkeypatch) -> None:
@@ -978,3 +1075,79 @@ async def _noop() -> None:
 
 def _noop_arg(*args, **kwargs) -> None:
     return None
+
+
+def _make_entry(data: dict[str, Any] | None = None, options: dict[str, Any] | None = None):
+    entry = SimpleNamespace()
+    entry.data = data or {"host": "http://192.168.8.1", "password": "pass"}
+    entry.options = options or {}
+    entry.entry_id = "test_entry"
+    entry.unique_id = "aa:bb:cc:dd:ee:ff"
+    return entry
+
+
+def test_hub_uses_configured_scan_interval() -> None:
+    from datetime import timedelta
+
+    entry = _make_entry(data={
+        "host": "http://192.168.8.1",
+        "password": "pass",
+        CONF_SCAN_INTERVAL: 60,
+    })
+    hub = GLinetHub(MagicMock(), entry)
+    assert hub.update_interval == timedelta(seconds=60)
+
+
+def test_hub_defaults_scan_interval_when_not_configured() -> None:
+    from datetime import timedelta
+
+    entry = _make_entry(data={
+        "host": "http://192.168.8.1",
+        "password": "pass",
+    })
+    hub = GLinetHub(MagicMock(), entry)
+    assert hub.update_interval == timedelta(seconds=30)
+
+
+def test_hub_scan_interval_from_options_overrides_data() -> None:
+    from datetime import timedelta
+
+    entry = _make_entry(
+        data={
+            "host": "http://192.168.8.1",
+            "password": "pass",
+            CONF_SCAN_INTERVAL: 30,
+        },
+        options={CONF_SCAN_INTERVAL: 120},
+    )
+    hub = GLinetHub(MagicMock(), entry)
+    assert hub.update_interval == timedelta(seconds=120)
+
+
+def test_apply_option_updates_changes_scan_interval() -> None:
+    from datetime import timedelta
+
+    entry = _make_entry(data={
+        "host": "http://192.168.8.1",
+        "password": "pass",
+        CONF_SCAN_INTERVAL: 30,
+    })
+    hub = GLinetHub(MagicMock(), entry)
+    assert hub.update_interval == timedelta(seconds=30)
+
+    hub.apply_option_updates({CONF_SCAN_INTERVAL: 90})
+    assert hub.update_interval == timedelta(seconds=90)
+
+
+def test_apply_option_updates_without_scan_interval_keeps_default() -> None:
+    from datetime import timedelta
+
+    entry = _make_entry(data={
+        "host": "http://192.168.8.1",
+        "password": "pass",
+    })
+    hub = GLinetHub(MagicMock(), entry)
+    assert hub.update_interval == timedelta(seconds=30)
+
+    hub.apply_option_updates({"some_other_option": "value"})
+    assert hub.update_interval == timedelta(seconds=30)
