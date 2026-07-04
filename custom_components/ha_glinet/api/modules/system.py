@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..const import LONG_TIMEOUT
 from ..models import RouterStatus, SystemInfo
 from ..utils import decode_firmware_version
 from .base import BaseModule
@@ -9,7 +10,7 @@ from .base import BaseModule
 
 class SystemModule(BaseModule):
     async def get_info(self) -> SystemInfo:
-        response = await self._call("system", "get_info")
+        response = await self._call("system", "get_info", timeout_seconds=LONG_TIMEOUT)
         info = dict(response)
         firmware_version = info.get("firmware_version", "")
         if firmware_version:

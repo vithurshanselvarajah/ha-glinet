@@ -10,6 +10,7 @@ from passlib.hash import md5_crypt, sha256_crypt, sha512_crypt
 
 from .const import (
     DEFAULT_TIMEOUT,
+    LONG_TIMEOUT,
 )
 from .exceptions import (
     APIClientError,
@@ -151,12 +152,16 @@ class GLinetApiClient:
             return await _extract_response_data(response)
 
     async def _request_challenge(self, username: str) -> dict[str, Any]:
-        result = await self._send_request(self._build_payload("challenge", {"username": username}))
+        result = await self._send_request(
+            self._build_payload("challenge", {"username": username}),
+            timeout_seconds=LONG_TIMEOUT,
+        )
         return dict(result)
 
     async def _fetch_session_id(self, username: str, login_hash: str) -> dict[str, Any]:
         result = await self._send_request(
-            self._build_payload("login", {"username": username, "hash": login_hash})
+            self._build_payload("login", {"username": username, "hash": login_hash}),
+            timeout_seconds=LONG_TIMEOUT,
         )
         return dict(result)
 

@@ -204,7 +204,7 @@ class SetupHub:
     async def check_reachable(self) -> bool:
         try:
             return await self.router.is_router_reachable(self.username)
-        except (ConnectionError, TypeError):
+        except (ConnectionError, TypeError, TimeoutError, OSError):
             _LOGGER.exception("Failed to connect to %s", self.host)
             return False
 
@@ -212,7 +212,10 @@ class SetupHub:
         try:
             await self.router.authenticate(self.username, password)
             info = await self.router.system.get_info()
-        except (ConnectionRefusedError, NonZeroResponse):
+        except (ConnectionRefusedError, TimeoutError, OSError) as exc:
+            _LOGGER.exception("Connection failure during GL-INet validation")
+            raise ConnectionError from exc
+        except NonZeroResponse:
             _LOGGER.info("Failed to authenticate with GL-INet router during validation")
             return False
 
@@ -240,7 +243,10 @@ async def process_user_input(
     if not await hub.check_reachable():
         raise CannotConnect
 
-    valid_auth = await hub.attempt_login(data.get(CONF_PASSWORD, DEFAULT_PASSWORD))
+    try:
+        valid_auth = await hub.attempt_login(data.get(CONF_PASSWORD, DEFAULT_PASSWORD))
+    except ConnectionError:
+        raise CannotConnect from None
     if raise_on_invalid_auth and not valid_auth:
         raise InvalidAuth
 
