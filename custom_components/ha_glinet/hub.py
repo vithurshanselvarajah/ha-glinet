@@ -116,6 +116,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._sw_version = "UNKNOWN"
 
         self._devices: dict[str, ClientDeviceInfo] = {}
+        self._all_connected_clients: dict[str, dict[str, Any]] = {}
         self._wifi_ifaces: dict[str, WifiInterface] = {}
         self._system_status: RouterStatus | None = None
         self._kmwan_status: dict[str, Any] = {}
@@ -884,6 +885,8 @@ class GLinetHub(DataUpdateCoordinator[None]):
         if connected_devices is None:
             return
 
+        self._all_connected_clients = connected_devices
+
         consider_home = self._options.get(CONF_CONSIDER_HOME, DEFAULT_CONSIDER_HOME.total_seconds())
         for device_mac, device in self._devices.items():
             device.apply_update(connected_devices.get(device_mac), consider_home)
@@ -1628,19 +1631,31 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
     @property
     def current_traffic_download(self) -> int:
-        return sum(device.rx_rate or 0 for device in self._devices.values())
+        return sum(
+            get_first_int(d, ("rx",)) or 0
+            for d in self._all_connected_clients.values()
+        )
 
     @property
     def current_traffic_upload(self) -> int:
-        return sum(device.tx_rate or 0 for device in self._devices.values())
+        return sum(
+            get_first_int(d, ("tx",)) or 0
+            for d in self._all_connected_clients.values()
+        )
 
     @property
     def total_traffic_download(self) -> int:
-        return sum(device.total_rx or 0 for device in self._devices.values())
+        return sum(
+            get_first_int(d, ("total_rx",)) or 0
+            for d in self._all_connected_clients.values()
+        )
 
     @property
     def total_traffic_upload(self) -> int:
-        return sum(device.total_tx or 0 for device in self._devices.values())
+        return sum(
+            get_first_int(d, ("total_tx",)) or 0
+            for d in self._all_connected_clients.values()
+        )
 
     @property
     def has_tailscale(self) -> bool:
