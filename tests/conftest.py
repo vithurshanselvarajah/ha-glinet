@@ -99,9 +99,12 @@ def pytest_configure() -> None:
         helpers.selector = types.ModuleType("homeassistant.helpers.selector")
         helpers.selector.TextSelector = lambda *args, **kwargs: None
         helpers.selector.TextSelectorConfig = lambda *args, **kwargs: None
-        helpers.selector.TextSelectorType = types.SimpleNamespace(URL="url", PASSWORD="password")
+        helpers.selector.TextSelectorType = types.SimpleNamespace(
+            URL="url", PASSWORD="password", TEXT="text"
+        )
         helpers.selector.SelectSelector = lambda *args, **kwargs: None
         helpers.selector.SelectSelectorConfig = lambda *args, **kwargs: None
+        helpers.selector.SelectSelectorMode = types.SimpleNamespace(DROPDOWN="dropdown")
 
         entity_registry = types.ModuleType("homeassistant.helpers.entity_registry")
         entity_registry.async_get = lambda hass: None

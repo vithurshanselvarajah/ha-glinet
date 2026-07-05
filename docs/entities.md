@@ -46,6 +46,8 @@ This behavior prevents the integration from automatically adding every guest dev
 
 However, you can enable the **Discover unknown devices** option during integration setup or in the options flow. When enabled, the integration tracks every device seen by the router, regardless of its status in the Home Assistant device registry.
 
+To restrict which unknown devices are discovered, you can use the **Unknown Devices Filter Mode** (whitelist or blacklist). You can select devices from the dropdown (available in the options flow) or manually specify MAC addresses.
+
 The tracker monitors:
 
 - MAC address

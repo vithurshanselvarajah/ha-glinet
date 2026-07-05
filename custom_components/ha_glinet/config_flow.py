@@ -22,8 +22,12 @@ from .const import (
     CONF_ENABLED_FEATURES,
     CONF_SCAN_INTERVAL,
     CONF_TITLE,
+    CONF_UNKNOWN_DEVICES_FILTER_MANUAL,
+    CONF_UNKNOWN_DEVICES_FILTER_MODE,
+    CONF_UNKNOWN_DEVICES_FILTER_SELECT,
     CONF_WAN_STATUS_MONITORS,
     DEFAULT_PASSWORD,
+    DEFAULT_UNKNOWN_DEVICES_FILTER_MODE,
     DEFAULT_URL,
     DEFAULT_USERNAME,
     DOMAIN,
@@ -132,6 +136,7 @@ def _wan_interfaces_from_monitors(monitors: list[str]) -> list[str]:
 def _config_schema(
     defaults: dict[str, Any] | None = None,
     wan_interfaces: list[str] | None = None,
+    discovered_devices: dict[str, str] | None = None,
 ) -> vol.Schema:
     defaults = defaults or {}
     wan_interfaces = wan_interfaces or DEFAULT_WAN_INTERFACES
@@ -139,50 +144,92 @@ def _config_schema(
         defaults.get(CONF_WAN_STATUS_MONITORS, [])
     )
     wan_interfaces = [*dict.fromkeys([*wan_interfaces, *selected_interfaces])]
-    return vol.Schema(
-        {
-            vol.Required(CONF_HOST, default=DEFAULT_URL): selector.TextSelector(
-                selector.TextSelectorConfig(type=selector.TextSelectorType.URL)
-            ),
-            vol.Required(CONF_PASSWORD, default=DEFAULT_PASSWORD): selector.TextSelector(
-                selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
-            ),
-            vol.Optional(
-                CONF_CONSIDER_HOME,
-                default=DEFAULT_CONSIDER_HOME.total_seconds(),
-            ): vol.All(vol.Coerce(int), vol.Clamp(min=0, max=900)),
-            vol.Optional(
-                CONF_ENABLED_FEATURES,
-                default=DEFAULT_ENABLED_FEATURES,
-            ): selector.SelectSelector(
-                selector.SelectSelectorConfig(
-                    options=FEATURE_OPTIONS,
-                    multiple=True,
-                )
-            ),
-            vol.Optional(
+    
+    schema_dict = {
+        vol.Required(CONF_HOST, default=DEFAULT_URL): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.URL)
+        ),
+        vol.Required(CONF_PASSWORD, default=DEFAULT_PASSWORD): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+        ),
+        vol.Optional(
+            CONF_CONSIDER_HOME,
+            default=DEFAULT_CONSIDER_HOME.total_seconds(),
+        ): vol.All(vol.Coerce(int), vol.Clamp(min=0, max=900)),
+        vol.Optional(
+            CONF_ENABLED_FEATURES,
+            default=DEFAULT_ENABLED_FEATURES,
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=FEATURE_OPTIONS,
+                multiple=True,
+            )
+        ),
+        vol.Optional(
+            CONF_WAN_STATUS_MONITORS,
+            default=defaults.get(
                 CONF_WAN_STATUS_MONITORS,
-                default=defaults.get(
-                    CONF_WAN_STATUS_MONITORS,
-                    _default_wan_status_monitors(wan_interfaces),
-                ),
-            ): selector.SelectSelector(
-                selector.SelectSelectorConfig(
-                    options=_wan_monitor_options(wan_interfaces),
-                    multiple=True,
-                )
+                _default_wan_status_monitors(wan_interfaces),
             ),
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=_wan_monitor_options(wan_interfaces),
+                multiple=True,
+            )
+        ),
+        vol.Optional(
+            CONF_SCAN_INTERVAL,
+            default=30,
+        ): vol.All(vol.Coerce(int), vol.Clamp(min=10, max=300)),
+        vol.Optional(CONF_ADD_ALL_DEVICES, default=False): bool,
+        vol.Optional(
+            CONF_CLEANUP_DEVICES,
+            default=0,
+        ): vol.All(vol.Coerce(int), vol.Clamp(min=0, max=10080)),
+        vol.Optional(
+            CONF_UNKNOWN_DEVICES_FILTER_MODE,
+            default=defaults.get(
+                CONF_UNKNOWN_DEVICES_FILTER_MODE,
+                DEFAULT_UNKNOWN_DEVICES_FILTER_MODE,
+            ),
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=[
+                    {"value": "blacklist", "label": "Blacklist"},
+                    {"value": "whitelist", "label": "Whitelist"},
+                ],
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        ),
+    }
+
+    if discovered_devices:
+        schema_dict[
             vol.Optional(
-                CONF_SCAN_INTERVAL,
-                default=30,
-            ): vol.All(vol.Coerce(int), vol.Clamp(min=10, max=300)),
-            vol.Optional(CONF_ADD_ALL_DEVICES, default=False): bool,
-            vol.Optional(
-                CONF_CLEANUP_DEVICES,
-                default=0,
-            ): vol.All(vol.Coerce(int), vol.Clamp(min=0, max=10080)),
-        }
+                CONF_UNKNOWN_DEVICES_FILTER_SELECT,
+                default=defaults.get(CONF_UNKNOWN_DEVICES_FILTER_SELECT, []),
+            )
+        ] = selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=[{"value": k, "label": v} for k, v in discovered_devices.items()],
+                multiple=True,
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        )
+
+    schema_dict[
+        vol.Optional(
+            CONF_UNKNOWN_DEVICES_FILTER_MANUAL,
+            default=defaults.get(CONF_UNKNOWN_DEVICES_FILTER_MANUAL, ""),
+        )
+    ] = selector.TextSelector(
+        selector.TextSelectorConfig(
+            multiline=True,
+            type=selector.TextSelectorType.TEXT,
+        )
     )
+
+    return vol.Schema(schema_dict)
 
 
 STEP_USER_DATA_SCHEMA = _config_schema()
@@ -275,6 +322,18 @@ async def process_user_input(
             ),
             CONF_ADD_ALL_DEVICES: data.get(CONF_ADD_ALL_DEVICES, False),
             CONF_CLEANUP_DEVICES: data.get(CONF_CLEANUP_DEVICES, 0),
+            CONF_UNKNOWN_DEVICES_FILTER_MODE: data.get(
+                CONF_UNKNOWN_DEVICES_FILTER_MODE,
+                DEFAULT_UNKNOWN_DEVICES_FILTER_MODE,
+            ),
+            CONF_UNKNOWN_DEVICES_FILTER_SELECT: data.get(
+                CONF_UNKNOWN_DEVICES_FILTER_SELECT,
+                [],
+            ),
+            CONF_UNKNOWN_DEVICES_FILTER_MANUAL: data.get(
+                CONF_UNKNOWN_DEVICES_FILTER_MANUAL,
+                "",
+            ),
         },
     }
 
@@ -371,6 +430,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
         defaults = {**self.config_entry.data, **self.config_entry.options}
         wan_interfaces = None
+        discovered_devices = {}
         hub = getattr(self.config_entry, "runtime_data", None)
         if hub is not None:
             wan_interfaces = [
@@ -378,8 +438,18 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 for interface in hub.kmwan_status.get("interfaces", [])
                 if isinstance(interface, dict) and interface.get("interface")
             ]
+            for mac, dev in hub._devices.items():
+                if not dev.is_known:
+                    name = dev.name or mac
+                    discovered_devices[mac] = f"{name} ({mac})"
+
+        current_selected = defaults.get(CONF_UNKNOWN_DEVICES_FILTER_SELECT, [])
+        for mac in current_selected:
+            if mac not in discovered_devices:
+                discovered_devices[mac] = mac
+
         data_schema = self.add_suggested_values_to_schema(
-            _config_schema(defaults, wan_interfaces or None),
+            _config_schema(defaults, wan_interfaces or None, discovered_devices or None),
             defaults,
         )
         return self.async_show_form(step_id="init", data_schema=data_schema, errors=errors)

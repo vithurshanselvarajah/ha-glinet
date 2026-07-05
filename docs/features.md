@@ -54,6 +54,9 @@ When adding the GL.iNet integration or modifying it via the **Configure** menu, 
 - **Consider Home**: The grace period in seconds before a device is marked as "Away". Prevents devices from flickering when they briefly drop off the network.
 - **Discover unknown devices**: When enabled, adds all newly discovered devices to the Home Assistant device registry rather than only known/tracked ones. Toggling this off automatically cleans up untracked devices.
 - **Auto-cleanup unknown devices (min)**: The inactivity period in minutes after which an untracked device is automatically removed from the registry. Set to `0` to disable.
+- **Unknown Devices Filter Mode**: Select whether the list of unknown devices behaves as a whitelist or blacklist.
+- **Select Unknown Devices**: Select from currently discovered unknown devices to whitelist or blacklist (only available in the options flow).
+- **Manual MAC Address List (One per line)**: Manually enter MAC addresses (one per line) of unknown devices to whitelist or blacklist.
 - **WAN Status Monitors**: Select which WAN interface/protocol combinations to monitor (e.g., `Ethernet 1 IPv4`, `Cellular IPv4`). Defaults to all detected interfaces for both IPv4 and IPv6. Deselect individual entries to hide those sensors and reduce polling overhead.
 - **Enabled Features**: Select which optional modules to activate for this router instance, including optional WAN policy controls.
 
