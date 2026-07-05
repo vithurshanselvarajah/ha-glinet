@@ -517,6 +517,24 @@ CLIENT_BANDWIDTH_SENSORS: tuple[ClientSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda device: device.tx_rate,
     ),
+    ClientSensorEntityDescription(
+        key="total_rx",
+        name="Total download",
+        icon="mdi:download-network",
+        device_class=SensorDeviceClass.DATA_SIZE,
+        native_unit_of_measurement="B",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        value_fn=lambda device: device.total_rx,
+    ),
+    ClientSensorEntityDescription(
+        key="total_tx",
+        name="Total upload",
+        icon="mdi:upload-network",
+        device_class=SensorDeviceClass.DATA_SIZE,
+        native_unit_of_measurement="B",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        value_fn=lambda device: device.total_tx,
+    ),
 )
 
 

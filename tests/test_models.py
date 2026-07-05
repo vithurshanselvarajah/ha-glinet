@@ -58,6 +58,21 @@ def test_client_device_ignores_non_rx_tx_bandwidth_keys() -> None:
     assert device.tx_rate is None
 
 
+def test_client_device_uses_total_rx_tx_as_total_counters() -> None:
+    device = ClientDeviceInfo("aa:bb:cc:dd:ee:ff")
+
+    device.apply_update(
+        {
+            "online": True,
+            "total_rx": 1024,
+            "total_tx": 2048,
+        }
+    )
+
+    assert device.total_rx == 1024
+    assert device.total_tx == 2048
+
+
 def test_client_device_uses_rx_tx_as_explicit_rate() -> None:
     device = ClientDeviceInfo("aa:bb:cc:dd:ee:ff")
 
