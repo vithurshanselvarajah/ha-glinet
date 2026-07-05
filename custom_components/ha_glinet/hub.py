@@ -1602,6 +1602,22 @@ class GLinetHub(DataUpdateCoordinator[None]):
         return sum(1 for device in self._devices.values() if device.is_connected)
 
     @property
+    def current_traffic_download(self) -> int:
+        return sum(device.rx_rate or 0 for device in self._devices.values())
+
+    @property
+    def current_traffic_upload(self) -> int:
+        return sum(device.tx_rate or 0 for device in self._devices.values())
+
+    @property
+    def total_traffic_download(self) -> int:
+        return sum(device.total_rx or 0 for device in self._devices.values())
+
+    @property
+    def total_traffic_upload(self) -> int:
+        return sum(device.total_tx or 0 for device in self._devices.values())
+
+    @property
     def has_tailscale(self) -> bool:
         return bool(self._tailscale_config)
 

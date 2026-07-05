@@ -39,6 +39,24 @@ async def _invoke_api_empty_clients(_: Any) -> dict[str, dict[str, Any]]:
     return {}
 
 
+def test_router_traffic_sensors_sum_all_discovered_devices() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._devices = {}
+
+    device_one = ClientDeviceInfo("aa:bb:cc:dd:ee:ff")
+    device_one.apply_update({"online": True, "rx": 10, "tx": 20, "total_rx": 100, "total_tx": 200})
+    hub._devices[device_one.mac] = device_one
+
+    device_two = ClientDeviceInfo("11:22:33:44:55:66")
+    device_two.apply_update({"online": True, "rx": 30, "tx": 40, "total_rx": 300, "total_tx": 400})
+    hub._devices[device_two.mac] = device_two
+
+    assert hub.current_traffic_download == 40
+    assert hub.current_traffic_upload == 60
+    assert hub.total_traffic_download == 400
+    assert hub.total_traffic_upload == 600
+
+
 async def test_fetch_connected_devices_marks_existing_devices_away_on_empty_client_list(
     monkeypatch,
 ) -> None:
