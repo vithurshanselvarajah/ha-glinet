@@ -12,7 +12,10 @@
           "enabled_features": "Enabled features",
           "wan_status_monitors": "Monitored WAN status sensors",
           "add_all_devices": "Discover unknown devices",
-          "cleanup_devices": "Auto-cleanup unknown devices"
+          "cleanup_devices": "Auto-cleanup unknown devices",
+          "unknown_devices_filter_mode": "Unknown Devices Filter Mode",
+          "unknown_devices_filter_select": "Select Unknown Devices",
+          "unknown_devices_filter_manual": "Unknown Devices Manual MAC Address List (One per line)"
         },
         "data_description": {
           "host": "Type the router hostname, URL, or IP address.",
@@ -22,7 +25,10 @@
           "enabled_features": "Choose the integration feature groups to set up. Disabled feature groups will not create their related entities or services.",
           "wan_status_monitors": "Choose the interface and IP version checks to monitor. Known router interface IDs are shown with friendly names, such as Ethernet 1 and Repeater. GL.iNet reports 0 as up and 1 as down.",
           "add_all_devices": "Automatically track and create entities for every device connected to the router, including those not yet integrated into Home Assistant.",
-          "cleanup_devices": "Set this to 0 to disable automatic cleanup. Any other number is treated as minutes; unknown discovered devices are removed after that period if they remain offline or disconnected."
+          "cleanup_devices": "Set this to 0 to disable automatic cleanup. Any other number is treated as minutes; unknown discovered devices are removed after that period if they remain offline or disconnected.",
+          "unknown_devices_filter_mode": "Select whether the list of unknown devices behaves as a whitelist or blacklist. (Blank defaults to Blacklist which won't block anything)",
+          "unknown_devices_filter_select": "Select from currently discovered unknown devices to whitelist or blacklist.",
+          "unknown_devices_filter_manual": "Manually enter MAC addresses (one per line) of unknown devices to whitelist or blacklist."
         }
       }
     },
@@ -46,7 +52,10 @@
           "enabled_features": "Enabled features",
           "wan_status_monitors": "Monitored WAN status sensors",
           "add_all_devices": "Discover unknown devices",
-          "cleanup_devices": "Auto-cleanup unknown devices"
+          "cleanup_devices": "Auto-cleanup unknown devices",
+          "unknown_devices_filter_mode": "Unknown Devices Filter Mode",
+          "unknown_devices_filter_select": "Select Unknown Devices",
+          "unknown_devices_filter_manual": "Unknown Devices Manual MAC Address List (One per line)"
         },
         "data_description": {
           "host": "Type the router hostname, URL, or IP address.",
@@ -56,7 +65,10 @@
           "enabled_features": "Choose the integration feature groups to set up. Disabled feature groups will not create their related entities or services.",
           "wan_status_monitors": "Choose the interface and IP version checks to monitor. Known router interface IDs are shown with friendly names, such as Ethernet 1 and Repeater. GL.iNet reports 0 as up and 1 as down.",
           "add_all_devices": "Automatically track and create entities for every device connected to the router, including those not yet integrated into Home Assistant.",
-          "cleanup_devices": "Set this to 0 to disable automatic cleanup. Any other number is treated as minutes; unknown discovered devices are removed after that period if they remain offline or disconnected."
+          "cleanup_devices": "Set this to 0 to disable automatic cleanup. Any other number is treated as minutes; unknown discovered devices are removed after that period if they remain offline or disconnected.",
+          "unknown_devices_filter_mode": "Select whether the list of unknown devices behaves as a whitelist or blacklist. (Blank defaults to Blacklist which won't block anything)",
+          "unknown_devices_filter_select": "Select from currently discovered unknown devices to whitelist or blacklist.",
+          "unknown_devices_filter_manual": "Manually enter MAC addresses (one per line) of unknown devices to whitelist or blacklist."
         }
       }
     }

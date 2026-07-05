@@ -179,7 +179,9 @@ jobs:
           system-prompt: >-
             You write concise GitHub release notes for a Home Assistant custom
             integration. Use Markdown bullets. Do not invent changes. Use the
-            commit subject, body, and changed files to summarize what changed.
+            commit subject, body, and changed files to summarize what changed. 
+            If the changes include fixes within the same release related to new
+            features being introduced, don't mention the fixes. Only the new releases
           prompt: |
             Create release notes for ha-glinet.
 
@@ -201,9 +203,6 @@ jobs:
           set -euo pipefail
 
           {
-            echo "# ha-glinet ${VERSION}"
-            echo
-            echo "Channel: release"
             echo
             if [[ -n "${AI_NOTES_FILE:-}" && -s "$AI_NOTES_FILE" ]]; then
               cat "$AI_NOTES_FILE"

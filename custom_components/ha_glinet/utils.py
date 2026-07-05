@@ -19,6 +19,11 @@ def get_first_int(data: Any, keys: tuple[str, ...], nested: tuple[str, ...] = ()
                 return value
             if isinstance(value, float):
                 return int(value)
+            if isinstance(value, str):
+                try:
+                    return int(value)
+                except ValueError:
+                    continue
     return None
 
 

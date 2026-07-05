@@ -42,6 +42,9 @@ from .const import (
     CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
     CONF_SCAN_INTERVAL,
+    CONF_UNKNOWN_DEVICES_FILTER_MANUAL,
+    CONF_UNKNOWN_DEVICES_FILTER_MODE,
+    CONF_UNKNOWN_DEVICES_FILTER_SELECT,
     CONF_WAN_STATUS_MONITORS,
     DEFAULT_USERNAME,
     DOMAIN,
@@ -283,7 +286,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 entity_registry.async_remove(entry.entity_id)
                 removed = True
 
-            if not removed and not self._settings.get(CONF_ADD_ALL_DEVICES):
+            if not removed:
 
                 mac = None
                 if entry.domain == TRACKER_DOMAIN:
@@ -306,18 +309,19 @@ class GLinetHub(DataUpdateCoordinator[None]):
                     if not device or not any(
                         eid != self._entry.entry_id for eid in device.config_entries
                     ):
-                        _LOGGER.debug(
-                            "Removing unknown device entity %s (discovery disabled)",
-                            entry.entity_id,
-                        )
-                        entity_registry.async_remove(entry.entity_id)
-                        if device:
+                        if not self._unknown_device_allowed(mac):
                             _LOGGER.debug(
-                                "Removing unknown device %s (discovery disabled)",
-                                device.name or mac,
+                                "Removing unknown device entity %s (discovery disabled)",
+                                entry.entity_id,
                             )
-                            dev_reg.async_remove_device(device.id)
-                        removed = True
+                            entity_registry.async_remove(entry.entity_id)
+                            if device:
+                                _LOGGER.debug(
+                                    "Removing unknown device %s (discovery disabled)",
+                                    device.name or mac,
+                                )
+                                dev_reg.async_remove_device(device.id)
+                            removed = True
 
             if removed:
                 continue
@@ -896,7 +900,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             if not existing_device or not any(
                 entry_id != self._entry.entry_id for entry_id in existing_device.config_entries
             ):
-                if not self._settings.get(CONF_ADD_ALL_DEVICES):
+                if not self._unknown_device_allowed(device_mac):
                     continue
                 device_is_known = False
             else:
@@ -1449,6 +1453,27 @@ class GLinetHub(DataUpdateCoordinator[None]):
         else:
             await self.fetch_sms_messages()
 
+    def _get_unknown_devices_filter(self) -> set[str]:
+        selected = self._settings.get(CONF_UNKNOWN_DEVICES_FILTER_SELECT, [])
+        manual_raw = self._settings.get(CONF_UNKNOWN_DEVICES_FILTER_MANUAL, "")
+        filter_set = set(selected)
+        if manual_raw:
+            for line in manual_raw.splitlines():
+                mac = line.strip().lower()
+                if mac:
+                    filter_set.add(mac)
+        return {mac.lower() for mac in filter_set}
+
+    def _unknown_device_allowed(self, mac: str) -> bool:
+        if not self._settings.get(CONF_ADD_ALL_DEVICES):
+            return False
+        filter_mode = self._settings.get(CONF_UNKNOWN_DEVICES_FILTER_MODE, "blacklist")
+        filter_set = self._get_unknown_devices_filter()
+        mac_lower = mac.lower()
+        if filter_mode == "whitelist":
+            return mac_lower in filter_set
+        return mac_lower not in filter_set
+
     def apply_option_updates(self, new_options: dict[str, Any]) -> bool:
         self._options.update(new_options)
         self._settings = dict(self._entry.data) | new_options
@@ -1600,6 +1625,22 @@ class GLinetHub(DataUpdateCoordinator[None]):
     @property
     def online_client_count(self) -> int:
         return sum(1 for device in self._devices.values() if device.is_connected)
+
+    @property
+    def current_traffic_download(self) -> int:
+        return sum(device.rx_rate or 0 for device in self._devices.values())
+
+    @property
+    def current_traffic_upload(self) -> int:
+        return sum(device.tx_rate or 0 for device in self._devices.values())
+
+    @property
+    def total_traffic_download(self) -> int:
+        return sum(device.total_rx or 0 for device in self._devices.values())
+
+    @property
+    def total_traffic_upload(self) -> int:
+        return sum(device.total_tx or 0 for device in self._devices.values())
 
     @property
     def has_tailscale(self) -> bool:

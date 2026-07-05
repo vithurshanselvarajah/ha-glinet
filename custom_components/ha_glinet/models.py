@@ -433,6 +433,8 @@ class ClientDeviceInfo:
         self._interface_type = DeviceInterfaceType.UNKNOWN
         self._rx_rate: int | None = None
         self._tx_rate: int | None = None
+        self._total_rx: int | None = None
+        self._total_tx: int | None = None
         self._is_known = True
 
     def apply_update(self, dev_info: dict | None = None, consider_home: int = 0) -> None:
@@ -457,6 +459,8 @@ class ClientDeviceInfo:
                 self._interface_type = DeviceInterfaceType.UNKNOWN
             self._rx_rate = get_first_int(dev_info, ("rx",))
             self._tx_rate = get_first_int(dev_info, ("tx",))
+            self._total_rx = get_first_int(dev_info, ("total_rx",))
+            self._total_tx = get_first_int(dev_info, ("total_tx",))
 
         if self._connected:
             self._connected = (now - self._last_activity).total_seconds() < consider_home
@@ -495,6 +499,14 @@ class ClientDeviceInfo:
     @property
     def tx_rate(self) -> int | None:
         return self._tx_rate
+
+    @property
+    def total_rx(self) -> int | None:
+        return self._total_rx
+
+    @property
+    def total_tx(self) -> int | None:
+        return self._total_tx
 
     @property
     def is_known(self) -> bool:
