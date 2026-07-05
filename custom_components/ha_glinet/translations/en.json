@@ -15,7 +15,7 @@
           "cleanup_devices": "Auto-cleanup unknown devices",
           "unknown_devices_filter_mode": "Unknown Devices Filter Mode",
           "unknown_devices_filter_select": "Select Unknown Devices",
-          "unknown_devices_filter_manual": "Manual MAC Address List (One per line)"
+          "unknown_devices_filter_manual": "Unknown Devices Manual MAC Address List (One per line)"
         },
         "data_description": {
           "host": "Type the router hostname, URL, or IP address.",
@@ -55,7 +55,7 @@
           "cleanup_devices": "Auto-cleanup unknown devices",
           "unknown_devices_filter_mode": "Unknown Devices Filter Mode",
           "unknown_devices_filter_select": "Select Unknown Devices",
-          "unknown_devices_filter_manual": "Manual MAC Address List (One per line)"
+          "unknown_devices_filter_manual": "Unknown Devices Manual MAC Address List (One per line)"
         },
         "data_description": {
           "host": "Type the router hostname, URL, or IP address.",
