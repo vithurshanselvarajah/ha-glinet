@@ -220,7 +220,7 @@ def _config_schema(
     schema_dict[
         vol.Optional(
             CONF_UNKNOWN_DEVICES_FILTER_MANUAL,
-            default=defaults.get(CONF_UNKNOWN_DEVICES_FILTER_MANUAL, ""),
+            default="",
         )
     ] = selector.TextSelector(
         selector.TextSelectorConfig(
