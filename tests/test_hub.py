@@ -28,6 +28,7 @@ def _hub_with_devices() -> GLinetHub:
     hub._host = "192.168.8.1"
     hub._devices = {"aa:bb:cc:dd:ee:ff": ClientDeviceInfo("aa:bb:cc:dd:ee:ff")}
     hub._devices["aa:bb:cc:dd:ee:ff"].apply_update({"online": True})
+    hub._all_connected_clients = {}
     hub._invoke_api = _invoke_api_empty_clients
     hub._api = types.SimpleNamespace(clients=types.SimpleNamespace(get_online=object()))
     hub._entry = types.SimpleNamespace(entry_id="test_entry")
@@ -39,22 +40,37 @@ async def _invoke_api_empty_clients(_: Any) -> dict[str, dict[str, Any]]:
     return {}
 
 
-def test_router_traffic_sensors_sum_all_discovered_devices() -> None:
+def test_router_traffic_sensors_sum_all_connected_clients() -> None:
+    """Traffic properties should aggregate from raw API data, not tracked devices."""
     hub = GLinetHub.__new__(GLinetHub)
     hub._devices = {}
-
-    device_one = ClientDeviceInfo("aa:bb:cc:dd:ee:ff")
-    device_one.apply_update({"online": True, "rx": 10, "tx": 20, "total_rx": 100, "total_tx": 200})
-    hub._devices[device_one.mac] = device_one
-
-    device_two = ClientDeviceInfo("11:22:33:44:55:66")
-    device_two.apply_update({"online": True, "rx": 30, "tx": 40, "total_rx": 300, "total_tx": 400})
-    hub._devices[device_two.mac] = device_two
+    hub._all_connected_clients = {
+        "aa:bb:cc:dd:ee:ff": {"rx": 10, "tx": 20, "total_rx": 100, "total_tx": 200},
+        "11:22:33:44:55:66": {"rx": 30, "tx": 40, "total_rx": 300, "total_tx": 400},
+    }
 
     assert hub.current_traffic_download == 40
     assert hub.current_traffic_upload == 60
     assert hub.total_traffic_download == 400
     assert hub.total_traffic_upload == 600
+
+
+def test_router_traffic_includes_untracked_devices() -> None:
+    """Traffic totals must include devices not tracked by HA (not in _devices)."""
+    hub = GLinetHub.__new__(GLinetHub)
+    # Only one device is tracked
+    hub._devices = {"aa:bb:cc:dd:ee:ff": ClientDeviceInfo("aa:bb:cc:dd:ee:ff")}
+    # But the API reports two devices
+    hub._all_connected_clients = {
+        "aa:bb:cc:dd:ee:ff": {"rx": 10, "tx": 20, "total_rx": 100, "total_tx": 200},
+        "11:22:33:44:55:66": {"rx": 5, "tx": 8, "total_rx": 50, "total_tx": 80},
+    }
+
+    # Both devices should contribute to traffic
+    assert hub.current_traffic_download == 15
+    assert hub.current_traffic_upload == 28
+    assert hub.total_traffic_download == 150
+    assert hub.total_traffic_upload == 280
 
 
 async def test_fetch_connected_devices_marks_existing_devices_away_on_empty_client_list(
