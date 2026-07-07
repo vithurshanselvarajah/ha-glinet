@@ -117,3 +117,42 @@ def test_wan_status_helpers_report_interface_protocol_state() -> None:
 
     unknown_sensor = WanStatusSensor(hub, "custom_wan", {"ipv4"})
     assert unknown_sensor._attr_name == "custom_wan status"
+
+
+def test_sms_sensor_counts_only_unread_messages() -> None:
+    from custom_components.ha_glinet.entities.sensor import HUB_SENSORS
+    from custom_components.ha_glinet.models import SmsMessage
+
+    desc = next(d for d in HUB_SENSORS if d.key == "sms_messages")
+
+    unread = SmsMessage(message_id="1", phone_number="+44123", text="a", status=0)
+    read = SmsMessage(message_id="2", phone_number="+44456", text="b", status=1)
+    sent = SmsMessage(message_id="3", phone_number="+44789", text="c", status=2)
+
+    hub = types.SimpleNamespace(
+        sms_messages={"1": unread, "2": read, "3": sent},
+    )
+
+    assert desc.value_fn(hub) == 1
+    attrs = desc.extra_attributes_fn(hub)
+    assert attrs["unread_count"] == 1
+    assert attrs["message_count"] == 3
+    assert attrs["incoming_count"] == 2
+    assert attrs["outgoing_count"] == 1
+
+
+def test_sms_sensor_returns_zero_when_no_unread() -> None:
+    from custom_components.ha_glinet.entities.sensor import HUB_SENSORS
+    from custom_components.ha_glinet.models import SmsMessage
+
+    desc = next(d for d in HUB_SENSORS if d.key == "sms_messages")
+
+    read = SmsMessage(message_id="1", phone_number="+44123", text="a", status=1)
+    sent = SmsMessage(message_id="2", phone_number="+44456", text="b", status=2)
+
+    hub = types.SimpleNamespace(
+        sms_messages={"1": read, "2": sent},
+    )
+
+    assert desc.value_fn(hub) == 0
+    assert desc.extra_attributes_fn(hub)["unread_count"] == 0

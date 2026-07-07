@@ -124,7 +124,7 @@
         "name": "Cellular APN"
       },
       "sms_messages": {
-        "name": "Text messages"
+        "name": "Unread messages"
       },
       "repeater_state": {
         "name": "Repeater state",

@@ -213,7 +213,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
         feature_map = {
             FEATURE_CELLULAR: ["cellular_"],
-            FEATURE_SMS: ["sms_messages", "text_messages"],
+            FEATURE_SMS: ["sms_messages", "unread_messages"],
             FEATURE_REPEATER: [
                 "repeater_",
                 "wifi_network",

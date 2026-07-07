@@ -354,12 +354,17 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
     ),
     HubSensorEntityDescription(
         key="sms_messages",
-        name="Text messages",
+        name="Unread messages",
         has_entity_name=True,
-        icon="mdi:message-text",
+        icon="mdi:email-alert",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: len(hub.sms_messages),
+        value_fn=lambda hub: sum(
+            1 for m in hub.sms_messages.values() if m.status == 0
+        ),
         extra_attributes_fn=lambda hub: {
+            "unread_count": sum(
+                1 for m in hub.sms_messages.values() if m.status == 0
+            ),
             "message_count": len(hub.sms_messages),
             "incoming_count": sum(
                 1 for m in hub.sms_messages.values() if m.direction == "incoming"

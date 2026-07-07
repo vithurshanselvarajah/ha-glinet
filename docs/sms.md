@@ -16,7 +16,7 @@ To enable this feature, check the **SMS** option under **Enabled Features** in t
 
 | Entity | Description | API Source |
 | --- | --- | --- |
-| **Text messages** | Count of SMS messages currently stored on the SIM card/modem. Attributes include `message_count`, `incoming_count`, `outgoing_count`, and a full `messages` list with per-message details. | `modem/get_sms_list` |
+| **Unread messages** | Count of unread SMS messages (status `0`) currently stored on the SIM card/modem. Attributes include `unread_count`, `message_count`, `incoming_count`, `outgoing_count`, and a full `messages` list with per-message details. | `modem/get_sms_list` |
 
 The `messages` attribute contains objects with the following fields:
 
@@ -57,7 +57,7 @@ Deletes SMS messages from the router based on a scope or specific ID.
   - `11` — All SMS.
   - `0` — All unread SMS.
   - `1` — All read SMS.
-- **`message_id`** (Optional): The unique ID of the message to delete. Found in the `Text messages` sensor attributes. Required if `scope` is `10`.
+- **`message_id`** (Optional): The unique ID of the message to delete. Found in the `Unread messages` sensor attributes. Required if `scope` is `10`.
 - **`mac`** (Optional): Target a specific router by MAC address.
 
 ### `refresh_sms`
