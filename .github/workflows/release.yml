@@ -181,7 +181,8 @@ jobs:
             integration. Use Markdown bullets. Do not invent changes. Use the
             commit subject, body, and changed files to summarize what changed. 
             If the changes include fixes within the same release related to new
-            features being introduced, don't mention the fixes. Only the new releases
+            features being introduced, don't mention the fixes. Only the new releases.
+            Also do not include notes about changes to files around versioning.
           prompt: |
             Create release notes for ha-glinet.
 
