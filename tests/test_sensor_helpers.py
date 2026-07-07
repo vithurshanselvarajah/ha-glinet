@@ -34,6 +34,7 @@ def _install_sensor_dependency_stubs() -> None:
     sensor.SensorStateClass = types.SimpleNamespace(
         MEASUREMENT="measurement",
         TOTAL_INCREASING="total_increasing",
+        TOTAL="total",
     )
     sys.modules.setdefault("homeassistant.components.sensor", sensor)
 

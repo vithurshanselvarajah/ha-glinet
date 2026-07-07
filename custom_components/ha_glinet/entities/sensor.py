@@ -165,7 +165,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:download-network",
         device_class=SensorDeviceClass.DATA_SIZE,
         native_unit_of_measurement="B",
-        state_class=SensorStateClass.TOTAL_INCREASING,
+        state_class=SensorStateClass.TOTAL,
         value_fn=lambda hub: hub.total_traffic_download,
     ),
     HubSensorEntityDescription(
@@ -175,7 +175,7 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         icon="mdi:upload-network",
         device_class=SensorDeviceClass.DATA_SIZE,
         native_unit_of_measurement="B",
-        state_class=SensorStateClass.TOTAL_INCREASING,
+        state_class=SensorStateClass.TOTAL,
         value_fn=lambda hub: hub.total_traffic_upload,
     ),
     HubSensorEntityDescription(
