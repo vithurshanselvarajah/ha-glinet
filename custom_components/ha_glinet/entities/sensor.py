@@ -41,6 +41,28 @@ if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 
+def _get_cellular_ip(hub: GLinetHub, version: str) -> str | None:
+    status = hub.cellular_status
+    if not isinstance(status, dict):
+        return None
+    modems = status.get("modems")
+    if not isinstance(modems, list):
+        return None
+    for modem in modems:
+        if not isinstance(modem, dict):
+            continue
+        network = modem.get("network")
+        if not isinstance(network, dict):
+            continue
+        ip_info = network.get(version)
+        if not isinstance(ip_info, dict):
+            continue
+        ip = ip_info.get("ip")
+        if ip not in (None, ""):
+            return str(ip)
+    return None
+
+
 @dataclass(frozen=True, kw_only=True)
 class SystemStatusEntityDescription(SensorEntityDescription):
     value_fn: Callable[[RouterStatus | None], int | float | None]
@@ -183,22 +205,14 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         name="Cellular WAN IPv4",
         has_entity_name=True,
         icon="mdi:ip-network",
-        value_fn=lambda hub: get_first_value(
-            hub.cellular_status,
-            ("ip",),
-            nested=("modem", "cellular", "sim", "network", "ipv4"),
-        ),
+        value_fn=lambda hub: _get_cellular_ip(hub, "ipv4"),
     ),
     HubSensorEntityDescription(
         key="cellular_ipv6",
         name="Cellular WAN IPv6",
         has_entity_name=True,
         icon="mdi:ip-network",
-        value_fn=lambda hub: get_first_value(
-            hub.cellular_status,
-            ("ip",),
-            nested=("modem", "cellular", "sim", "network", "ipv6"),
-        ),
+        value_fn=lambda hub: _get_cellular_ip(hub, "ipv6"),
     ),
     HubSensorEntityDescription(
         key="firewall_rules",

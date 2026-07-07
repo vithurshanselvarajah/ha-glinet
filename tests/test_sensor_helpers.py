@@ -206,3 +206,52 @@ def test_cellular_ip_sensors_are_enabled() -> None:
     assert _sensor_is_enabled(hub, desc_v4) is False
     assert _sensor_is_enabled(hub, desc_v6) is True
 
+
+def test_get_cellular_ip_resolves_correctly() -> None:
+    from custom_components.ha_glinet.entities.sensor import _get_cellular_ip
+
+    # Case 1: IPv4 is available, IPv6 is not available
+    hub = types.SimpleNamespace(
+        cellular_status={
+            "modems": [
+                {
+                    "bus": "0001:01:00.0",
+                    "network": {
+                        "status": 0,
+                        "ipv4": {
+                            "gateway": "10.164.158.132",
+                            "ip": "10.164.158.131",
+                        },
+                    },
+                }
+            ]
+        }
+    )
+
+    assert _get_cellular_ip(hub, "ipv4") == "10.164.158.131"
+    assert _get_cellular_ip(hub, "ipv6") is None
+
+    # Case 2: Both IPv4 and IPv6 are available
+    hub = types.SimpleNamespace(
+        cellular_status={
+            "modems": [
+                {
+                    "bus": "0001:01:00.0",
+                    "network": {
+                        "status": 0,
+                        "ipv4": {
+                            "ip": "10.164.158.131",
+                        },
+                        "ipv6": {
+                            "ip": "2001:db8::1",
+                        },
+                    },
+                }
+            ]
+        }
+    )
+
+    assert _get_cellular_ip(hub, "ipv4") == "10.164.158.131"
+    assert _get_cellular_ip(hub, "ipv6") == "2001:db8::1"
+
+
