@@ -156,3 +156,53 @@ def test_sms_sensor_returns_zero_when_no_unread() -> None:
 
     assert desc.value_fn(hub) == 0
     assert desc.extra_attributes_fn(hub)["unread_count"] == 0
+
+
+def test_cellular_ip_sensors_are_enabled() -> None:
+    from custom_components.ha_glinet.entities.sensor import HUB_SENSORS, _sensor_is_enabled
+
+    desc_v4 = next(d for d in HUB_SENSORS if d.key == "cellular_ipv4")
+    desc_v6 = next(d for d in HUB_SENSORS if d.key == "cellular_ipv6")
+
+    # Case 1: wan_status_monitors is None (default), modem_0001 is in _wan_interfaces
+    hub = types.SimpleNamespace(
+        wan_status_monitors=None,
+        kmwan_status={
+            "interfaces": [
+                {"interface": "wan"},
+                {"interface": "modem_0001"},
+            ]
+        }
+    )
+    assert _sensor_is_enabled(hub, desc_v4) is True
+    assert _sensor_is_enabled(hub, desc_v6) is True
+
+    # Case 2: wan_status_monitors is None (default), modem_0001 is NOT in _wan_interfaces
+    hub = types.SimpleNamespace(
+        wan_status_monitors=None,
+        kmwan_status={
+            "interfaces": [
+                {"interface": "wan"},
+                {"interface": "wwan"},
+            ]
+        }
+    )
+    assert _sensor_is_enabled(hub, desc_v4) is False
+    assert _sensor_is_enabled(hub, desc_v6) is False
+
+    # Case 3: wan_status_monitors is configured, and modem_0001:ipv4 is selected
+    hub = types.SimpleNamespace(
+        wan_status_monitors={"modem_0001:ipv4", "wan:ipv4"},
+        kmwan_status={}
+    )
+    assert _sensor_is_enabled(hub, desc_v4) is True
+    assert _sensor_is_enabled(hub, desc_v6) is False
+
+    # Case 4: wan_status_monitors is configured, and modem_0001:ipv6 is selected
+    hub = types.SimpleNamespace(
+        wan_status_monitors={"modem_0001:ipv6", "wwan:ipv4"},
+        kmwan_status={}
+    )
+    assert _sensor_is_enabled(hub, desc_v4) is False
+    assert _sensor_is_enabled(hub, desc_v6) is True
+

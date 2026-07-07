@@ -150,6 +150,12 @@
       "repeater_bssid": {
         "name": "Repeater BSSID"
       },
+      "cellular_ipv4": {
+        "name": "Cellular WAN IPv4"
+      },
+      "cellular_ipv6": {
+        "name": "Cellular WAN IPv6"
+      },
       "wg_server_users": {
         "name": "WireGuard server users"
       },

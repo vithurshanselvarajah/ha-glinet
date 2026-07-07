@@ -179,14 +179,25 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         value_fn=lambda hub: hub.total_traffic_upload,
     ),
     HubSensorEntityDescription(
-        key="wan_ip",
-        name="WAN IP",
+        key="cellular_ipv4",
+        name="Cellular WAN IPv4",
         has_entity_name=True,
         icon="mdi:ip-network",
         value_fn=lambda hub: get_first_value(
             hub.cellular_status,
             ("ip",),
             nested=("modem", "cellular", "sim", "network", "ipv4"),
+        ),
+    ),
+    HubSensorEntityDescription(
+        key="cellular_ipv6",
+        name="Cellular WAN IPv6",
+        has_entity_name=True,
+        icon="mdi:ip-network",
+        value_fn=lambda hub: get_first_value(
+            hub.cellular_status,
+            ("ip",),
+            nested=("modem", "cellular", "sim", "network", "ipv6"),
         ),
     ),
     HubSensorEntityDescription(
@@ -534,6 +545,16 @@ FEATURE_SENSOR_MAP: dict[str, str] = {
 
 
 def _sensor_is_enabled(hub: GLinetHub, description: HubSensorEntityDescription) -> bool:
+    if description.key in {"cellular_ipv4", "cellular_ipv6"}:
+        monitors = hub.wan_status_monitors
+        protocol = "ipv4" if description.key == "cellular_ipv4" else "ipv6"
+        if monitors is None:
+            return any(
+                iface.get("interface") == "modem_0001"
+                for iface in _wan_interfaces(hub)
+            )
+        return f"modem_0001:{protocol}" in monitors
+
     feature = FEATURE_SENSOR_MAP.get(description.key)
     return feature is None or hub.feature_enabled(feature)
 
@@ -849,7 +870,7 @@ class HubStatusSensor(CoordinatorEntity[GLinetHub], SensorEntity):
     def available(self) -> bool:
         if not super().available:
             return False
-        if self.entity_description.key == "wan_ip":
+        if self.entity_description.key in {"cellular_ipv4", "cellular_ipv6"}:
             return self.native_value is not None
         if self.entity_description.key in {
             "repeater_ssid",
