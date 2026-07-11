@@ -61,19 +61,19 @@ class ModemModule(BaseModule):
         recipient: str,
         text: str,
         timeout: int = 10,
+        slot: int | str | None = None,
     ) -> dict[str, Any]:
+        params: dict[str, Any] = {
+            "bus": bus,
+            "phone_number": recipient,
+            "body": text,
+            "timeout": timeout,
+        }
+        if slot is not None:
+            params["slot"] = slot
         payload = self._client._build_sid_payload(
             "call",
-            [
-                "modem",
-                "send_sms",
-                {
-                    "bus": bus,
-                    "phone_number": recipient,
-                    "body": text,
-                    "timeout": timeout,
-                },
-            ],
+            ["modem", "send_sms", params],
             self._client.sid,
         )
         response = await self._client._send_request(
@@ -83,10 +83,16 @@ class ModemModule(BaseModule):
         return dict(response)
 
     async def remove_sms(
-        self, bus: str, scope: int, message_id: str | None = None
+        self,
+        bus: str,
+        scope: int,
+        message_id: str | None = None,
+        slot: int | str | None = None,
     ) -> dict[str, Any]:
         params = {"bus": bus, "scope": scope}
         if message_id:
             params["name"] = message_id
+        if slot is not None:
+            params["slot"] = slot
         response = await self._call("modem", "remove_sms", params)
         return dict(response)
