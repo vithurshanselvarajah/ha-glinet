@@ -1451,16 +1451,18 @@ class GLinetHub(DataUpdateCoordinator[None]):
         chunks = [text[i : i + 160] for i in range(0, len(text), 160)]
         for chunk in chunks:
             if slot is None:
-                api_call = lambda c=chunk: self.router_api.modem.send_sms(
-                    bus, recipient, c
-                )
+
+                async def api_call(c: str = chunk):
+                    return await self.router_api.modem.send_sms(bus, recipient, c)
+
             else:
-                api_call = lambda c=chunk: self.router_api.modem.send_sms(
-                    bus, recipient, c, slot=slot
-                )
-            response = await self._invoke_optional_api(
-                api_call
-            )
+
+                async def api_call(c: str = chunk):
+                    return await self.router_api.modem.send_sms(
+                        bus, recipient, c, slot=slot
+                    )
+
+            response = await self._invoke_optional_api(api_call)
             if response is None:
                 raise RuntimeError("The router did not accept the SMS send request")
 
@@ -1485,11 +1487,17 @@ class GLinetHub(DataUpdateCoordinator[None]):
             raise RuntimeError("No GL-INet modem bus is available for SMS removal")
 
         if slot is None:
-            api_call = lambda: self.router_api.modem.remove_sms(bus, scope, message_id)
+
+            async def api_call():
+                return await self.router_api.modem.remove_sms(bus, scope, message_id)
+
         else:
-            api_call = lambda: self.router_api.modem.remove_sms(
-                bus, scope, message_id, slot=slot
-            )
+
+            async def api_call():
+                return await self.router_api.modem.remove_sms(
+                    bus, scope, message_id, slot=slot
+                )
+
         await self._invoke_optional_api(api_call)
         if scope == 10 and message_id:
             self._sms_messages.pop(message_id, None)
