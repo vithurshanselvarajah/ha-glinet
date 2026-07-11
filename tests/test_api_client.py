@@ -268,12 +268,147 @@ async def test_sms_methods_use_sms_module_payloads() -> None:
     ]
 
 
+async def test_send_sms_includes_slot_when_supplied() -> None:
+    session = FakeSession([{"result": {"sent": True}}])
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+
+    assert await client.modem.send_sms(
+        "cpu", "+441234567890", "hi", slot=2
+    ) == {"sent": True}
+
+    assert session.requests[0]["json"]["params"] == [
+        "sid-1",
+        "modem",
+        "send_sms",
+        {
+            "bus": "cpu",
+            "phone_number": "+441234567890",
+            "body": "hi",
+            "timeout": 10,
+            "slot": 2,
+        },
+    ]
+
+
 async def test_get_modem_info_uses_documented_modem_endpoint() -> None:
     session = FakeSession([{"result": {"modems": [{"bus": "1-1"}]}}])
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
 
     assert await client.modem.get_info() == {"modems": [{"bus": "1-1"}]}
     assert session.requests[0]["json"]["params"] == ["sid-1", "modem", "get_info", {}]
+
+
+async def test_modem_status_uses_49_slot_endpoints_for_new_firmware() -> None:
+    session = FakeSession(
+        [
+            {"result": {"interfaces": ["modem_cpu_s2"]}},
+            {
+                "result": {
+                    "signals": [
+                        {
+                            "slot": 2,
+                            "timestamp": 10,
+                            "strength": 4,
+                            "rsrp": -80,
+                            "rsrq": -11,
+                            "sinr": 25,
+                            "network_type": "NR5G-SA",
+                        }
+                    ]
+                }
+            },
+            {
+                "result": {
+                    "networks": [
+                        {
+                            "bus": "cpu",
+                            "slot": "2",
+                            "iccid": "iccid-2",
+                            "status": 0,
+                            "dial_status": 0,
+                            "traffic_total": "1024",
+                        }
+                    ]
+                }
+            },
+            {
+                "result": {
+                    "networks": [
+                        {
+                            "bus": "cpu",
+                            "slot": "2",
+                            "network_interface": "modem_cpu",
+                            "ipv4": {"ip": "10.0.0.2"},
+                            "ipv6": [],
+                            "cell_info": {"mode": "NR5G-SA TDD", "band": 78},
+                        }
+                    ]
+                }
+            },
+        ]
+    )
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+    client._firmware_version = (4, 9, 0, 0)
+
+    assert await client.modem.get_status() == {
+        "modems": [
+            {
+                "bus": "cpu",
+                "slot": "2",
+                "iccid": "iccid-2",
+                "status": 0,
+                "dial_status": 0,
+                "signal": 4,
+                "network_type": "NR5G-SA",
+                "simcard": {
+                    "iccid": "iccid-2",
+                    "network_type": "NR5G-SA",
+                    "signal": {
+                        "slot": 2,
+                        "timestamp": 10,
+                        "strength": 4,
+                        "rsrp": -80,
+                        "rsrq": -11,
+                        "sinr": 25,
+                        "network_type": "NR5G-SA",
+                    },
+                },
+                "network": {"ipv4": {"ip": "10.0.0.2"}, "ipv6": {}},
+                "cell_info": {"mode": "NR5G-SA TDD", "band": 78},
+                "traffic_total": "1024",
+                "protocol": None,
+                "network_interface": "modem_cpu",
+            }
+        ]
+    }
+    assert [request["json"]["params"] for request in session.requests] == [
+        ["sid-1", "modem", "get_modem_current_interface", {}],
+        ["sid-1", "modem", "get_signals", {"time": 10}],
+        ["sid-1", "modem", "get_network_status", {"bus": "cpu", "slot": 2}],
+        ["sid-1", "modem", "get_network_info", {"bus": "cpu", "slot": 2}],
+    ]
+
+
+async def test_modem_sms_list_uses_49_bus_payload_for_new_firmware() -> None:
+    session = FakeSession(
+        [
+            {"result": {"interfaces": ["modem_1_1_s1", "modem_1_1_2_s2"]}},
+            {"result": {"list": [{"name": "sms-1", "bus": "1-1"}]}},
+            {"result": {"list": [{"name": "sms-2", "bus": "1-1.2", "slot": 2}]}},
+        ]
+    )
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+    client._firmware_version = (4, 9, 0, 0)
+
+    assert await client.modem.get_sms_list() == [
+        {"name": "sms-1", "bus": "1-1"},
+        {"name": "sms-2", "bus": "1-1.2", "slot": 2},
+    ]
+    assert [request["json"]["params"] for request in session.requests] == [
+        ["sid-1", "modem", "get_modem_current_interface", {}],
+        ["sid-1", "modem", "get_sms_list", {"bus": "1-1"}],
+        ["sid-1", "modem", "get_sms_list", {"bus": "1-1.2"}],
+    ]
 
 
 async def test_get_kmwan_status_uses_kmwan_endpoint() -> None:
