@@ -16,7 +16,8 @@ To enable this feature, check the **Cellular** option under **Enabled Features**
 
 | Entity | Description | API Source |
 | --- | --- | --- |
-| **WAN IP** | The IP address assigned to the cellular internet interface. Hidden when cellular internet is unavailable. | `modem/get_status` |
+| **Cellular WAN IPv4** | The IP address assigned to the cellular internet interface. Hidden when cellular internet is unavailable. | `modem/get_status` |
+| **Cellular WAN IPv6** | The IPv6 address assigned to the cellular internet interface. Hidden when cellular internet is unavailable. | `modem/get_status` |
 | **Cellular signal** | Overall cellular signal strength percentage. | `modem/get_status` |
 | **Cellular RSSI** | Received Signal Strength Indicator in dBm. | `modem/get_status` |
 | **Cellular RSRP** | Reference Signal Received Power in dBm. | `modem/get_status` |

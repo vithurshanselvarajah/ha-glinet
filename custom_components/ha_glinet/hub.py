@@ -183,8 +183,20 @@ class GLinetHub(DataUpdateCoordinator[None]):
         return feature in self.enabled_features
 
     def _wan_status_entity_selected(self, unique_id: str) -> bool:
-        prefix = f"glinet_sensor/{self.device_mac}/wan_status_"
-        if not unique_id.startswith(prefix):
+        prefix = f"glinet_sensor/{self.device_mac}/"
+
+        cellular_ip_map = {
+            f"{prefix}cellular_ipv4": "modem_0001:ipv4",
+            f"{prefix}cellular_ipv6": "modem_0001:ipv6",
+        }
+        if unique_id in cellular_ip_map:
+            monitors = self.wan_status_monitors
+            if monitors is None:
+                return True
+            return cellular_ip_map[unique_id] in monitors
+
+        wan_prefix = f"{prefix}wan_status_"
+        if not unique_id.startswith(wan_prefix):
             return True
 
         monitors = self.wan_status_monitors
@@ -197,7 +209,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             if separator and protocol in {"ipv4", "ipv6"} and interface:
                 selected_parts.append((interface, protocol))
 
-        suffix = unique_id.removeprefix(prefix)
+        suffix = unique_id.removeprefix(wan_prefix)
         return any(
             suffix == interface or suffix == f"{interface}_{protocol}"
             for interface, protocol in selected_parts
@@ -214,7 +226,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
         feature_map = {
             FEATURE_CELLULAR: ["cellular_"],
-            FEATURE_SMS: ["sms_messages", "text_messages"],
+            FEATURE_SMS: ["sms_messages", "unread_messages"],
             FEATURE_REPEATER: [
                 "repeater_",
                 "wifi_network",

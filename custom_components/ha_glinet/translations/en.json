@@ -112,7 +112,7 @@
         "name": "Cellular network"
       },
       "sms_messages": {
-        "name": "Text messages"
+        "name": "Unread messages"
       },
       "repeater_state": {
         "name": "Repeater state",
@@ -149,6 +149,12 @@
       },
       "repeater_bssid": {
         "name": "Repeater BSSID"
+      },
+      "cellular_ipv4": {
+        "name": "Cellular WAN IPv4"
+      },
+      "cellular_ipv6": {
+        "name": "Cellular WAN IPv6"
       },
       "wg_server_users": {
         "name": "WireGuard server users"

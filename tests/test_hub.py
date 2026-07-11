@@ -925,6 +925,63 @@ async def test_async_initialize_hub_cleans_up_unselected_wan_status_sensors(
     mock_er.async_remove.assert_any_call("sensor.repeater_ipv6_status")
 
 
+async def test_async_initialize_hub_cleans_up_unselected_cellular_ip_sensors(
+    monkeypatch,
+) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {
+        CONF_ADD_ALL_DEVICES: True,
+        CONF_WAN_STATUS_MONITORS: ["wan:ipv4", "modem_0001:ipv4"],
+        CONF_ENABLED_FEATURES: ["cellular"],
+    }
+    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub.hass = MagicMock()
+    hub._late_init_complete = True
+    hub._factory_mac = "00:11:22:33:44:55"
+
+    selected_ipv4 = types.SimpleNamespace(
+        entity_id="sensor.cellular_wan_ipv4",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_ipv4",
+        domain="sensor",
+    )
+    unselected_ipv6 = types.SimpleNamespace(
+        entity_id="sensor.cellular_wan_ipv6",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_ipv6",
+        domain="sensor",
+    )
+    unrelated = types.SimpleNamespace(
+        entity_id="sensor.connected_clients",
+        unique_id="glinet_sensor/00:11:22:33:44:55/connected_clients",
+        domain="sensor",
+    )
+
+    mock_er = MagicMock()
+    mock_er.async_remove = MagicMock()
+
+    import homeassistant.helpers.entity_registry as er
+
+    monkeypatch.setattr(er, "async_get", lambda _: mock_er)
+    monkeypatch.setattr(
+        er,
+        "async_entries_for_config_entry",
+        MagicMock(
+            return_value=[
+                selected_ipv4,
+                unselected_ipv6,
+                unrelated,
+            ]
+        ),
+    )
+
+    hub.refresh_session_token = _noop
+    hub.fetch_all_data = _noop
+
+    await hub.async_initialize_hub()
+
+    assert mock_er.async_remove.call_count == 1
+    mock_er.async_remove.assert_any_call("sensor.cellular_wan_ipv6")
+
+
 async def test_fetch_connected_devices_respects_add_all_devices_option(monkeypatch) -> None:
     import custom_components.ha_glinet.hub as hub_module
     monkeypatch.setattr(hub_module, "async_dispatcher_send", _noop_arg)

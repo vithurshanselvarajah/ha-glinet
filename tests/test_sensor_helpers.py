@@ -34,6 +34,7 @@ def _install_sensor_dependency_stubs() -> None:
     sensor.SensorStateClass = types.SimpleNamespace(
         MEASUREMENT="measurement",
         TOTAL_INCREASING="total_increasing",
+        TOTAL="total",
     )
     sys.modules.setdefault("homeassistant.components.sensor", sensor)
 
@@ -116,3 +117,141 @@ def test_wan_status_helpers_report_interface_protocol_state() -> None:
 
     unknown_sensor = WanStatusSensor(hub, "custom_wan", {"ipv4"})
     assert unknown_sensor._attr_name == "custom_wan status"
+
+
+def test_sms_sensor_counts_only_unread_messages() -> None:
+    from custom_components.ha_glinet.entities.sensor import HUB_SENSORS
+    from custom_components.ha_glinet.models import SmsMessage
+
+    desc = next(d for d in HUB_SENSORS if d.key == "sms_messages")
+
+    unread = SmsMessage(message_id="1", phone_number="+44123", text="a", status=0)
+    read = SmsMessage(message_id="2", phone_number="+44456", text="b", status=1)
+    sent = SmsMessage(message_id="3", phone_number="+44789", text="c", status=2)
+
+    hub = types.SimpleNamespace(
+        sms_messages={"1": unread, "2": read, "3": sent},
+    )
+
+    assert desc.value_fn(hub) == 1
+    attrs = desc.extra_attributes_fn(hub)
+    assert attrs["unread_count"] == 1
+    assert attrs["message_count"] == 3
+    assert attrs["incoming_count"] == 2
+    assert attrs["outgoing_count"] == 1
+
+
+def test_sms_sensor_returns_zero_when_no_unread() -> None:
+    from custom_components.ha_glinet.entities.sensor import HUB_SENSORS
+    from custom_components.ha_glinet.models import SmsMessage
+
+    desc = next(d for d in HUB_SENSORS if d.key == "sms_messages")
+
+    read = SmsMessage(message_id="1", phone_number="+44123", text="a", status=1)
+    sent = SmsMessage(message_id="2", phone_number="+44456", text="b", status=2)
+
+    hub = types.SimpleNamespace(
+        sms_messages={"1": read, "2": sent},
+    )
+
+    assert desc.value_fn(hub) == 0
+    assert desc.extra_attributes_fn(hub)["unread_count"] == 0
+
+
+def test_cellular_ip_sensors_are_enabled() -> None:
+    from custom_components.ha_glinet.entities.sensor import HUB_SENSORS, _sensor_is_enabled
+
+    desc_v4 = next(d for d in HUB_SENSORS if d.key == "cellular_ipv4")
+    desc_v6 = next(d for d in HUB_SENSORS if d.key == "cellular_ipv6")
+
+    # Case 1: wan_status_monitors is None (default), modem_0001 is in _wan_interfaces
+    hub = types.SimpleNamespace(
+        wan_status_monitors=None,
+        kmwan_status={
+            "interfaces": [
+                {"interface": "wan"},
+                {"interface": "modem_0001"},
+            ]
+        }
+    )
+    assert _sensor_is_enabled(hub, desc_v4) is True
+    assert _sensor_is_enabled(hub, desc_v6) is True
+
+    # Case 2: wan_status_monitors is None (default), modem_0001 is NOT in _wan_interfaces
+    hub = types.SimpleNamespace(
+        wan_status_monitors=None,
+        kmwan_status={
+            "interfaces": [
+                {"interface": "wan"},
+                {"interface": "wwan"},
+            ]
+        }
+    )
+    assert _sensor_is_enabled(hub, desc_v4) is False
+    assert _sensor_is_enabled(hub, desc_v6) is False
+
+    # Case 3: wan_status_monitors is configured, and modem_0001:ipv4 is selected
+    hub = types.SimpleNamespace(
+        wan_status_monitors={"modem_0001:ipv4", "wan:ipv4"},
+        kmwan_status={}
+    )
+    assert _sensor_is_enabled(hub, desc_v4) is True
+    assert _sensor_is_enabled(hub, desc_v6) is False
+
+    # Case 4: wan_status_monitors is configured, and modem_0001:ipv6 is selected
+    hub = types.SimpleNamespace(
+        wan_status_monitors={"modem_0001:ipv6", "wwan:ipv4"},
+        kmwan_status={}
+    )
+    assert _sensor_is_enabled(hub, desc_v4) is False
+    assert _sensor_is_enabled(hub, desc_v6) is True
+
+
+def test_get_cellular_ip_resolves_correctly() -> None:
+    from custom_components.ha_glinet.entities.sensor import _get_cellular_ip
+
+    # Case 1: IPv4 is available, IPv6 is not available
+    hub = types.SimpleNamespace(
+        cellular_status={
+            "modems": [
+                {
+                    "bus": "0001:01:00.0",
+                    "network": {
+                        "status": 0,
+                        "ipv4": {
+                            "gateway": "10.164.158.132",
+                            "ip": "10.164.158.131",
+                        },
+                    },
+                }
+            ]
+        }
+    )
+
+    assert _get_cellular_ip(hub, "ipv4") == "10.164.158.131"
+    assert _get_cellular_ip(hub, "ipv6") is None
+
+    # Case 2: Both IPv4 and IPv6 are available
+    hub = types.SimpleNamespace(
+        cellular_status={
+            "modems": [
+                {
+                    "bus": "0001:01:00.0",
+                    "network": {
+                        "status": 0,
+                        "ipv4": {
+                            "ip": "10.164.158.131",
+                        },
+                        "ipv6": {
+                            "ip": "2001:db8::1",
+                        },
+                    },
+                }
+            ]
+        }
+    )
+
+    assert _get_cellular_ip(hub, "ipv4") == "10.164.158.131"
+    assert _get_cellular_ip(hub, "ipv6") == "2001:db8::1"
+
+

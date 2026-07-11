@@ -219,6 +219,7 @@ def pytest_configure() -> None:
         sensor.SensorStateClass = types.SimpleNamespace(
             MEASUREMENT="measurement",
             TOTAL_INCREASING="total_increasing",
+            TOTAL="total",
         )
         switch = types.ModuleType("homeassistant.components.switch")
         switch.SwitchEntity = object

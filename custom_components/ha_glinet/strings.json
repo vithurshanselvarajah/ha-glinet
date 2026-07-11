@@ -124,7 +124,7 @@
         "name": "Cellular APN"
       },
       "sms_messages": {
-        "name": "Text messages"
+        "name": "Unread messages"
       },
       "repeater_state": {
         "name": "Repeater state",
@@ -168,8 +168,11 @@
       "fan_temperature": {
         "name": "Fan threshold temperature"
       },
-      "wan_ip": {
-        "name": "WAN IP"
+      "cellular_ipv4": {
+        "name": "Cellular WAN IPv4"
+      },
+      "cellular_ipv6": {
+        "name": "Cellular WAN IPv6"
       },
       "wg_server_users": {
         "name": "WireGuard server users"
