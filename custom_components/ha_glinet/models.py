@@ -394,6 +394,7 @@ class SmsMessage:
     phone_number: str
     text: str
     bus: str | None = None
+    slot: int | str | None = None
     status: int | None = None
     timestamp: str | None = None
     read: bool | None = None

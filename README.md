@@ -91,6 +91,10 @@ You can turn optional features on or off during setup, or later from the Configu
 The main documentation lives in the project [Wiki](https://github.com/vithurshanselvarajah/ha-glinet/wiki).
 
 ### For End Users
+* [Feature Matrix](https://github.com/vithurshanselvarajah/ha-glinet/wiki/features) — What features are supported on each model.
+* [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/entities) — A list of all sensors, switches, and trackers created by the integration.
+* [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet/wiki/services) — How to call services to control the router (e.g. sending SMS or connecting to repeater WiFi).
+* [Automation Templates](https://github.com/vithurshanselvarajah/ha-glinet/wiki/automations) — Ready-made automations you can import (SMS notifications, etc.).
 - [Feature Matrix](https://github.com/vithurshanselvarajah/ha-glinet/wiki/features) — A quick overview of what the integration supports.
 - [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/entities) — A list of the sensors, switches, buttons, and trackers created by the integration.
 - [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet/wiki/services) — How to call the router services from Home Assistant.
@@ -109,6 +113,12 @@ The main documentation lives in the project [Wiki](https://github.com/vithurshan
 <summary><b>Developer Quick Start</b> (Click to expand)</summary>
 
 ### Project Layout
+* `custom_components/ha_glinet/api`: Bundled GL.iNet API client code.
+* `custom_components/ha_glinet/entities`: Home Assistant entity implementations.
+* `custom_components/ha_glinet`: Integration bootstrap, config flow, hub, services, and shared models.
+* `docs`: Raw markdown files for the documentation wiki.
+* `ha-automations`: Home Assistant automation templates ready to import.
+* `tests`: Unit tests with mocked API/session behavior.
 - `custom_components/ha_glinet/api`: Bundled GL.iNet API client code.
 - `custom_components/ha_glinet/entities`: Home Assistant entity implementations.
 - `custom_components/ha_glinet`: Integration bootstrap, config flow, hub, services, and shared models.

@@ -124,6 +124,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._modems: dict[str, dict[str, Any]] = {}
         self._cached_modem_info: dict[str, Any] | None = None
         self._default_modem_bus: str | None = None
+        self._default_modem_slot: int | str | None = None
         self._wireguard_clients: dict[int, WireGuardClient] = {}
         self._wireguard_connections: list[WireGuardClient] | None = None
         self._tailscale_config: dict[str, Any] = {}
@@ -476,6 +477,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._modems = {}
             self._cached_modem_info = None
             self._default_modem_bus = None
+            self._default_modem_slot = None
 
         if self.feature_enabled(FEATURE_REPEATER):
             tasks.extend(
@@ -1271,14 +1273,19 @@ class GLinetHub(DataUpdateCoordinator[None]):
             dict(status_response or {}).get("modems", []),
         )
         self._modems = {
-            str(modem["bus"]): modem
+            _modem_key(modem): modem
             for modem in modems
             if modem.get("bus")
         }
-        self._default_modem_bus = _select_sms_modem_bus(self._modems)
+        default_modem = _select_sms_modem(self._modems)
+        self._default_modem_bus = (
+            str(default_modem.get("bus")) if default_modem else None
+        )
+        self._default_modem_slot = default_modem.get("slot") if default_modem else None
         self._cellular_status = {
             "modems": modems,
             "default_bus": self._default_modem_bus,
+            "default_slot": self._default_modem_slot,
         }
 
     async def fetch_repeater_status(self) -> None:
@@ -1424,6 +1431,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 phone_number=str(item.get("phone_number") or item.get("sender") or ""),
                 text=str(item.get("body") or ""),
                 bus=item.get("bus"),
+                slot=item.get("slot"),
                 status=get_first_int(item, ("status",)),
                 timestamp=item.get("date") or item.get("time") or item.get("timestamp"),
                 read=_sms_status_is_read(item.get("status")),
@@ -1432,17 +1440,29 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
     async def send_sms(self, recipient: str, text: str) -> None:
         bus = self._default_modem_bus
+        slot = getattr(self, "_default_modem_slot", None)
         if bus is None:
             await self.fetch_cellular_status()
             bus = self._default_modem_bus
+            slot = self._default_modem_slot
         if bus is None:
             raise RuntimeError("No SMS-capable GL-INet modem was found")
 
         chunks = [text[i : i + 160] for i in range(0, len(text), 160)]
         for chunk in chunks:
-            response = await self._invoke_optional_api(
-                lambda c=chunk: self.router_api.modem.send_sms(bus, recipient, c)
-            )
+            if slot is None:
+
+                async def api_call(c: str = chunk):
+                    return await self.router_api.modem.send_sms(bus, recipient, c)
+
+            else:
+
+                async def api_call(c: str = chunk):
+                    return await self.router_api.modem.send_sms(
+                        bus, recipient, c, slot=slot
+                    )
+
+            response = await self._invoke_optional_api(api_call)
             if response is None:
                 raise RuntimeError("The router did not accept the SMS send request")
 
@@ -1453,16 +1473,32 @@ class GLinetHub(DataUpdateCoordinator[None]):
     ) -> None:
         message = self._sms_messages.get(message_id) if message_id else None
         bus = message.bus if message else self._default_modem_bus
+        slot = (
+            getattr(message, "slot", None)
+            if message
+            else getattr(self, "_default_modem_slot", None)
+        )
 
         if bus is None:
             await self.fetch_cellular_status()
             bus = self._default_modem_bus
+            slot = self._default_modem_slot
         if bus is None:
             raise RuntimeError("No GL-INet modem bus is available for SMS removal")
 
-        await self._invoke_optional_api(
-            lambda: self.router_api.modem.remove_sms(bus, scope, message_id)
-        )
+        if slot is None:
+
+            async def api_call():
+                return await self.router_api.modem.remove_sms(bus, scope, message_id)
+
+        else:
+
+            async def api_call():
+                return await self.router_api.modem.remove_sms(
+                    bus, scope, message_id, slot=slot
+                )
+
+        await self._invoke_optional_api(api_call)
         if scope == 10 and message_id:
             self._sms_messages.pop(message_id, None)
         else:
@@ -1836,19 +1872,27 @@ def _merge_modem_lists(
     for modem in [*info_modems, *status_modems]:
         if not isinstance(modem, dict) or not modem.get("bus"):
             continue
-        bus = str(modem["bus"])
-        merged[bus] = merged.get(bus, {}) | dict(modem)
+        key = _modem_key(modem)
+        merged[key] = merged.get(key, {}) | dict(modem)
     return list(merged.values())
 
 
-def _select_sms_modem_bus(modems: dict[str, dict[str, Any]]) -> str | None:
-    for bus, modem in modems.items():
+def _modem_key(modem: dict[str, Any]) -> str:
+    bus = str(modem["bus"])
+    slot = modem.get("slot")
+    if slot is None or slot == "":
+        return bus
+    return f"{bus}:slot:{slot}"
+
+
+def _select_sms_modem(modems: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
+    for modem in modems.values():
         if modem.get("sms_support") is True:
-            return bus
-    for bus, modem in modems.items():
+            return modem
+    for modem in modems.values():
         if modem.get("simcard"):
-            return bus
-    return next(iter(modems), None)
+            return modem
+    return next(iter(modems.values()), None)
 
 
 def _sms_status_is_read(status: Any) -> bool | None:

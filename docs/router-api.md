@@ -58,6 +58,10 @@ sid, module-name, function-name, optional parameters
 
 The GL.iNet API surface is not identical across all devices. When adding new features, prefer optional API calls for model-specific modules and expose entities only when useful data is returned.
 
+- Modem status uses `modem/get_info` and `modem/get_status` on firmware 4.8.x. On
+  firmware 4.9+ the client uses the newer per-slot modem endpoints and normalizes
+  those responses for the existing cellular sensors.
+
 ## Repeater Notes
 
 The repeater integration follows the SDK 4.0 repeater module endpoints:

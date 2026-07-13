@@ -9,6 +9,7 @@ These pages cover what the integration provides, how to configure it, and how to
 - [Feature Matrix](https://github.com/vithurshanselvarajah/ha-glinet/wiki/features) - A quick overview of supported features and actions.
 - [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/entities) - Detailed list of sensors, switches, buttons, and trackers.
 - [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet/wiki/services) - Guide on using Home Assistant services to control your router.
+- [Automation Templates](https://github.com/vithurshanselvarajah/ha-glinet/wiki/automations) - Ready-made automations you can paste into Home Assistant.
 - [Smart Fan Controls](https://github.com/vithurshanselvarajah/ha-glinet/wiki/smart-fan) - Fan status, speed, and temperature threshold controls.
 - [Unknown Device Management](https://github.com/vithurshanselvarajah/ha-glinet/wiki/unknown-devices) - Discovery, cleanup, and allow/blocklist handling for unknown devices.
 
