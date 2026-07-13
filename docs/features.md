@@ -16,6 +16,7 @@ The following capabilities are always available regardless of optional feature s
 - **Device Tracking**: Monitors connected clients — MAC address, name/alias, IP address, interface type, and last-seen timestamp. Includes a cleanup mechanism for stale offline devices.
 - **Connected Clients Count**: Sensor showing total currently active tracked clients.
 - **Client Diagnostics**: Per-client download rate, upload rate, and IP address sensors attached to each tracked client device.
+- **Unknown Device Management**: Discover unknown devices, auto-cleanup rules, allow/blocklist controls, and manual MAC address entries. See [Unknown Device Management](https://github.com/vithurshanselvarajah/ha-glinet/wiki/unknown-devices).
 - **Firmware Updates**: Native Home Assistant firmware update entity with release notes when the router exposes them.
 - **Sanitized Diagnostics**: Safe diagnostic downloads masking sensitive data (MAC addresses, WiFi passwords, session IDs, and tokens).
 
@@ -36,11 +37,11 @@ The integration treats several advanced capabilities as optional modules selecta
 - [KMWAN](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api) - Read and update GL.iNet's KMWAN multi-WAN configuration through actions.
 - [MWAN3](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api) - Read and update MWAN3 multi-WAN configuration through actions.
 - [Firewall](https://github.com/vithurshanselvarajah/ha-glinet/wiki/firewall) - Manage firewall rules, port forwarding, and DMZ settings.
+- [Smart Fan Controls](https://github.com/vithurshanselvarajah/ha-glinet/wiki/smart-fan) - Monitor fan status, speed, and set temperature thresholds.
 - [MCU Battery](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-battery) - Monitor battery status and configure high/low temperature warnings.
 - [MCU OLED](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-oled) - Configure what is displayed on the router's OLED screen.
 - [Parental & Access Control](https://github.com/vithurshanselvarajah/ha-glinet/wiki/parental-control) - Manage internet access blocks and parental group rules per client.
 - [API Playground](https://github.com/vithurshanselvarajah/ha-glinet/wiki/playground) - Send custom JSON-RPC or ubus commands and inspect the response.
-
 
 If you disable all optional features, the integration still registers all core router status sensors and entities.
 
