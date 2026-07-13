@@ -1,14 +1,16 @@
 # ha-glinet Documentation
 
-Welcome to the `ha-glinet` documentation! To help you find what you need quickly, this wiki is divided into guides for End Users and references for Developers.
+Welcome to the `ha-glinet` documentation. This wiki is meant to help you find the right guide quickly, whether you are setting up the integration for the first time or looking for a specific feature.
 
 ## For End Users
 
-Information on what the integration provides, how to configure it, and how to use it in your Home Assistant setup.
+These pages cover what the integration provides, how to configure it, and how to use it in Home Assistant.
 
-- [Feature Matrix](https://github.com/vithurshanselvarajah/ha-glinet/wiki/features) - A high-level overview of supported features and actions.
-- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/entities) - Detailed list of all sensors, switches, buttons, and trackers.
+- [Feature Matrix](https://github.com/vithurshanselvarajah/ha-glinet/wiki/features) - A quick overview of supported features and actions.
+- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/entities) - Detailed list of sensors, switches, buttons, and trackers.
 - [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet/wiki/services) - Guide on using Home Assistant services to control your router.
+- [Smart Fan Controls](https://github.com/vithurshanselvarajah/ha-glinet/wiki/smart-fan) - Fan status, speed, and temperature threshold controls.
+- [Unknown Device Management](https://github.com/vithurshanselvarajah/ha-glinet/wiki/unknown-devices) - Discovery, cleanup, and allow/blocklist handling for unknown devices.
 
 ### Optional Features
 
@@ -30,13 +32,12 @@ These pages cover configuration, entities, and services for optional modules tha
 - [Parental & Access Control](https://github.com/vithurshanselvarajah/ha-glinet/wiki/parental-control) - Manage internet access blocks and parental group rules per client.
 - [API Playground](https://github.com/vithurshanselvarajah/ha-glinet/wiki/playground) - Send custom JSON-RPC or ubus commands and inspect the response.
 
-
 ## For Developers
 
-Deep dives into the architecture, API clients, and contribution guidelines for maintaining or extending the integration.
+These pages are aimed at the architecture, API details, and maintenance work behind the integration.
 
-- [Developer Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/developer-reference) - Start here! Contribution guide, codebase structure, and tooling.
-- [Architecture](https://github.com/vithurshanselvarajah/ha-glinet/wiki/architecture) - How the integration interacts with Home Assistant and the router.
+- [Developer Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/developer-reference) - Start here for contribution notes, tooling, and project structure.
+- [Architecture](https://github.com/vithurshanselvarajah/ha-glinet/wiki/architecture) - How the integration is structured and interacts with Home Assistant.
 - [Runtime State & Poller (Hub)](https://github.com/vithurshanselvarajah/ha-glinet/wiki/hub) - Details on the `GLinetHub` and `DataUpdateCoordinator`.
 - [Router API Notes](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api) - Notes on the GL.iNet JSON-RPC API and authentication.
 - [Modem API Coverage](https://github.com/vithurshanselvarajah/ha-glinet/wiki/modem-api) - Details on the optional cellular modem API.
