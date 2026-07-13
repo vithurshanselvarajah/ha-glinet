@@ -1,0 +1,26 @@
+alias: SMSNotificiation
+description: ""
+triggers:
+  - seconds: "30"
+    trigger: time_pattern
+conditions: []
+actions:
+  - response_variable: sms_data
+    action: ha_glinet.get_sms
+  - repeat:
+      for_each: >-
+        {{ sms_data.messages | selectattr('direction', 'eq', 'incoming') | list
+        }}
+      sequence:
+        - data:
+            title: 📱 {{ repeat.item.phone_number }}
+            message: "{{ repeat.item.text }}"
+            data:
+              notification_id: sms_{{ repeat.item.id }}
+          action: notify.persistent_notification
+        - data:
+            scope: 10
+            message_id: "{{ repeat.item.id }}"
+          action: ha_glinet.remove_sms
+          enabled: true
+mode: single

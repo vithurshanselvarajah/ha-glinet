@@ -85,6 +85,7 @@ Detailed documentation lives in the project [Wiki](https://github.com/vithurshan
 * [Feature Matrix](https://github.com/vithurshanselvarajah/ha-glinet/wiki/features) — What features are supported on each model.
 * [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/entities) — A list of all sensors, switches, and trackers created by the integration.
 * [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet/wiki/services) — How to call services to control the router (e.g. sending SMS or connecting to repeater WiFi).
+* [Automation Templates](https://github.com/vithurshanselvarajah/ha-glinet/wiki/automations) — Ready-made automations you can import (SMS notifications, etc.).
 
 ### For Developers
 * [Developer Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/developer-reference) — Code style, structure, and development tools.
@@ -102,6 +103,7 @@ Detailed documentation lives in the project [Wiki](https://github.com/vithurshan
 * `custom_components/ha_glinet/entities`: Home Assistant entity implementations.
 * `custom_components/ha_glinet`: Integration bootstrap, config flow, hub, services, and shared models.
 * `docs`: Raw markdown files for the documentation wiki.
+* `ha-automations`: Home Assistant automation templates ready to import.
 * `tests`: Unit tests with mocked API/session behavior.
 
 ### Development Checks

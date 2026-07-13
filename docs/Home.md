@@ -9,6 +9,7 @@ Information on what the integration provides, how to configure it, and how to us
 - [Feature Matrix](https://github.com/vithurshanselvarajah/ha-glinet/wiki/features) - A high-level overview of supported features and actions.
 - [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet/wiki/entities) - Detailed list of all sensors, switches, buttons, and trackers.
 - [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet/wiki/services) - Guide on using Home Assistant services to control your router.
+- [Automation Templates](https://github.com/vithurshanselvarajah/ha-glinet/wiki/automations) - Ready-made automations you can paste into Home Assistant.
 
 ### Optional Features
 
