@@ -34,4 +34,4 @@ To enable this feature, check the **Cellular** option under **Enabled Features**
 
 ## Developer Reference
 
-For details on how the modem APIs are queried and parsed, see the [Modem API Coverage](https://github.com/vithurshanselvarajah/glinet-router/wiki/modem-api) documentation.
+For details on how the modem APIs are queried and parsed, see the [Modem API Coverage](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/modem-api) documentation.
