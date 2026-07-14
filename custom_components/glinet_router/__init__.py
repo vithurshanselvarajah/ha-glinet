@@ -24,19 +24,20 @@ PLATFORMS = [
 ]
 
 
-async def _migrate_legacy_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if entry.domain == DOMAIN:
-        return
+        return True
     if entry.domain != LEGACY_DOMAIN:
-        return
+        return False
 
     _LOGGER.debug(
-        "Re-keying in-place config entry %s from %s to %s",
+        "Migrating config entry %s from %s to %s",
         entry.entry_id,
         LEGACY_DOMAIN,
         DOMAIN,
     )
     hass.config_entries.async_update_entry(entry, domain=DOMAIN)
+    return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -46,7 +47,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .hub import GLinetHub
 
-    await _migrate_legacy_entry(hass, entry)
+    # Defensive: if a legacy entry somehow reaches setup (e.g. partial
+    # migration), finish the re-key in-place before bringing up the hub.
+    if entry.domain == LEGACY_DOMAIN:
+        hass.config_entries.async_update_entry(entry, domain=DOMAIN)
 
     hub = GLinetHub(hass, entry)
     await hub.async_initialize_hub()

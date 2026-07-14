@@ -7,7 +7,7 @@ from typing import Any
 
 from custom_components.glinet_router import (
     PLATFORMS,
-    _migrate_legacy_entry,
+    async_migrate_entry,
 )
 from custom_components.glinet_router.const import DOMAIN, LEGACY_DOMAIN
 
@@ -37,8 +37,9 @@ async def test_migrate_legacy_entry_rekeys_to_new_domain() -> None:
     hass = SimpleNamespace(config_entries=_FakeConfigEntries())
     entry = _make_entry(LEGACY_DOMAIN)
 
-    await _migrate_legacy_entry(hass, entry)
+    result = await async_migrate_entry(hass, entry)
 
+    assert result is True
     assert entry.domain == DOMAIN
     assert hass.config_entries.updates == [(entry, {"domain": DOMAIN})]
 
@@ -47,8 +48,9 @@ async def test_migrate_legacy_entry_is_noop_for_new_domain() -> None:
     hass = SimpleNamespace(config_entries=_FakeConfigEntries())
     entry = _make_entry(DOMAIN)
 
-    await _migrate_legacy_entry(hass, entry)
+    result = await async_migrate_entry(hass, entry)
 
+    assert result is True
     assert hass.config_entries.updates == []
 
 
@@ -56,8 +58,9 @@ async def test_migrate_legacy_entry_is_noop_for_unrelated_domain() -> None:
     hass = SimpleNamespace(config_entries=_FakeConfigEntries())
     entry = _make_entry("some_other_domain")
 
-    await _migrate_legacy_entry(hass, entry)
+    result = await async_migrate_entry(hass, entry)
 
+    assert result is False
     assert hass.config_entries.updates == []
     assert entry.domain == "some_other_domain"
 
