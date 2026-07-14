@@ -1,6 +1,5 @@
 DOMAIN = "glinet_router"
 API_PATH = "/rpc"
-LEGACY_DOMAIN = "ha_glinet"
 INTEGRATION_NAME = "GL.iNet Router"
 DEFAULT_URL = "http://192.168.8.1"
 DEFAULT_USERNAME = "root"
