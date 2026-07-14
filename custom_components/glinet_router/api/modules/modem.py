@@ -2,23 +2,21 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..const import LONG_TIMEOUT
+from ..const import FIRMWARE_4_9, LONG_TIMEOUT
 from ..exceptions import NonZeroResponse
 from ..models import ModemInfo
 from .base import BaseModule
 
-FIRMWARE_4_9 = (4, 9, 0, 0)
-
 
 class ModemModule(BaseModule):
     async def get_status(self) -> dict[str, Any]:
-        if self._uses_modem_49_api:
+        if await self._uses_modem_49_api:
             return await self._get_status_49()
         response = await self._call("modem", "get_status")
         return dict(response)
 
     async def get_info(self) -> dict[str, Any]:
-        if self._uses_modem_49_api:
+        if await self._uses_modem_49_api:
             return await self._get_info_49()
         response = await self._call("modem", "get_info")
         return dict(response)
@@ -56,7 +54,7 @@ class ModemModule(BaseModule):
         ]
 
     async def get_sms_list(self) -> list[dict[str, Any]]:
-        if self._uses_modem_49_api:
+        if await self._uses_modem_49_api:
             return await self._get_sms_list_49()
         response = await self._call("modem", "get_sms_list")
         if isinstance(response, list):
@@ -107,9 +105,8 @@ class ModemModule(BaseModule):
         return dict(response)
 
     @property
-    def _uses_modem_49_api(self) -> bool:
-        firmware = self._client._firmware_version
-        return firmware is not None and firmware >= FIRMWARE_4_9
+    async def _uses_modem_49_api(self) -> bool:
+        return await self._client._is_firmware_at_least(FIRMWARE_4_9)
 
     async def _get_info_49(self) -> dict[str, Any]:
         status = await self._get_status_49()

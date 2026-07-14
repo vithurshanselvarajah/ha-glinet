@@ -232,11 +232,11 @@ class WireGuardSwitch(GLinetSwitchBase):
                 and self._client not in self._hub.connected_vpn_clients
             ):
                 for client in self._hub.connected_vpn_clients:
-                    await self._hub.stop_vpn_client(client.peer_id)
+                    await self._hub.stop_vpn_client(client.group_id, client.peer_id)
 
             await self._hub.start_vpn_client(
                 self._client.group_id,
-                self._client.tunnel_id or self._client.peer_id,
+                self._client.peer_id,
             )
         except OSError:
             _LOGGER.exception("Unable to enable WireGuard client")
@@ -246,7 +246,8 @@ class WireGuardSwitch(GLinetSwitchBase):
     async def async_turn_off(self, **_: Any) -> None:
         try:
             await self._hub.stop_vpn_client(
-                self._client.tunnel_id or self._client.peer_id
+                self._client.group_id,
+                self._client.peer_id,
             )
         except OSError:
             _LOGGER.exception("Unable to stop WireGuard client")

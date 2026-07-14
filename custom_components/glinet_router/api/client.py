@@ -141,6 +141,15 @@ class GLinetApiClient:
             "id": 0,
         }
 
+    async def _ensure_firmware_version(self) -> None:
+        if self._firmware_version is None:
+            await self.system.get_info()
+
+    async def _is_firmware_at_least(self, version: tuple[int, int, int, int]) -> bool:
+        await self._ensure_firmware_version()
+        fw_ver = self._firmware_version
+        return fw_ver is not None and fw_ver >= version
+
     async def _send_request(
         self, payload: dict[str, Any], timeout_seconds: int = DEFAULT_TIMEOUT
     ) -> dict[str, Any] | list[Any]:

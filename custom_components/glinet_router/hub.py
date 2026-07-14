@@ -1041,9 +1041,9 @@ class GLinetHub(DataUpdateCoordinator[None]):
         )
         await self.fetch_wireguard_clients()
 
-    async def stop_vpn_client(self, peer_id: int) -> None:
+    async def stop_vpn_client(self, group_id: int, peer_id: int) -> None:
         await self._invoke_api(
-            lambda: self.router_api.wg_client.stop_wireguard_client(peer_id)
+            lambda: self.router_api.wg_client.stop_wireguard_client(group_id, peer_id)
         )
         await self.fetch_wireguard_clients()
 
