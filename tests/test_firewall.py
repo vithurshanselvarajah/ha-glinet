@@ -4,15 +4,15 @@ from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
-from custom_components.ha_glinet.api.client import GLinetApiClient
-from custom_components.ha_glinet.const import (
+from custom_components.glinet_router.api.client import GLinetApiClient
+from custom_components.glinet_router.const import (
     CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
     FEATURE_FIREWALL,
 )
-from custom_components.ha_glinet.entities.switch import GLinetDMZSwitch, GLinetWANAccessSwitch
-from custom_components.ha_glinet.hub import GLinetHub
-from custom_components.ha_glinet.models import ClientDeviceInfo
+from custom_components.glinet_router.entities.switch import GLinetDMZSwitch, GLinetWANAccessSwitch
+from custom_components.glinet_router.hub import GLinetHub
+from custom_components.glinet_router.models import ClientDeviceInfo
 from tests.test_api_client import FakeSession
 
 
@@ -315,7 +315,7 @@ async def test_fetch_kmwan_status_stores_response() -> None:
 
 
 async def test_cleanup_stale_devices_removes_unknown_device_entities(monkeypatch) -> None:
-    import custom_components.ha_glinet.hub as hub_module
+    import custom_components.glinet_router.hub as hub_module
 
     hub = GLinetHub.__new__(GLinetHub)
     mac = "aa:bb:cc:dd:ee:ff"

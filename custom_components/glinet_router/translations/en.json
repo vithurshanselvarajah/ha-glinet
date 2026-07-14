@@ -1,9 +1,9 @@
 {
-  "title": "GL-INet",
+  "title": "GL.iNet Router",
   "config": {
     "step": {
       "user": {
-        "description": "Provide router details to link your GL-INet device",
+        "description": "Provide router details to link your GL.iNet device",
         "data": {
           "host": "Router Address",
           "password": "Admin Password",
@@ -19,7 +19,7 @@
         },
         "data_description": {
           "host": "Type the router hostname, URL, or IP address.",
-          "password": "Enter the admin password configured on your GL-INet router.",
+          "password": "Enter the admin password configured on your GL.iNet router.",
           "consider_home": "Number of seconds before a disconnected client is treated as away.",
           "scan_interval": "Number of seconds between polling the router for updates.",
           "enabled_features": "Choose the integration feature groups to set up. Disabled feature groups will not create their related entities or services.",
@@ -59,7 +59,7 @@
         },
         "data_description": {
           "host": "Type the router hostname, URL, or IP address.",
-          "password": "Enter the admin password configured on your GL-INet router.",
+          "password": "Enter the admin password configured on your GL.iNet router.",
           "consider_home": "Number of seconds before a disconnected client is treated as away.",
           "scan_interval": "Number of seconds between polling the router for updates.",
           "enabled_features": "Choose the integration feature groups to set up. Disabled feature groups will not create their related entities or services.",

@@ -1,5 +1,5 @@
 {
-  "title": "GL-INet",
+  "title": "GL.iNet Router",
   "config": {
     "step": {
       "user": {
@@ -38,7 +38,7 @@
       "unknown": "Something went wrong while validating settings"
     },
     "abort": {
-      "already_configured": "This GL-INet router is already set up"
+      "already_configured": "This GL.iNet router is already set up"
     }
   },
   "options": {

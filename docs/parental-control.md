@@ -36,7 +36,7 @@ To enable this feature, check the **Parental & Access Control** option under **E
 
 ## Actions (Services)
 
-The following services are registered under the `ha_glinet` domain when the Parental & Access Control feature is enabled:
+The following services are registered under the `glinet_router` domain when the Parental & Access Control feature is enabled:
 
 ### `parental_control_set_temporary_override`
 Enables or disables a temporary parental control override for a specific group.

@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from custom_components.ha_glinet.api.exceptions import NonZeroResponse
-from custom_components.ha_glinet.hub import GLinetHub
+from custom_components.glinet_router.api.exceptions import NonZeroResponse
+from custom_components.glinet_router.hub import GLinetHub
 
 
 @pytest.fixture

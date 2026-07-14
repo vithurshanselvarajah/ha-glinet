@@ -2,19 +2,19 @@ from typing import Any
 
 import pytest
 
-from custom_components.ha_glinet.api.client import (
+from custom_components.glinet_router.api.client import (
     GLinetApiClient,
     _decode_firmware_version,
     _extract_response_data,
 )
-from custom_components.ha_glinet.api.exceptions import (
+from custom_components.glinet_router.api.exceptions import (
     APIClientError,
     AuthenticationError,
     NonZeroResponse,
     TokenError,
     UnsuccessfulRequest,
 )
-from custom_components.ha_glinet.api.models import WifiInterfaceInfo
+from custom_components.glinet_router.api.models import WifiInterfaceInfo
 
 
 class FakeResponse:

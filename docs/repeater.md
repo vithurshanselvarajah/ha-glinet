@@ -53,7 +53,7 @@ The **Repeater state** sensor remains available whenever the repeater feature is
 
 ## Actions (Services)
 
-The following services are registered under the `ha_glinet` domain when the Repeater feature is enabled:
+The following services are registered under the `glinet_router` domain when the Repeater feature is enabled:
 
 ### `scan_wifi`
 Scans available WiFi networks for repeater mode.
@@ -77,7 +77,7 @@ Connects the router to an open or secured external WiFi network.
 Example:
 
 ```yaml
-action: ha_glinet.connect_wifi
+action: glinet_router.connect_wifi
 data:
   ssid: CampgroundWiFi
   password: !secret campground_wifi_password

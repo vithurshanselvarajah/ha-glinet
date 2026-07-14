@@ -1,6 +1,6 @@
 import pytest
 
-from custom_components.ha_glinet.utils import channel_to_band, compute_mac_offset
+from custom_components.glinet_router.utils import channel_to_band, compute_mac_offset
 
 
 @pytest.mark.parametrize(

@@ -12,7 +12,7 @@ It performs:
 - Python compilation for `custom_components` and `tests`.
 - Pytest.
 - Ruff linting.
-- Version consistency check between `custom_components/ha_glinet/manifest.json` and `pyproject.toml`.
+- Version consistency check between `custom_components/glinet_router/manifest.json` and `pyproject.toml`.
 
 ## Release
 
@@ -23,7 +23,7 @@ Release triggers:
 - Stable release: push to `main` with `release:` anywhere in the head commit message.
 - Manual run: trigger workflow dispatch on `main`.
 
-The workflow reads the version from `custom_components/ha_glinet/manifest.json`.
+The workflow reads the version from `custom_components/glinet_router/manifest.json`.
 
 Stable releases create:
 
@@ -31,4 +31,4 @@ Stable releases create:
 v<manifest-version>
 ```
 
-The release job runs CI first, builds a HACS-friendly zip containing `custom_components/ha_glinet`, asks GitHub Models to generate release notes via `actions/ai-inference`, then publishes a GitHub release. If GitHub Models is not available, the workflow falls back to commit-based release notes.
+The release job runs CI first, builds a HACS-friendly zip containing `custom_components/glinet_router`, asks GitHub Models to generate release notes via `actions/ai-inference`, then publishes a GitHub release. If GitHub Models is not available, the workflow falls back to commit-based release notes.

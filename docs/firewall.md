@@ -34,7 +34,7 @@ To enable this feature, check the **Firewall** option under **Enabled Features**
 
 ## Actions (Services)
 
-The following services are registered under the `ha_glinet` domain when the Firewall feature is enabled:
+The following services are registered under the `glinet_router` domain when the Firewall feature is enabled:
 
 ### `add_firewall_rule`
 Adds a custom firewall rule.

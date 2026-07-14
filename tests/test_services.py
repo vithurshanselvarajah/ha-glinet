@@ -3,7 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
-from custom_components.ha_glinet.const import (
+from custom_components.glinet_router.const import (
     ATTR_ALL_BAND,
     ATTR_BLOCK,
     ATTR_BODY,
@@ -71,7 +71,7 @@ from custom_components.ha_glinet.const import (
     SERVICE_SET_DMZ,
     SERVICE_SET_FAN_TEMPERATURE,
 )
-from custom_components.ha_glinet.services import (
+from custom_components.glinet_router.services import (
     _enabled_features_from_entry,
     async_register_services,
 )

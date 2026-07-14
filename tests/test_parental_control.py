@@ -4,15 +4,15 @@ from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
-from custom_components.ha_glinet.api.client import GLinetApiClient
-from custom_components.ha_glinet.const import (
+from custom_components.glinet_router.api.client import GLinetApiClient
+from custom_components.glinet_router.const import (
     CONF_ENABLED_FEATURES,
     FEATURE_PARENTAL_CONTROL,
 )
-from custom_components.ha_glinet.entities.select import GLinetClientParentalGroupSelect
-from custom_components.ha_glinet.entities.switch import GLinetClientInternetAccessSwitch
-from custom_components.ha_glinet.hub import GLinetHub
-from custom_components.ha_glinet.models import ClientDeviceInfo, ParentalGroup, ParentalStatus
+from custom_components.glinet_router.entities.select import GLinetClientParentalGroupSelect
+from custom_components.glinet_router.entities.switch import GLinetClientInternetAccessSwitch
+from custom_components.glinet_router.hub import GLinetHub
+from custom_components.glinet_router.models import ClientDeviceInfo, ParentalGroup, ParentalStatus
 from tests.test_api_client import FakeSession
 
 
@@ -268,7 +268,7 @@ async def test_fetch_all_data_includes_and_resets_parental_control() -> None:
 async def test_async_initialize_hub_cleans_up_parental_control_entities(
     monkeypatch,
 ) -> None:
-    import custom_components.ha_glinet.hub as hub_module
+    import custom_components.glinet_router.hub as hub_module
 
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {CONF_ENABLED_FEATURES: []}

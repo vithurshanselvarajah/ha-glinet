@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
-from custom_components.ha_glinet.const import (
+from custom_components.glinet_router.const import (
     CONF_ADD_ALL_DEVICES,
     CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
@@ -16,8 +16,8 @@ from custom_components.ha_glinet.const import (
     FEATURE_WG_CLIENT,
     FEATURE_WG_SERVER,
 )
-from custom_components.ha_glinet.hub import GLinetHub, utcnow
-from custom_components.ha_glinet.models import ClientDeviceInfo, RepeaterState, RepeaterStatus
+from custom_components.glinet_router.hub import GLinetHub, utcnow
+from custom_components.glinet_router.models import ClientDeviceInfo, RepeaterState, RepeaterStatus
 
 
 def _hub_with_devices() -> GLinetHub:
@@ -81,7 +81,7 @@ async def test_fetch_connected_devices_marks_existing_devices_away_on_empty_clie
     def fake_dispatcher_send(_: Any, event: str) -> None:
         calls.append(event)
 
-    import custom_components.ha_glinet.hub as hub_module
+    import custom_components.glinet_router.hub as hub_module
 
     monkeypatch.setattr(hub_module, "async_dispatcher_send", fake_dispatcher_send)
     hub = _hub_with_devices()
@@ -89,7 +89,7 @@ async def test_fetch_connected_devices_marks_existing_devices_away_on_empty_clie
     await hub.fetch_connected_devices()
 
     assert hub._devices["aa:bb:cc:dd:ee:ff"].is_connected is False
-    assert calls == ["ha_glinet-device-update-00:00:00:00:00:00"]
+    assert calls == ["glinet_router-device-update-00:00:00:00:00:00"]
 
 
 async def test_fetch_tailscale_state_treats_timeout_as_optional() -> None:
@@ -500,7 +500,7 @@ async def test_scan_wifi_networks_stores_results(monkeypatch) -> None:
     def fake_dispatcher_send(hass: Any, event: str) -> None:
         calls.append(event)
 
-    import custom_components.ha_glinet.hub as hub_module
+    import custom_components.glinet_router.hub as hub_module
 
     monkeypatch.setattr(hub_module, "async_dispatcher_send", fake_dispatcher_send)
 
@@ -512,7 +512,7 @@ async def test_scan_wifi_networks_stores_results(monkeypatch) -> None:
     assert hub._last_wifi_scan is not None
     assert calls == [
         {"refresh": True},
-        "ha_glinet-networks-update-00:00:00:00:00:00",
+        "glinet_router-networks-update-00:00:00:00:00:00",
     ]
 
 
@@ -983,7 +983,7 @@ async def test_async_initialize_hub_cleans_up_unselected_cellular_ip_sensors(
 
 
 async def test_fetch_connected_devices_respects_add_all_devices_option(monkeypatch) -> None:
-    import custom_components.ha_glinet.hub as hub_module
+    import custom_components.glinet_router.hub as hub_module
     monkeypatch.setattr(hub_module, "async_dispatcher_send", _noop_arg)
 
     hub = GLinetHub.__new__(GLinetHub)
@@ -1124,7 +1124,7 @@ async def test_stop_wg_server(monkeypatch) -> None:
 
 
 async def test_cleanup_stale_devices_removes_known_device_entities(monkeypatch) -> None:
-    import custom_components.ha_glinet.hub as hub_module
+    import custom_components.glinet_router.hub as hub_module
 
     hub = GLinetHub.__new__(GLinetHub)
     mac = "aa:bb:cc:dd:ee:ff"

@@ -9,10 +9,10 @@ Forward incoming SMS messages from your GL.iNet router to Home Assistant as pers
 ## What It Does
 
 1. Polls for SMS every 30 seconds using a time pattern trigger.
-2. Calls `ha_glinet.get_sms` to fetch all messages from the router.
+2. Calls `glinet_router.get_sms` to fetch all messages from the router.
 3. Filters to **incoming** messages only.
 4. For each message, creates a persistent notification showing the sender's phone number and message text.
-5. Removes the processed message from the router via `ha_glinet.remove_sms`.
+5. Removes the processed message from the router via `glinet_router.remove_sms`.
 
 ---
 
@@ -37,7 +37,7 @@ triggers:
 conditions: []
 actions:
   - response_variable: sms_data
-    action: ha_glinet.get_sms
+    action: glinet_router.get_sms
   - repeat:
       for_each: >-
         {{ sms_data.messages | selectattr('direction', 'eq', 'incoming') | list
@@ -52,7 +52,7 @@ actions:
         - data:
             scope: 10
             message_id: "{{ repeat.item.id }}"
-          action: ha_glinet.remove_sms
+          action: glinet_router.remove_sms
           enabled: true
 mode: single
 ```

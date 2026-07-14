@@ -1,6 +1,6 @@
 # Developer Reference
 
-This document serves as a guide for anyone looking to contribute to, modify, or extend the `ha-glinet` integration. 
+This document serves as a guide for anyone looking to contribute to, modify, or extend the `glinet-router` integration. 
 
 ## Codebase Structure
 
@@ -8,7 +8,7 @@ The integration is cleanly separated into two distinct layers:
 1. **The API Layer (`api/`)**: A standalone, framework-agnostic asynchronous HTTP client built using `aiohttp` for communicating with the GL.iNet JSON-RPC (`/rpc`) interface.
 2. **The Integration Layer (`entities/`, `hub.py`, `services.py`)**: The Home Assistant-specific implementation that translates router data into sensors, trackers, and switches.
 
-## The API Layer (`custom_components/ha_glinet/api/`)
+## The API Layer (`custom_components/glinet_router/api/`)
 
 The API client is highly modular.
 

@@ -59,12 +59,12 @@ jobs:
           version="$(python - <<'PY'
           import json
           from pathlib import Path
-          print(json.loads(Path("custom_components/ha_glinet/manifest.json").read_text())["version"])
+          print(json.loads(Path("custom_components/glinet_router/manifest.json").read_text())["version"])
           PY
           )"
 
           tag="v${version}"
-          artifact_name="ha_glinet-${version}.zip"
+          artifact_name="glinet_router-${version}.zip"
 
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -98,7 +98,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          zip -r "dist/${ARTIFACT_NAME}" custom_components/ha_glinet \
+          zip -r "dist/${ARTIFACT_NAME}" custom_components/glinet_router \
             -x "__pycache__/*" \
             -x "*/__pycache__/*" \
             -x "*.pyc"
@@ -184,7 +184,7 @@ jobs:
             features being introduced, don't mention the fixes. Only the new releases.
             Also do not include notes about changes to files around versioning.
           prompt: |
-            Create release notes for ha-glinet.
+            Create release notes for glinet-router.
 
             Channel: release
             Version: ${{ needs.prepare.outputs.version }}
@@ -225,7 +225,7 @@ jobs:
             echo
             echo "## HACS"
             echo
-            echo "Download the attached ha_glinet zip archive or install/update through HACS."
+            echo "Download the attached glinet_router zip archive or install/update through HACS."
           } > release-notes.md
 
       - name: Create GitHub release
@@ -236,7 +236,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          title="ha-glinet ${TAG}"
+          title="glinet-router ${TAG}"
 
           gh release create "$TAG" \
             "dist/${ARTIFACT_NAME}" \

@@ -68,7 +68,7 @@ async def _extract_response_data(response: ClientResponse) -> dict[str, Any] | l
         return payload["result"]
 
     if "error" not in payload:
-        raise APIClientError(f"Unexpected response from GL-INet router: {payload}")
+        raise APIClientError(f"Unexpected response from GL.iNet router: {payload}")
 
     error = payload["error"]
     message = error.get("message", "null")

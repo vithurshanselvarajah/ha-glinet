@@ -1,17 +1,17 @@
 # Architecture
 
-`ha-glinet` is a Home Assistant custom integration for GL.iNet routers. It uses local polling against the router JSON-RPC endpoint and does not depend on a cloud service.
+`glinet-router` is a Home Assistant custom integration for GL.iNet routers. It uses local polling against the router JSON-RPC endpoint and does not depend on a cloud service.
 
 ## Main Modules
 
-- `custom_components/ha_glinet/api`: bundled async API client for `/rpc`.
-- `custom_components/ha_glinet/api/models.py`: strongly-typed dataclasses for API responses.
-- `custom_components/ha_glinet/config_flow.py`: Home Assistant setup and options flow.
-- `custom_components/ha_glinet/hub.py`: runtime state holder and poller.
-- `custom_components/ha_glinet/entities`: entity implementations.
-- `custom_components/ha_glinet/models.py`: local data models shared by the hub and entities.
-- `custom_components/ha_glinet/services.py`: Service registration and handlers.
-- `custom_components/ha_glinet/diagnostics.py`: handles generation of sanitized diagnostic snapshot data.
+- `custom_components/glinet_router/api`: bundled async API client for `/rpc`.
+- `custom_components/glinet_router/api/models.py`: strongly-typed dataclasses for API responses.
+- `custom_components/glinet_router/config_flow.py`: Home Assistant setup and options flow.
+- `custom_components/glinet_router/hub.py`: runtime state holder and poller.
+- `custom_components/glinet_router/entities`: entity implementations.
+- `custom_components/glinet_router/models.py`: local data models shared by the hub and entities.
+- `custom_components/glinet_router/services.py`: Service registration and handlers.
+- `custom_components/glinet_router/diagnostics.py`: handles generation of sanitized diagnostic snapshot data.
 
 ## Runtime Flow
 

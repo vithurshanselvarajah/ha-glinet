@@ -29,7 +29,7 @@ jobs:
 
       - name: Validate JSON metadata
         run: |
-          python -m json.tool custom_components/ha_glinet/manifest.json >/dev/null
+          python -m json.tool custom_components/glinet_router/manifest.json >/dev/null
           python -m json.tool hacs.json >/dev/null
 
       - name: Compile Python
@@ -48,7 +48,7 @@ jobs:
           import tomllib
           from pathlib import Path
 
-          manifest = json.loads(Path("custom_components/ha_glinet/manifest.json").read_text())
+          manifest = json.loads(Path("custom_components/glinet_router/manifest.json").read_text())
           project = tomllib.loads(Path("pyproject.toml").read_text())
           manifest_version = manifest["version"]
           project_version = project["project"]["version"]

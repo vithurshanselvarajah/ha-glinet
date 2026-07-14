@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
-from custom_components.ha_glinet.hub import GLinetHub
-from custom_components.ha_glinet.models import AdGuardStatus
+from custom_components.glinet_router.hub import GLinetHub
+from custom_components.glinet_router.models import AdGuardStatus
 
 
 async def test_fetch_adguard_status() -> None:

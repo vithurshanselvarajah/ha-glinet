@@ -6,20 +6,20 @@ For entities related to optional features, visit their respective pages:
 
 | Optional Feature | Wiki Page |
 | --- | --- |
-| Cellular sensors | [Cellular](https://github.com/vithurshanselvarajah/ha-glinet/wiki/cellular) |
-| Repeater sensors, switches, selects & binary sensors | [Repeater](https://github.com/vithurshanselvarajah/ha-glinet/wiki/repeater) |
-| SMS sensor | [SMS](https://github.com/vithurshanselvarajah/ha-glinet/wiki/sms) |
-| Tailscale switch | [Tailscale](https://github.com/vithurshanselvarajah/ha-glinet/wiki/tailscale) |
-| WireGuard client switches | [WireGuard Client](https://github.com/vithurshanselvarajah/ha-glinet/wiki/wireguard-client) |
-| WireGuard server sensor & switch | [WireGuard Server](https://github.com/vithurshanselvarajah/ha-glinet/wiki/wireguard-server) |
-| OpenVPN client switches & location select | [OpenVPN Client](https://github.com/vithurshanselvarajah/ha-glinet/wiki/openvpn-client) |
-| OpenVPN server sensor & switch | [OpenVPN Server](https://github.com/vithurshanselvarajah/ha-glinet/wiki/openvpn-server) |
-| ZeroTier switch | [ZeroTier](https://github.com/vithurshanselvarajah/ha-glinet/wiki/zerotier) |
-| AdGuard Home switches | [AdGuard Home](https://github.com/vithurshanselvarajah/ha-glinet/wiki/adguard-home) |
-| Firewall sensors & switches | [Firewall](https://github.com/vithurshanselvarajah/ha-glinet/wiki/firewall) |
-| Battery sensors & binary sensor | [MCU Battery](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-battery) |
-| MCU OLED (services only — no entities) | [MCU OLED](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-oled) |
-| Parental control sensors, switches, selects & binary sensors | [Parental & Access Control](https://github.com/vithurshanselvarajah/ha-glinet/wiki/parental-control) |
+| Cellular sensors | [Cellular](https://github.com/vithurshanselvarajah/glinet-router/wiki/cellular) |
+| Repeater sensors, switches, selects & binary sensors | [Repeater](https://github.com/vithurshanselvarajah/glinet-router/wiki/repeater) |
+| SMS sensor | [SMS](https://github.com/vithurshanselvarajah/glinet-router/wiki/sms) |
+| Tailscale switch | [Tailscale](https://github.com/vithurshanselvarajah/glinet-router/wiki/tailscale) |
+| WireGuard client switches | [WireGuard Client](https://github.com/vithurshanselvarajah/glinet-router/wiki/wireguard-client) |
+| WireGuard server sensor & switch | [WireGuard Server](https://github.com/vithurshanselvarajah/glinet-router/wiki/wireguard-server) |
+| OpenVPN client switches & location select | [OpenVPN Client](https://github.com/vithurshanselvarajah/glinet-router/wiki/openvpn-client) |
+| OpenVPN server sensor & switch | [OpenVPN Server](https://github.com/vithurshanselvarajah/glinet-router/wiki/openvpn-server) |
+| ZeroTier switch | [ZeroTier](https://github.com/vithurshanselvarajah/glinet-router/wiki/zerotier) |
+| AdGuard Home switches | [AdGuard Home](https://github.com/vithurshanselvarajah/glinet-router/wiki/adguard-home) |
+| Firewall sensors & switches | [Firewall](https://github.com/vithurshanselvarajah/glinet-router/wiki/firewall) |
+| Battery sensors & binary sensor | [MCU Battery](https://github.com/vithurshanselvarajah/glinet-router/wiki/mcu-battery) |
+| MCU OLED (services only — no entities) | [MCU OLED](https://github.com/vithurshanselvarajah/glinet-router/wiki/mcu-oled) |
+| Parental control sensors, switches, selects & binary sensors | [Parental & Access Control](https://github.com/vithurshanselvarajah/glinet-router/wiki/parental-control) |
 
 ---
 
