@@ -62,10 +62,10 @@ You can turn optional features on or off during setup, or later from the Configu
 
 ### Using HACS (Recommended)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=vithurshanselvarajah&repository=glinet-router)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=vithurshanselvarajah&repository=ha-glinet-router)
 
 1. Open HACS in Home Assistant.
-2. Search for GL-Inet.
+2. Search for GL.iNet Router.
 3. Click Download, then restart Home Assistant once the install finishes.
 
 ### Manual Installation
