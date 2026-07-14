@@ -51,7 +51,7 @@ body:
       label: Any errors in logs
       description: Please paste any relevant error logs from Home Assistant.
       placeholder: |
-        2024-05-08 20:00:00 ERROR (MainThread) [custom_components.ha_glinet.hub] ...
+        2024-05-08 20:00:00 ERROR (MainThread) [custom_components.glinet_router.hub] ...
     validations:
       required: false
   - type: textarea

@@ -260,10 +260,10 @@ class SetupHub:
             await self.router.authenticate(self.username, password)
             info = await self.router.system.get_info()
         except (ConnectionRefusedError, TimeoutError, OSError) as exc:
-            _LOGGER.exception("Connection failure during GL-INet validation")
+            _LOGGER.exception("Connection failure during GL.iNet validation")
             raise ConnectionError from exc
         except NonZeroResponse:
-            _LOGGER.info("Failed to authenticate with GL-INet router during validation")
+            _LOGGER.info("Failed to authenticate with GL.iNet router during validation")
             return False
 
         self.router_mac = str(info.mac)

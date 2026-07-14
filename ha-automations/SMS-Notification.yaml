@@ -6,7 +6,7 @@ triggers:
 conditions: []
 actions:
   - response_variable: sms_data
-    action: ha_glinet.get_sms
+    action: glinet_router.get_sms
   - repeat:
       for_each: >-
         {{ sms_data.messages | selectattr('direction', 'eq', 'incoming') | list
@@ -21,6 +21,6 @@ actions:
         - data:
             scope: 10
             message_id: "{{ repeat.item.id }}"
-          action: ha_glinet.remove_sms
+          action: glinet_router.remove_sms
           enabled: true
 mode: single

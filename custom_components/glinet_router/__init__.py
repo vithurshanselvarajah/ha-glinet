@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
+
+from .const import DOMAIN, LEGACY_DOMAIN
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
     from .hub import GLinetHub
+
+_LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [
     "binary_sensor",
@@ -19,12 +24,29 @@ PLATFORMS = [
 ]
 
 
+async def _migrate_legacy_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    if entry.domain == DOMAIN:
+        return
+    if entry.domain != LEGACY_DOMAIN:
+        return
+
+    _LOGGER.debug(
+        "Re-keying in-place config entry %s from %s to %s",
+        entry.entry_id,
+        LEGACY_DOMAIN,
+        DOMAIN,
+    )
+    hass.config_entries.async_update_entry(entry, domain=DOMAIN)
+
+
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .hub import GLinetHub
+
+    await _migrate_legacy_entry(hass, entry)
 
     hub = GLinetHub(hass, entry)
     await hub.async_initialize_hub()

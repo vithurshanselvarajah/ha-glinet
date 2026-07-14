@@ -3,11 +3,11 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
-from custom_components.ha_glinet.api.client import GLinetApiClient
-from custom_components.ha_glinet.api.models import RouterStatus
-from custom_components.ha_glinet.entities.binary_sensor import GLinetBatteryAbnormalBinarySensor
-from custom_components.ha_glinet.entities.sensor import HUB_SENSORS
-from custom_components.ha_glinet.hub import GLinetHub
+from custom_components.glinet_router.api.client import GLinetApiClient
+from custom_components.glinet_router.api.models import RouterStatus
+from custom_components.glinet_router.entities.binary_sensor import GLinetBatteryAbnormalBinarySensor
+from custom_components.glinet_router.entities.sensor import HUB_SENSORS
+from custom_components.glinet_router.hub import GLinetHub
 from tests.test_api_client import FakeSession
 
 

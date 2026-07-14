@@ -33,7 +33,7 @@ The `messages` attribute contains objects with the following fields:
 
 ## Actions (Services)
 
-The following services are registered under the `ha_glinet` domain when the SMS feature is enabled:
+The following services are registered under the `glinet_router` domain when the SMS feature is enabled:
 
 ### `send_sms`
 Sends a text message.

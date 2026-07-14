@@ -32,7 +32,7 @@ To enable this feature, check the **MCU Battery** option under **Enabled Feature
 
 ## Actions (Services)
 
-The following services are registered under the `ha_glinet` domain when the MCU Battery feature is enabled:
+The following services are registered under the `glinet_router` domain when the MCU Battery feature is enabled:
 
 ### `get_mcu_battery_config`
 Retrieves the current battery warning configuration from the router. Supports response data.

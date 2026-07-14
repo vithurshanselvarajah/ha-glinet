@@ -5,7 +5,7 @@ from typing import Any
 
 from homeassistant.components.update import UpdateEntityFeature
 
-from custom_components.ha_glinet.update import GLinetFirmwareUpdateEntity
+from custom_components.glinet_router.update import GLinetFirmwareUpdateEntity
 
 
 class FakeHub:

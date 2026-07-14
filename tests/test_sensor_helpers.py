@@ -4,7 +4,7 @@ import sys
 import types
 from dataclasses import dataclass
 
-from custom_components.ha_glinet.utils import get_first_int, get_first_value
+from custom_components.glinet_router.utils import get_first_int, get_first_value
 
 
 def _install_sensor_dependency_stubs() -> None:
@@ -69,7 +69,7 @@ def test_first_value_searches_nested_payloads() -> None:
 
 
 def test_wan_status_helpers_report_interface_protocol_state() -> None:
-    from custom_components.ha_glinet.entities.sensor import (
+    from custom_components.glinet_router.entities.sensor import (
         WanStatusSensor,
         _wan_interface_by_name,
         _wan_protocol_status,
@@ -120,8 +120,8 @@ def test_wan_status_helpers_report_interface_protocol_state() -> None:
 
 
 def test_sms_sensor_counts_only_unread_messages() -> None:
-    from custom_components.ha_glinet.entities.sensor import HUB_SENSORS
-    from custom_components.ha_glinet.models import SmsMessage
+    from custom_components.glinet_router.entities.sensor import HUB_SENSORS
+    from custom_components.glinet_router.models import SmsMessage
 
     desc = next(d for d in HUB_SENSORS if d.key == "sms_messages")
 
@@ -142,8 +142,8 @@ def test_sms_sensor_counts_only_unread_messages() -> None:
 
 
 def test_sms_sensor_returns_zero_when_no_unread() -> None:
-    from custom_components.ha_glinet.entities.sensor import HUB_SENSORS
-    from custom_components.ha_glinet.models import SmsMessage
+    from custom_components.glinet_router.entities.sensor import HUB_SENSORS
+    from custom_components.glinet_router.models import SmsMessage
 
     desc = next(d for d in HUB_SENSORS if d.key == "sms_messages")
 
@@ -159,7 +159,7 @@ def test_sms_sensor_returns_zero_when_no_unread() -> None:
 
 
 def test_cellular_ip_sensors_are_enabled() -> None:
-    from custom_components.ha_glinet.entities.sensor import HUB_SENSORS, _sensor_is_enabled
+    from custom_components.glinet_router.entities.sensor import HUB_SENSORS, _sensor_is_enabled
 
     desc_v4 = next(d for d in HUB_SENSORS if d.key == "cellular_ipv4")
     desc_v6 = next(d for d in HUB_SENSORS if d.key == "cellular_ipv6")
@@ -208,7 +208,7 @@ def test_cellular_ip_sensors_are_enabled() -> None:
 
 
 def test_get_cellular_ip_resolves_correctly() -> None:
-    from custom_components.ha_glinet.entities.sensor import _get_cellular_ip
+    from custom_components.glinet_router.entities.sensor import _get_cellular_ip
 
     # Case 1: IPv4 is available, IPv6 is not available
     hub = types.SimpleNamespace(

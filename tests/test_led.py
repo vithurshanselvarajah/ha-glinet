@@ -2,7 +2,7 @@ from typing import Any
 
 import pytest
 
-from custom_components.ha_glinet.api.client import GLinetApiClient
+from custom_components.glinet_router.api.client import GLinetApiClient
 from tests.test_api_client import FakeSession
 
 

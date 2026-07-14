@@ -14,7 +14,7 @@ To enable this feature, check the **MCU OLED** option under **Enabled Features**
 
 ## Actions (Services)
 
-The following services are registered under the `ha_glinet` domain when the MCU OLED feature is enabled:
+The following services are registered under the `glinet_router` domain when the MCU OLED feature is enabled:
 
 ### `get_mcu_oled_config`
 Retrieves the current OLED screen display configuration from the router. Supports response data.

@@ -956,7 +956,7 @@ async def async_register_services(hass: HomeAssistant) -> None:
 def _get_hub(hass: HomeAssistant, call_data: dict[str, Any]) -> GLinetHub:
     entries = hass.config_entries.async_entries(DOMAIN)
     if not entries:
-        raise ValueError("No GL-INet config entries are loaded")
+        raise ValueError("No GL.iNet config entries are loaded")
 
     target_mac = call_data.get(CONF_MAC)
     for config_entry in entries:
@@ -965,4 +965,4 @@ def _get_hub(hass: HomeAssistant, call_data: dict[str, Any]) -> GLinetHub:
             continue
         if target_mac is None or hub.device_mac.lower() == str(target_mac).lower():
             return hub
-    raise ValueError(f"No GL-INet router found for MAC address {target_mac}")
+    raise ValueError(f"No GL.iNet router found for MAC address {target_mac}")

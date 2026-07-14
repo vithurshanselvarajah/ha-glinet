@@ -1,6 +1,6 @@
 # Feature Matrix & Supported Actions
 
-This page provides an overview of the core features always provided by the GL.iNet integration. Optional features are documented on their own dedicated pages — see the [Home](https://github.com/vithurshanselvarajah/ha-glinet/wiki/Home) page for the full list.
+This page provides an overview of the core features always provided by the GL.iNet integration. Optional features are documented on their own dedicated pages — see the [Home](https://github.com/vithurshanselvarajah/glinet-router/wiki/Home) page for the full list.
 
 ## Core Features
 
@@ -16,7 +16,7 @@ The following capabilities are always available regardless of optional feature s
 - **Device Tracking**: Monitors connected clients — MAC address, name/alias, IP address, interface type, and last-seen timestamp. Includes a cleanup mechanism for stale offline devices.
 - **Connected Clients Count**: Sensor showing total currently active tracked clients.
 - **Client Diagnostics**: Per-client download rate, upload rate, and IP address sensors attached to each tracked client device.
-- **Unknown Device Management**: Discover unknown devices, auto-cleanup rules, allow/blocklist controls, and manual MAC address entries. See [Unknown Device Management](https://github.com/vithurshanselvarajah/ha-glinet/wiki/unknown-devices).
+- **Unknown Device Management**: Discover unknown devices, auto-cleanup rules, allow/blocklist controls, and manual MAC address entries. See [Unknown Device Management](https://github.com/vithurshanselvarajah/glinet-router/wiki/unknown-devices).
 - **Firmware Updates**: Native Home Assistant firmware update entity with release notes when the router exposes them.
 - **Sanitized Diagnostics**: Safe diagnostic downloads masking sensitive data (MAC addresses, WiFi passwords, session IDs, and tokens).
 
@@ -24,24 +24,24 @@ The following capabilities are always available regardless of optional feature s
 
 The integration treats several advanced capabilities as optional modules selectable during setup or via the **Configure** menu:
 
-- [Cellular](https://github.com/vithurshanselvarajah/ha-glinet/wiki/cellular) - Monitor cellular connection, signals, and modem diagnostics.
-- [Repeater](https://github.com/vithurshanselvarajah/ha-glinet/wiki/repeater) - Connect to and scan for external WiFi networks, manage saved networks.
-- [SMS](https://github.com/vithurshanselvarajah/ha-glinet/wiki/sms) - Send, receive, and delete text messages.
-- [Tailscale](https://github.com/vithurshanselvarajah/ha-glinet/wiki/tailscale) - Enable or disable Tailscale integration.
-- [WireGuard Client](https://github.com/vithurshanselvarajah/ha-glinet/wiki/wireguard-client) - Toggle configured WireGuard client profiles.
-- [WireGuard Server](https://github.com/vithurshanselvarajah/ha-glinet/wiki/wireguard-server) - Manage the built-in WireGuard server.
-- [OpenVPN Client](https://github.com/vithurshanselvarajah/ha-glinet/wiki/openvpn-client) - Manage and select OpenVPN client configurations.
-- [OpenVPN Server](https://github.com/vithurshanselvarajah/ha-glinet/wiki/openvpn-server) - Manage the built-in OpenVPN server.
-- [ZeroTier](https://github.com/vithurshanselvarajah/ha-glinet/wiki/zerotier) - Enable or disable ZeroTier VPN connections.
-- [AdGuard Home](https://github.com/vithurshanselvarajah/ha-glinet/wiki/adguard-home) - Enable/disable AdGuard Home and DNS redirection.
-- [KMWAN](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api) - Read and update GL.iNet's KMWAN multi-WAN configuration through actions.
-- [MWAN3](https://github.com/vithurshanselvarajah/ha-glinet/wiki/router-api) - Read and update MWAN3 multi-WAN configuration through actions.
-- [Firewall](https://github.com/vithurshanselvarajah/ha-glinet/wiki/firewall) - Manage firewall rules, port forwarding, and DMZ settings.
-- [Smart Fan Controls](https://github.com/vithurshanselvarajah/ha-glinet/wiki/smart-fan) - Monitor fan status, speed, and set temperature thresholds.
-- [MCU Battery](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-battery) - Monitor battery status and configure high/low temperature warnings.
-- [MCU OLED](https://github.com/vithurshanselvarajah/ha-glinet/wiki/mcu-oled) - Configure what is displayed on the router's OLED screen.
-- [Parental & Access Control](https://github.com/vithurshanselvarajah/ha-glinet/wiki/parental-control) - Manage internet access blocks and parental group rules per client.
-- [API Playground](https://github.com/vithurshanselvarajah/ha-glinet/wiki/playground) - Send custom JSON-RPC or ubus commands and inspect the response.
+- [Cellular](https://github.com/vithurshanselvarajah/glinet-router/wiki/cellular) - Monitor cellular connection, signals, and modem diagnostics.
+- [Repeater](https://github.com/vithurshanselvarajah/glinet-router/wiki/repeater) - Connect to and scan for external WiFi networks, manage saved networks.
+- [SMS](https://github.com/vithurshanselvarajah/glinet-router/wiki/sms) - Send, receive, and delete text messages.
+- [Tailscale](https://github.com/vithurshanselvarajah/glinet-router/wiki/tailscale) - Enable or disable Tailscale integration.
+- [WireGuard Client](https://github.com/vithurshanselvarajah/glinet-router/wiki/wireguard-client) - Toggle configured WireGuard client profiles.
+- [WireGuard Server](https://github.com/vithurshanselvarajah/glinet-router/wiki/wireguard-server) - Manage the built-in WireGuard server.
+- [OpenVPN Client](https://github.com/vithurshanselvarajah/glinet-router/wiki/openvpn-client) - Manage and select OpenVPN client configurations.
+- [OpenVPN Server](https://github.com/vithurshanselvarajah/glinet-router/wiki/openvpn-server) - Manage the built-in OpenVPN server.
+- [ZeroTier](https://github.com/vithurshanselvarajah/glinet-router/wiki/zerotier) - Enable or disable ZeroTier VPN connections.
+- [AdGuard Home](https://github.com/vithurshanselvarajah/glinet-router/wiki/adguard-home) - Enable/disable AdGuard Home and DNS redirection.
+- [KMWAN](https://github.com/vithurshanselvarajah/glinet-router/wiki/router-api) - Read and update GL.iNet's KMWAN multi-WAN configuration through actions.
+- [MWAN3](https://github.com/vithurshanselvarajah/glinet-router/wiki/router-api) - Read and update MWAN3 multi-WAN configuration through actions.
+- [Firewall](https://github.com/vithurshanselvarajah/glinet-router/wiki/firewall) - Manage firewall rules, port forwarding, and DMZ settings.
+- [Smart Fan Controls](https://github.com/vithurshanselvarajah/glinet-router/wiki/smart-fan) - Monitor fan status, speed, and set temperature thresholds.
+- [MCU Battery](https://github.com/vithurshanselvarajah/glinet-router/wiki/mcu-battery) - Monitor battery status and configure high/low temperature warnings.
+- [MCU OLED](https://github.com/vithurshanselvarajah/glinet-router/wiki/mcu-oled) - Configure what is displayed on the router's OLED screen.
+- [Parental & Access Control](https://github.com/vithurshanselvarajah/glinet-router/wiki/parental-control) - Manage internet access blocks and parental group rules per client.
+- [API Playground](https://github.com/vithurshanselvarajah/glinet-router/wiki/playground) - Send custom JSON-RPC or ubus commands and inspect the response.
 
 If you disable all optional features, the integration still registers all core router status sensors and entities.
 

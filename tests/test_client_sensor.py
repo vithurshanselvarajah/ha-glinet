@@ -2,8 +2,11 @@ from unittest.mock import MagicMock
 
 from homeassistant.const import EntityCategory
 
-from custom_components.ha_glinet.entities.sensor import ClientSensor, ClientSensorEntityDescription
-from custom_components.ha_glinet.models import ClientDeviceInfo
+from custom_components.glinet_router.entities.sensor import (
+    ClientSensor,
+    ClientSensorEntityDescription,
+)
+from custom_components.glinet_router.models import ClientDeviceInfo
 
 
 def test_client_ip_sensor() -> None:

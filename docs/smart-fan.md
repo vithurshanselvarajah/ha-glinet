@@ -31,7 +31,7 @@ Sets the router fan threshold temperature.
 Example:
 
 ```yaml
-action: ha_glinet.set_fan_temperature
+action: glinet_router.set_fan_temperature
 data:
   temperature: 70
 ```

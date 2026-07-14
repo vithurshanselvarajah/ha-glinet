@@ -1,6 +1,6 @@
 # API Playground
 
-The **API Playground** is an advanced feature that allows you to interact directly with the GL.iNet router's JSON-RPC/ubus API. By using the `ha_glinet.playground` service, you can execute custom API methods and receive the raw JSON responses directly in Home Assistant.
+The **API Playground** is an advanced feature that allows you to interact directly with the GL.iNet router's JSON-RPC/ubus API. By using the `glinet_router.playground` service, you can execute custom API methods and receive the raw JSON responses directly in Home Assistant.
 
 > [!WARNING]
 > This is an advanced feature intended for developers and power users. Sending invalid commands or parameters can alter your router's configuration, interrupt network connectivity, or cause reboot loops. Use with caution.
@@ -12,18 +12,18 @@ The **API Playground** is an advanced feature that allows you to interact direct
 Because the playground allows arbitrary commands to be executed on the router, it is **disabled by default**. To enable it:
 
 1. In Home Assistant, go to **Settings > Devices & Services**.
-2. Find the **GL-INet** integration cards.
+2. Find the **GL.iNet** integration cards.
 3. Click **Configure** on the router instance you wish to use.
 4. In the features checklist, check the box next to **API Playground**.
 5. Click **Submit** to save changes.
 
-Once enabled, the `ha_glinet.playground` service will be registered and available to call from Developer Tools, automations, and scripts.
+Once enabled, the `glinet_router.playground` service will be registered and available to call from Developer Tools, automations, and scripts.
 
 ---
 
 ## Action Structure
 
-The `ha_glinet.playground` service takes the following fields:
+The `glinet_router.playground` service takes the following fields:
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -49,7 +49,7 @@ This calls the `get_status` method of the `system` ubus module to fetch router u
 
 **Service Call YAML:**
 ```yaml
-action: ha_glinet.playground
+action: glinet_router.playground
 data:
   method: "system/get_status"
 ```
@@ -76,7 +76,7 @@ This fetches the lists of defined network security zones on your router.
 
 **Service Call YAML:**
 ```yaml
-action: ha_glinet.playground
+action: glinet_router.playground
 data:
   method: "firewall/get_zone_list"
 ```
@@ -108,7 +108,7 @@ This toggles the router's physical front LED panel on or off.
 
 **Service Call YAML (Turn off LED):**
 ```yaml
-action: ha_glinet.playground
+action: glinet_router.playground
 data:
   method: "led/set_config"
   body:
@@ -129,7 +129,7 @@ This retrieves the connection state of active VPN tunnels on newer GL.iNet firmw
 
 **Service Call YAML:**
 ```yaml
-action: ha_glinet.playground
+action: glinet_router.playground
 data:
   method: "vpn-client/get_status"
 ```
@@ -155,7 +155,7 @@ This calls the unauthenticated top-level `challenge` method to query authenticat
 
 **Service Call YAML:**
 ```yaml
-action: ha_glinet.playground
+action: glinet_router.playground
 data:
   method: "challenge"
   body:

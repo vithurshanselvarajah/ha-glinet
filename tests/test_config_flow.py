@@ -3,7 +3,7 @@ from __future__ import annotations
 import types
 from typing import Any
 
-from custom_components.ha_glinet.config_flow import (
+from custom_components.glinet_router.config_flow import (
     CONF_ENABLED_FEATURES,
     DEFAULT_ENABLED_FEATURES,
     FEATURE_OPTIONS,
@@ -11,7 +11,7 @@ from custom_components.ha_glinet.config_flow import (
     _wan_monitor_options,
     process_user_input,
 )
-from custom_components.ha_glinet.const import (
+from custom_components.glinet_router.const import (
     CONF_WAN_STATUS_MONITORS,
     DEFAULT_USERNAME,
     FEATURE_KMWAN,

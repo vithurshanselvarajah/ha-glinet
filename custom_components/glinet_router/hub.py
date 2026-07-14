@@ -360,7 +360,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             )
             router_info = await self._invoke_api(self._api.system.get_info)
         except (ClientError, TimeoutError, OSError) as exc:
-            _LOGGER.exception("Error connecting to GL-INet router %s", self._host)
+            _LOGGER.exception("Error connecting to GL.iNet router %s", self._host)
             raise ConfigEntryNotReady from exc
         except AuthenticationError as exc:
             raise ConfigEntryAuthFailed from exc
@@ -382,12 +382,12 @@ class GLinetHub(DataUpdateCoordinator[None]):
                     self._settings.get(CONF_USERNAME, DEFAULT_USERNAME),
                     self._settings[CONF_PASSWORD],
                 )
-                _LOGGER.debug("GL-INet router %s token was renewed", self._host)
+                _LOGGER.debug("GL.iNet router %s token was renewed", self._host)
                 return
             except (AuthenticationError, TokenError, NonZeroResponse) as exc:
                 if attempt < attempts - 1:
                     _LOGGER.debug(
-                        "Attempt %d/%d: GL-INet router %s failed to renew token: %s. Retrying...",
+                        "Attempt %d/%d: GL.iNet router %s failed to renew token: %s. Retrying...",
                         attempt + 1,
                         attempts,
                         self._host,
@@ -395,7 +395,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
                     )
                     continue
                 _LOGGER.error(
-                    "GL-INet router %s failed to renew the token after %d attempts: %s.",
+                    "GL.iNet router %s failed to renew the token after %d attempts: %s.",
                     self._host,
                     attempts,
                     exc,
@@ -551,13 +551,13 @@ class GLinetHub(DataUpdateCoordinator[None]):
             response = await api_callable()
         except TimeoutError:
             if not self._connect_error:
-                _LOGGER.exception("GL-INet router %s did not respond in time", self._host)
+                _LOGGER.exception("GL.iNet router %s did not respond in time", self._host)
             self._connect_error = True
             return None
         except (TokenError, AuthenticationError):
             if not self._connect_error:
                 _LOGGER.warning(
-                    "GL-INet router %s rejected the token or access was denied; "
+                    "GL.iNet router %s rejected the token or access was denied; "
                     "a reauthentication will be attempted",
                     self._host,
                 )
@@ -566,23 +566,23 @@ class GLinetHub(DataUpdateCoordinator[None]):
             return None
         except NonZeroResponse:
             if not self._connect_error:
-                _LOGGER.exception("GL-INet router %s returned a router error response", self._host)
+                _LOGGER.exception("GL.iNet router %s returned a router error response", self._host)
             self._connect_error = True
             return None
         except ConfigEntryAuthFailed:
             raise
         except Exception:
             if not self._connect_error:
-                _LOGGER.exception("GL-INet router %s returned an unexpected error", self._host)
+                _LOGGER.exception("GL.iNet router %s returned an unexpected error", self._host)
             self._connect_error = True
             return None
 
         if self._token_error:
             self._token_error = False
-            _LOGGER.info("GL-INet router %s token is valid again", self._host)
+            _LOGGER.info("GL.iNet router %s token is valid again", self._host)
         if self._connect_error:
             self._connect_error = False
-            _LOGGER.info("Reconnected to GL-INet router %s", self._host)
+            _LOGGER.info("Reconnected to GL.iNet router %s", self._host)
         return response
 
     async def _invoke_optional_api(self, api_callable: Callable[[], Awaitable[T]]) -> T | None:
@@ -592,7 +592,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._token_error = True
             return None
         except (APIClientError, OSError, TimeoutError, ValueError, NonZeroResponse):
-            _LOGGER.debug("Optional GL-INet router API is unavailable", exc_info=True)
+            _LOGGER.debug("Optional GL.iNet router API is unavailable", exc_info=True)
             return None
 
     async def reboot(self, delay: int = 0) -> None:
@@ -1446,7 +1446,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             bus = self._default_modem_bus
             slot = self._default_modem_slot
         if bus is None:
-            raise RuntimeError("No SMS-capable GL-INet modem was found")
+            raise RuntimeError("No SMS-capable GL.iNet modem was found")
 
         chunks = [text[i : i + 160] for i in range(0, len(text), 160)]
         for chunk in chunks:
@@ -1484,7 +1484,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             bus = self._default_modem_bus
             slot = self._default_modem_slot
         if bus is None:
-            raise RuntimeError("No GL-INet modem bus is available for SMS removal")
+            raise RuntimeError("No GL.iNet modem bus is available for SMS removal")
 
         if slot is None:
 
@@ -1541,8 +1541,8 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 (CONNECTION_NETWORK_MAC, compute_mac_offset(self.device_mac, 1)),
             },
             name=self.hub_name,
-            model=self.router_model or "GL-INet Router",
-            manufacturer="GL-INet",
+            model=self.router_model or "GL.iNet Router",
+            manufacturer="GL.iNet",
             configuration_url=self._host,
             sw_version=self._sw_version,
         )
@@ -1550,7 +1550,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
     @property
     def router_api(self) -> GLinetApiClient:
         if self._api is None:
-            raise RuntimeError("GL-INet API client has not been initialized")
+            raise RuntimeError("GL.iNet API client has not been initialized")
         return self._api
 
     async def custom_request(
@@ -1579,7 +1579,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
     @property
     def hub_name(self) -> str:
-        return f"GL-INet {self._model.upper()}"
+        return f"GL.iNet {self._model.upper()}"
 
     @property
     def firmware_version(self) -> str:
