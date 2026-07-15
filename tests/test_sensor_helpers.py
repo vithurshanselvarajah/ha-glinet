@@ -8,6 +8,9 @@ from custom_components.glinet_router.utils import get_first_int, get_first_value
 
 
 def _install_sensor_dependency_stubs() -> None:
+    if _homeassistant_is_importable():
+        return
+
     @dataclass(frozen=True, kw_only=True)
     class SensorEntityDescription:
         key: str
@@ -40,7 +43,7 @@ def _install_sensor_dependency_stubs() -> None:
 
     const = sys.modules["homeassistant.const"]
     const.PERCENTAGE = "%"
-    const.EntityCategory = types.SimpleNamespace(DIAGNOSTIC="diagnostic")
+    const.EntityCategory = types.SimpleNamespace(DIAGNOSTIC="diagnostic", CONFIG="config")
     const.UnitOfTemperature = types.SimpleNamespace(CELSIUS="C")
 
     core = types.ModuleType("homeassistant.core")
@@ -51,6 +54,12 @@ def _install_sensor_dependency_stubs() -> None:
     entity_platform = types.ModuleType("homeassistant.helpers.entity_platform")
     entity_platform.AddEntitiesCallback = object
     sys.modules.setdefault("homeassistant.helpers.entity_platform", entity_platform)
+
+
+def _homeassistant_is_importable() -> bool:
+    import importlib.util
+
+    return importlib.util.find_spec("homeassistant") is not None
 
 
 _install_sensor_dependency_stubs()
