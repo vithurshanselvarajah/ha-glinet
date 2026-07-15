@@ -99,6 +99,7 @@ class ScanWifiButton(CoordinatorEntity[GLinetHub], ButtonEntity):
     async def async_press(self) -> None:
         await self._hub.scan_wifi_networks()
 
+
 class TestFanButton(CoordinatorEntity[GLinetHub], ButtonEntity):
     _attr_has_entity_name = True
     _attr_name = "Fan test"

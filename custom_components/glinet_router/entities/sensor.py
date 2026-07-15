@@ -383,13 +383,9 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         has_entity_name=True,
         icon="mdi:email-alert",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: sum(
-            1 for m in hub.sms_messages.values() if m.status == 0
-        ),
+        value_fn=lambda hub: sum(1 for m in hub.sms_messages.values() if m.status == 0),
         extra_attributes_fn=lambda hub: {
-            "unread_count": sum(
-                1 for m in hub.sms_messages.values() if m.status == 0
-            ),
+            "unread_count": sum(1 for m in hub.sms_messages.values() if m.status == 0),
             "message_count": len(hub.sms_messages),
             "incoming_count": sum(
                 1 for m in hub.sms_messages.values() if m.direction == "incoming"
@@ -563,10 +559,7 @@ def _sensor_is_enabled(hub: GLinetHub, description: HubSensorEntityDescription) 
         monitors = hub.wan_status_monitors
         protocol = "ipv4" if description.key == "cellular_ipv4" else "ipv6"
         if monitors is None:
-            return any(
-                iface.get("interface") == "modem_0001"
-                for iface in _wan_interfaces(hub)
-            )
+            return any(iface.get("interface") == "modem_0001" for iface in _wan_interfaces(hub))
         return f"modem_0001:{protocol}" in monitors
 
     feature = FEATURE_SENSOR_MAP.get(description.key)
@@ -993,7 +986,6 @@ class ClientSensor(CoordinatorEntity[GLinetHub], SensorEntity):
 
 
 class RepeaterChannelSensor(CoordinatorEntity[GLinetHub], SensorEntity):
-
     _attr_has_entity_name = True
     _attr_icon = "mdi:radio-tower"
     _attr_device_class = SensorDeviceClass.ENUM

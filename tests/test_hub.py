@@ -477,9 +477,7 @@ async def test_scan_wifi_networks_stores_results(monkeypatch) -> None:
     hub._scanned_networks = []
     hub._last_wifi_scan = None
 
-    async def fake_scan_wifi_networks(
-        params: dict[str, Any]
-    ) -> list[dict[str, Any]]:
+    async def fake_scan_wifi_networks(params: dict[str, Any]) -> list[dict[str, Any]]:
         calls.append(params)
         return [
             {
@@ -625,9 +623,7 @@ async def test_set_repeater_band_updates_config(monkeypatch) -> None:
     called: list[Any] = []
 
     class RepeaterModule:
-        async def set_config(
-            self, params: dict[str, Any]
-        ) -> dict[str, Any]:
+        async def set_config(self, params: dict[str, Any]) -> dict[str, Any]:
             called.append(params.get("lock_band"))
             return {}
 
@@ -754,22 +750,22 @@ async def test_async_initialize_hub_cleans_up_orphaned_entities(monkeypatch) -> 
     hub._late_init_complete = True
     hub._factory_mac = "00:11:22:33:44:55"
 
-
     orphan_entry = types.SimpleNamespace(
         entity_id="sensor.glinet_cellular_signal",
         unique_id="glinet_sensor/00:11:22:33:44:55/cellular_signal",
-        domain="sensor"
+        domain="sensor",
     )
     valid_entry = types.SimpleNamespace(
         entity_id="sensor.glinet_uptime",
         unique_id="glinet_sensor/00:11:22:33:44:55/system_uptime",
-        domain="sensor"
+        domain="sensor",
     )
 
     mock_er = MagicMock()
     mock_er.async_remove = MagicMock()
 
     import homeassistant.helpers.entity_registry as er
+
     monkeypatch.setattr(er, "async_get", lambda _: mock_er)
     monkeypatch.setattr(
         er,
@@ -780,9 +776,7 @@ async def test_async_initialize_hub_cleans_up_orphaned_entities(monkeypatch) -> 
     hub.refresh_session_token = _noop
     hub.fetch_all_data = _noop
 
-
     await hub.async_initialize_hub()
-
 
     mock_er.async_remove.assert_called_once_with("sensor.glinet_cellular_signal")
 
@@ -984,6 +978,7 @@ async def test_async_initialize_hub_cleans_up_unselected_cellular_ip_sensors(
 
 async def test_fetch_connected_devices_respects_add_all_devices_option(monkeypatch) -> None:
     import custom_components.glinet_router.hub as hub_module
+
     monkeypatch.setattr(hub_module, "async_dispatcher_send", _noop_arg)
 
     hub = GLinetHub.__new__(GLinetHub)
@@ -994,12 +989,11 @@ async def test_fetch_connected_devices_respects_add_all_devices_option(monkeypat
     hub._entry = types.SimpleNamespace(entry_id="test_entry", unique_id="unique_id")
     hub.hass = MagicMock()
 
-
     mock_dr = MagicMock()
     mock_dr.async_get_device.return_value = None
     import homeassistant.helpers.device_registry as dr
-    monkeypatch.setattr(dr, "async_get", lambda _: mock_dr)
 
+    monkeypatch.setattr(dr, "async_get", lambda _: mock_dr)
 
     hub._api = types.SimpleNamespace(clients=types.SimpleNamespace(get_online=AsyncMock()))
     hub._invoke_api = AsyncMock(
@@ -1007,7 +1001,6 @@ async def test_fetch_connected_devices_respects_add_all_devices_option(monkeypat
     )
 
     await hub.fetch_connected_devices()
-
 
     assert "11:22:33:44:55:66" in hub._devices
     assert hub._devices["11:22:33:44:55:66"].is_known is False
@@ -1021,16 +1014,13 @@ async def test_async_initialize_hub_cleans_up_unknown_devices(monkeypatch) -> No
     hub._late_init_complete = True
     hub._factory_mac = "00:11:22:33:44:55"
 
-
     unknown_tracker = types.SimpleNamespace(
-        entity_id="device_tracker.unknown",
-        unique_id="aa:bb:cc:dd:ee:ff",
-        domain="device_tracker"
+        entity_id="device_tracker.unknown", unique_id="aa:bb:cc:dd:ee:ff", domain="device_tracker"
     )
     unknown_sensor = types.SimpleNamespace(
         entity_id="sensor.unknown_bandwidth",
         unique_id="glinet_client_sensor/aa:bb:cc:dd:ee:ff/download",
-        domain="sensor"
+        domain="sensor",
     )
 
     mock_er = MagicMock()
@@ -1038,6 +1028,7 @@ async def test_async_initialize_hub_cleans_up_unknown_devices(monkeypatch) -> No
 
     import homeassistant.helpers.device_registry as dr
     import homeassistant.helpers.entity_registry as er
+
     monkeypatch.setattr(er, "async_get", lambda _: mock_er)
     monkeypatch.setattr(
         er,
@@ -1045,12 +1036,9 @@ async def test_async_initialize_hub_cleans_up_unknown_devices(monkeypatch) -> No
         MagicMock(return_value=[unknown_tracker, unknown_sensor]),
     )
 
-
     mock_dr = MagicMock()
     mock_dr.async_get_device.return_value = types.SimpleNamespace(
-        id="device_id",
-        name="Test Device",
-        config_entries={"test_entry"}
+        id="device_id", name="Test Device", config_entries={"test_entry"}
     )
     mock_dr.async_remove_device = MagicMock()
     monkeypatch.setattr(dr, "async_get", lambda _: mock_dr)
@@ -1060,11 +1048,9 @@ async def test_async_initialize_hub_cleans_up_unknown_devices(monkeypatch) -> No
 
     await hub.async_initialize_hub()
 
-
     assert mock_er.async_remove.call_count == 2
     mock_er.async_remove.assert_any_call("device_tracker.unknown")
     mock_er.async_remove.assert_any_call("sensor.unknown_bandwidth")
-
 
     assert mock_dr.async_remove_device.call_count >= 1
     mock_dr.async_remove_device.assert_any_call("device_id")
@@ -1086,6 +1072,7 @@ async def test_fetch_wg_server_status(monkeypatch) -> None:
     assert hub.wg_server_status.enabled is True
     assert hub.wg_server_connected_users == 1
 
+
 async def test_start_wg_server(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {}
@@ -1095,6 +1082,7 @@ async def test_start_wg_server(monkeypatch) -> None:
         async def start(self) -> dict[str, Any]:
             called.append("start")
             return {"ok": True}
+
         async def get_status(self) -> dict[str, Any]:
             return {"server": {"status": 1}}
 
@@ -1103,6 +1091,7 @@ async def test_start_wg_server(monkeypatch) -> None:
 
     await hub.start_wg_server()
     assert "start" in called
+
 
 async def test_stop_wg_server(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
@@ -1113,6 +1102,7 @@ async def test_stop_wg_server(monkeypatch) -> None:
         async def stop(self) -> dict[str, Any]:
             called.append("stop")
             return {"ok": True}
+
         async def get_status(self) -> dict[str, Any]:
             return {"server": {"status": 0}}
 
@@ -1180,11 +1170,13 @@ def _make_entry(data: dict[str, Any] | None = None, options: dict[str, Any] | No
 def test_hub_uses_configured_scan_interval() -> None:
     from datetime import timedelta
 
-    entry = _make_entry(data={
-        "host": "http://192.168.8.1",
-        "password": "pass",
-        CONF_SCAN_INTERVAL: 60,
-    })
+    entry = _make_entry(
+        data={
+            "host": "http://192.168.8.1",
+            "password": "pass",
+            CONF_SCAN_INTERVAL: 60,
+        }
+    )
     hub = GLinetHub(MagicMock(), entry)
     assert hub.update_interval == timedelta(seconds=60)
 
@@ -1192,10 +1184,12 @@ def test_hub_uses_configured_scan_interval() -> None:
 def test_hub_defaults_scan_interval_when_not_configured() -> None:
     from datetime import timedelta
 
-    entry = _make_entry(data={
-        "host": "http://192.168.8.1",
-        "password": "pass",
-    })
+    entry = _make_entry(
+        data={
+            "host": "http://192.168.8.1",
+            "password": "pass",
+        }
+    )
     hub = GLinetHub(MagicMock(), entry)
     assert hub.update_interval == timedelta(seconds=30)
 
@@ -1218,11 +1212,13 @@ def test_hub_scan_interval_from_options_overrides_data() -> None:
 def test_apply_option_updates_changes_scan_interval() -> None:
     from datetime import timedelta
 
-    entry = _make_entry(data={
-        "host": "http://192.168.8.1",
-        "password": "pass",
-        CONF_SCAN_INTERVAL: 30,
-    })
+    entry = _make_entry(
+        data={
+            "host": "http://192.168.8.1",
+            "password": "pass",
+            CONF_SCAN_INTERVAL: 30,
+        }
+    )
     hub = GLinetHub(MagicMock(), entry)
     assert hub.update_interval == timedelta(seconds=30)
 
@@ -1233,10 +1229,12 @@ def test_apply_option_updates_changes_scan_interval() -> None:
 def test_apply_option_updates_without_scan_interval_keeps_default() -> None:
     from datetime import timedelta
 
-    entry = _make_entry(data={
-        "host": "http://192.168.8.1",
-        "password": "pass",
-    })
+    entry = _make_entry(
+        data={
+            "host": "http://192.168.8.1",
+            "password": "pass",
+        }
+    )
     hub = GLinetHub(MagicMock(), entry)
     assert hub.update_interval == timedelta(seconds=30)
 

@@ -98,7 +98,6 @@ class GLinetApiClient:
         self.sid = sid
         self._logged_in = sid is not None
 
-
         self.system = SystemModule(self)
         self.modem = ModemModule(self)
         self.mcu = McuModule(self)
@@ -192,13 +191,9 @@ class GLinetApiClient:
             if algorithm == 1:
                 cipher_password = md5_crypt.using(salt=salt).hash(login_password)
             elif algorithm == 5:
-                cipher_password = sha256_crypt.using(salt=salt, rounds=5000).hash(
-                    login_password
-                )
+                cipher_password = sha256_crypt.using(salt=salt, rounds=5000).hash(login_password)
             elif algorithm == 6:
-                cipher_password = sha512_crypt.using(salt=salt, rounds=5000).hash(
-                    login_password
-                )
+                cipher_password = sha512_crypt.using(salt=salt, rounds=5000).hash(login_password)
             else:
                 raise ValueError("Unsupported router cipher algorithm")
 
@@ -252,6 +247,3 @@ class GLinetApiClient:
             else:
                 payload = self._build_sid_payload(method, [params], self.sid)
         return await self._send_request(payload)
-
-
-

@@ -7,6 +7,7 @@ from .base import BaseModule
 if TYPE_CHECKING:
     pass
 
+
 class OvpnServerModule(BaseModule):
     async def get_status(self) -> dict[str, Any]:
         response = await self._call("ovpn-server", "get_status")

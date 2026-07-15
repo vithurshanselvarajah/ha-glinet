@@ -27,19 +27,15 @@ class SystemModule(BaseModule):
         response = await self._call("system", "get_status")
         status = dict(response)
         sys_info = status.get("system", {})
-        
+
         def _get(key, default=None):
             val = status.get(key)
             if val is None:
                 val = sys_info.get(key)
             return val if val is not None else default
 
-        load_average = (
-            _get("load_average") 
-            or _get("loadavg") 
-            or []
-        )
-        
+        load_average = _get("load_average") or _get("loadavg") or []
+
         cpu = status.get("cpu") or sys_info.get("cpu") or {}
         temperature = cpu.get("temperature")
         if temperature is None:

@@ -22,9 +22,7 @@ async def test_mcu_module_methods_use_expected_payloads() -> None:
     )
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
 
-    assert await client.mcu.get_battery_config() == {
-        "capacity": {"enable": False, "value": "10"}
-    }
+    assert await client.mcu.get_battery_config() == {"capacity": {"enable": False, "value": "10"}}
     assert await client.mcu.set_battery_config({"capacity": {"enable": True, "value": 12}}) == {
         "err_code": 0,
         "err_msg": "OK",
@@ -67,9 +65,7 @@ async def test_hub_mcu_actions_call_api_and_cache_config() -> None:
     hub._invoke_api = invoke_api
     hub._invoke_optional_api = invoke_optional_api
 
-    assert await hub.get_mcu_battery_config() == {
-        "capacity": {"enable": True, "value": 20}
-    }
+    assert await hub.get_mcu_battery_config() == {"capacity": {"enable": True, "value": 20}}
     await hub.set_mcu_battery_config({"capacity": {"enable": False, "value": 10}})
     assert await hub.get_mcu_oled_config() == {"screen_display": {"main": True, "lan": False}}
     await hub.set_mcu_oled_config({"lan": True})

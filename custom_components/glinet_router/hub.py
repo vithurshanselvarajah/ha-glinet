@@ -301,7 +301,6 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 removed = True
 
             if not removed:
-
                 mac = None
                 if entry.domain == TRACKER_DOMAIN:
                     mac = entry.unique_id
@@ -770,9 +769,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         await self.get_mcu_oled_config()
 
     async def fetch_access_control_config(self) -> None:
-        response = await self._invoke_optional_api(
-            self.router_api.black_white_list.get_config
-        )
+        response = await self._invoke_optional_api(self.router_api.black_white_list.get_config)
         self._access_control_config = response or {}
         self._access_control_mode = str(
             self._access_control_config.get("mode")
@@ -797,9 +794,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._parental_status = ParentalStatus.from_api_response(config, status, mode)
 
     async def set_parental_control_enabled(self, enabled: bool) -> None:
-        await self._invoke_api(
-            lambda: self.router_api.parental_control.set_config(enabled)
-        )
+        await self._invoke_api(lambda: self.router_api.parental_control.set_config(enabled))
         await self.fetch_parental_control_status()
 
     async def set_group_enabled(self, group_id: str, enabled: bool) -> None:
@@ -838,9 +833,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
     async def set_access_control_mode(self, mode: str) -> None:
         macs = self._white_mac if mode == "white" else self._black_mac
-        await self._invoke_api(
-            lambda: self.router_api.black_white_list.set_config(mode, macs)
-        )
+        await self._invoke_api(lambda: self.router_api.black_white_list.set_config(mode, macs))
         await self.fetch_access_control_config()
 
     async def set_single_device_block(self, mac: str, block: bool) -> None:
@@ -858,9 +851,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
     async def set_group_schedules_enabled(self, group_id: str, enabled: bool) -> None:
         group = self._parental_status.groups.get(group_id)
         params = (
-            group.with_updates(schedule_enable=enabled, schedules_enabled=enabled)
-            if group
-            else {}
+            group.with_updates(schedule_enable=enabled, schedules_enabled=enabled) if group else {}
         )
         params.pop("id", None)
         await self._invoke_api(
@@ -1007,9 +998,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 group_id=int(config["group_id"]),
                 peer_id=int(config["peer_id"]),
                 tunnel_id=(
-                    int(config["tunnel_id"])
-                    if config.get("tunnel_id") is not None
-                    else None
+                    int(config["tunnel_id"]) if config.get("tunnel_id") is not None else None
                 ),
             )
             for config in response
@@ -1075,7 +1064,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             locations = []
             if config.get("location"):
                 locations = [loc.strip() for loc in config["location"].split(";")]
-            
+
             remotes = []
             remote_val = config.get("remote")
             if isinstance(remote_val, list):
@@ -1128,7 +1117,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
     async def start_ovpn_client(self, group_id: int, client_id: int) -> None:
         # Match sample project: stop active OpenVPN first
         await self.stop_all_ovpns()
-        
+
         key = f"{group_id}_{client_id}"
         client = self._ovpn_clients.get(key)
         tunnel_id = client.tunnel_id if client else None
@@ -1163,7 +1152,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._ovpn_server_status = {}
             return
         self._ovpn_server_status = status_response
-        
+
         users_response = await self._invoke_api(self.router_api.ovpn_server.get_user_list)
         self._ovpn_server_users = users_response or []
 
@@ -1233,9 +1222,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._led_enabled = response.get("led_enable")
 
     async def set_led_enabled(self, enabled: bool) -> None:
-        await self._invoke_api(
-            lambda: self.router_api.led.set_config({"led_enable": enabled})
-        )
+        await self._invoke_api(lambda: self.router_api.led.set_config({"led_enable": enabled}))
         await self.fetch_led_status()
 
     async def fetch_adguard_status(self) -> None:
@@ -1272,15 +1259,9 @@ class GLinetHub(DataUpdateCoordinator[None]):
             dict(info_response or {}).get("modems", []),
             dict(status_response or {}).get("modems", []),
         )
-        self._modems = {
-            _modem_key(modem): modem
-            for modem in modems
-            if modem.get("bus")
-        }
+        self._modems = {_modem_key(modem): modem for modem in modems if modem.get("bus")}
         default_modem = _select_sms_modem(self._modems)
-        self._default_modem_bus = (
-            str(default_modem.get("bus")) if default_modem else None
-        )
+        self._default_modem_bus = str(default_modem.get("bus")) if default_modem else None
         self._default_modem_slot = default_modem.get("slot") if default_modem else None
         self._cellular_status = {
             "modems": modems,
@@ -1301,9 +1282,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._repeater_config = response
 
     async def set_repeater_auto_switch(self, enabled: bool) -> None:
-        await self._invoke_api(
-            lambda: self.router_api.repeater.set_config({"auto": enabled})
-        )
+        await self._invoke_api(lambda: self.router_api.repeater.set_config({"auto": enabled}))
         await self.fetch_repeater_config()
 
     async def set_repeater_smart_reconnect(self, enabled: bool) -> None:
@@ -1320,9 +1299,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         await self.fetch_repeater_status()
 
     async def set_repeater_band(self, band: str | None) -> None:
-        await self._invoke_api(
-            lambda: self.router_api.repeater.set_config({"lock_band": band})
-        )
+        await self._invoke_api(lambda: self.router_api.repeater.set_config({"lock_band": band}))
         await self.fetch_repeater_config()
 
     async def fetch_fan_status(self) -> None:
@@ -1390,9 +1367,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             params["key"] = password
         if bssid:
             params["bssid"] = bssid
-        await self._invoke_api(
-            lambda: self.router_api.repeater.connect(params)
-        )
+        await self._invoke_api(lambda: self.router_api.repeater.connect(params))
         await self.fetch_repeater_status()
 
     async def disconnect_wifi(self) -> None:
@@ -1458,9 +1433,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             else:
 
                 async def api_call(c: str = chunk):
-                    return await self.router_api.modem.send_sms(
-                        bus, recipient, c, slot=slot
-                    )
+                    return await self.router_api.modem.send_sms(bus, recipient, c, slot=slot)
 
             response = await self._invoke_optional_api(api_call)
             if response is None:
@@ -1468,9 +1441,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
         await self.fetch_sms_messages()
 
-    async def remove_sms(
-        self, scope: int, message_id: str | None = None
-    ) -> None:
+    async def remove_sms(self, scope: int, message_id: str | None = None) -> None:
         message = self._sms_messages.get(message_id) if message_id else None
         bus = message.bus if message else self._default_modem_bus
         slot = (
@@ -1494,9 +1465,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         else:
 
             async def api_call():
-                return await self.router_api.modem.remove_sms(
-                    bus, scope, message_id, slot=slot
-                )
+                return await self.router_api.modem.remove_sms(bus, scope, message_id, slot=slot)
 
         await self._invoke_optional_api(api_call)
         if scope == 10 and message_id:
@@ -1556,10 +1525,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
     async def custom_request(
         self, method: str, body: dict[str, Any] | list[Any] | None = None
     ) -> dict[str, Any] | list[Any] | None:
-        return await self._invoke_api(
-            lambda: self.router_api.custom_call(method, body)
-        )
-
+        return await self._invoke_api(lambda: self.router_api.custom_call(method, body))
 
     @property
     def router_host(self) -> str:
@@ -1679,30 +1645,22 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
     @property
     def current_traffic_download(self) -> int:
-        return sum(
-            get_first_int(d, ("rx",)) or 0
-            for d in self._all_connected_clients.values()
-        )
+        return sum(get_first_int(d, ("rx",)) or 0 for d in self._all_connected_clients.values())
 
     @property
     def current_traffic_upload(self) -> int:
-        return sum(
-            get_first_int(d, ("tx",)) or 0
-            for d in self._all_connected_clients.values()
-        )
+        return sum(get_first_int(d, ("tx",)) or 0 for d in self._all_connected_clients.values())
 
     @property
     def total_traffic_download(self) -> int:
         return sum(
-            get_first_int(d, ("total_rx",)) or 0
-            for d in self._all_connected_clients.values()
+            get_first_int(d, ("total_rx",)) or 0 for d in self._all_connected_clients.values()
         )
 
     @property
     def total_traffic_upload(self) -> int:
         return sum(
-            get_first_int(d, ("total_tx",)) or 0
-            for d in self._all_connected_clients.values()
+            get_first_int(d, ("total_tx",)) or 0 for d in self._all_connected_clients.values()
         )
 
     @property
@@ -1864,6 +1822,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
     def event_networks_updated(self) -> str:
         return f"{DOMAIN}-networks-update-{self._factory_mac}"
 
+
 def _merge_modem_lists(
     info_modems: list[dict[str, Any]],
     status_modems: list[dict[str, Any]],
@@ -1926,5 +1885,3 @@ def _access_mode_is_black(mode: str) -> bool:
 
 def _access_mode_is_white(mode: str) -> bool:
     return mode in {"white", "whitelist", "allow"}
-
-

@@ -140,11 +140,9 @@ def _config_schema(
 ) -> vol.Schema:
     defaults = defaults or {}
     wan_interfaces = wan_interfaces or DEFAULT_WAN_INTERFACES
-    selected_interfaces = _wan_interfaces_from_monitors(
-        defaults.get(CONF_WAN_STATUS_MONITORS, [])
-    )
+    selected_interfaces = _wan_interfaces_from_monitors(defaults.get(CONF_WAN_STATUS_MONITORS, []))
     wan_interfaces = [*dict.fromkeys([*wan_interfaces, *selected_interfaces])]
-    
+
     schema_dict = {
         vol.Required(CONF_HOST, default=DEFAULT_URL): selector.TextSelector(
             selector.TextSelectorConfig(type=selector.TextSelectorType.URL)
@@ -236,7 +234,6 @@ STEP_USER_DATA_SCHEMA = _config_schema()
 
 
 class SetupHub:
-
     def __init__(self, host: str, hass: HomeAssistant) -> None:
         self.host = host
         self.username = DEFAULT_USERNAME
@@ -339,15 +336,12 @@ async def process_user_input(
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-
     VERSION = 1
 
     def __init__(self) -> None:
         self._discovered_data: dict[str, Any] | None = None
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
@@ -407,10 +401,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
             try:

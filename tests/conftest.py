@@ -287,9 +287,6 @@ def pytest_pyfunc_call(pyfuncitem: Any) -> bool:
     if not inspect.iscoroutinefunction(testfunction):
         return False
 
-    kwargs = {
-        name: pyfuncitem.funcargs[name]
-        for name in pyfuncitem._fixtureinfo.argnames
-    }
+    kwargs = {name: pyfuncitem.funcargs[name] for name in pyfuncitem._fixtureinfo.argnames}
     asyncio.run(testfunction(**kwargs))
     return True

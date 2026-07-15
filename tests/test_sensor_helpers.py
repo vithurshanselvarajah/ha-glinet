@@ -40,7 +40,7 @@ def _install_sensor_dependency_stubs() -> None:
 
     const = sys.modules["homeassistant.const"]
     const.PERCENTAGE = "%"
-    const.EntityCategory = types.SimpleNamespace(DIAGNOSTIC="diagnostic")
+    const.EntityCategory = types.SimpleNamespace(DIAGNOSTIC="diagnostic", CONFIG="config")
     const.UnitOfTemperature = types.SimpleNamespace(CELSIUS="C")
 
     core = types.ModuleType("homeassistant.core")
@@ -172,7 +172,7 @@ def test_cellular_ip_sensors_are_enabled() -> None:
                 {"interface": "wan"},
                 {"interface": "modem_0001"},
             ]
-        }
+        },
     )
     assert _sensor_is_enabled(hub, desc_v4) is True
     assert _sensor_is_enabled(hub, desc_v6) is True
@@ -185,23 +185,21 @@ def test_cellular_ip_sensors_are_enabled() -> None:
                 {"interface": "wan"},
                 {"interface": "wwan"},
             ]
-        }
+        },
     )
     assert _sensor_is_enabled(hub, desc_v4) is False
     assert _sensor_is_enabled(hub, desc_v6) is False
 
     # Case 3: wan_status_monitors is configured, and modem_0001:ipv4 is selected
     hub = types.SimpleNamespace(
-        wan_status_monitors={"modem_0001:ipv4", "wan:ipv4"},
-        kmwan_status={}
+        wan_status_monitors={"modem_0001:ipv4", "wan:ipv4"}, kmwan_status={}
     )
     assert _sensor_is_enabled(hub, desc_v4) is True
     assert _sensor_is_enabled(hub, desc_v6) is False
 
     # Case 4: wan_status_monitors is configured, and modem_0001:ipv6 is selected
     hub = types.SimpleNamespace(
-        wan_status_monitors={"modem_0001:ipv6", "wwan:ipv4"},
-        kmwan_status={}
+        wan_status_monitors={"modem_0001:ipv6", "wwan:ipv4"}, kmwan_status={}
     )
     assert _sensor_is_enabled(hub, desc_v4) is False
     assert _sensor_is_enabled(hub, desc_v6) is True
@@ -253,5 +251,3 @@ def test_get_cellular_ip_resolves_correctly() -> None:
 
     assert _get_cellular_ip(hub, "ipv4") == "10.164.158.131"
     assert _get_cellular_ip(hub, "ipv6") == "2001:db8::1"
-
-

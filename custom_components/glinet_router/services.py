@@ -94,6 +94,7 @@ from .const import (
     SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE,
     SERVICE_PARENTAL_CONTROL_UPDATE_SIGNATURES,
     SERVICE_PLAYGROUND,
+    SERVICE_REFRESH_CLIENTS,
     SERVICE_REFRESH_SMS,
     SERVICE_REMOVE_FIREWALL_RULE,
     SERVICE_REMOVE_PORT_FORWARD,
@@ -139,12 +140,8 @@ async def async_register_services(hass: HomeAssistant) -> None:
     firewall_enabled = any(
         FEATURE_FIREWALL in _enabled_features_from_entry(entry) for entry in entries
     )
-    mwan3_enabled = any(
-        FEATURE_MWAN3 in _enabled_features_from_entry(entry) for entry in entries
-    )
-    kmwan_enabled = any(
-        FEATURE_KMWAN in _enabled_features_from_entry(entry) for entry in entries
-    )
+    mwan3_enabled = any(FEATURE_MWAN3 in _enabled_features_from_entry(entry) for entry in entries)
+    kmwan_enabled = any(FEATURE_KMWAN in _enabled_features_from_entry(entry) for entry in entries)
     mcu_battery_enabled = any(
         FEATURE_MCU_BATTERY in _enabled_features_from_entry(entry) for entry in entries
     )
@@ -156,8 +153,7 @@ async def async_register_services(hass: HomeAssistant) -> None:
         FEATURE_REPEATER in _enabled_features_from_entry(entry) for entry in entries
     )
     parental_control_enabled = any(
-        FEATURE_PARENTAL_CONTROL in _enabled_features_from_entry(entry)
-        for entry in entries
+        FEATURE_PARENTAL_CONTROL in _enabled_features_from_entry(entry) for entry in entries
     )
     playground_enabled = any(
         FEATURE_PLAYGROUND in _enabled_features_from_entry(entry) for entry in entries
@@ -166,6 +162,11 @@ async def async_register_services(hass: HomeAssistant) -> None:
     async def async_set_fan_temperature(call: ServiceCall) -> None:
         hub = _get_hub(hass, call.data)
         await hub.set_fan_temperature(call.data[ATTR_TEMPERATURE])
+
+    async def async_refresh_clients(call: ServiceCall) -> None:
+        hub = _get_hub(hass, call.data)
+        await hub.fetch_connected_devices()
+        await hub.async_request_refresh()
 
     async def async_mwan3_get_config(call: ServiceCall) -> ServiceResponse:
         hub = _get_hub(hass, call.data)
@@ -945,11 +946,16 @@ async def async_register_services(hass: HomeAssistant) -> None:
         schema=vol.Schema(
             {
                 vol.Optional(CONF_MAC): cv.string,
-                vol.Required(ATTR_TEMPERATURE): vol.All(
-                    vol.Coerce(int), vol.Range(min=70, max=90)
-                ),
+                vol.Required(ATTR_TEMPERATURE): vol.All(vol.Coerce(int), vol.Range(min=70, max=90)),
             }
         ),
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_REFRESH_CLIENTS,
+        async_refresh_clients,
+        schema=vol.Schema({vol.Optional(CONF_MAC): cv.string}),
     )
 
 

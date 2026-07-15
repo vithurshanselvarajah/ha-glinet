@@ -156,7 +156,7 @@ class WireGuardServerStatus:
             rx_bytes=server.get("rx_bytes", 0),
             tx_bytes=server.get("tx_bytes", 0),
         )
-    
+
 
 @dataclass(slots=True)
 class OpenVpnClient:
@@ -255,10 +255,7 @@ class ParentalGroup:
         group_id = str(data.get("id") or data.get("group_id") or data.get(".name") or "")
         name = str(data.get("name") or data.get("alias") or group_id)
         macs = _mac_list(
-            data.get("mac")
-            or data.get("macs")
-            or data.get("clients")
-            or data.get("devices")
+            data.get("mac") or data.get("macs") or data.get("clients") or data.get("devices")
         )
         rule = data.get("rule") or data.get("rule_id")
         return cls(
@@ -278,11 +275,7 @@ class ParentalGroup:
             ),
             active_schedule_ids=[
                 str(item)
-                for item in (
-                    data.get("active_schedule_ids")
-                    or data.get("active_schedules")
-                    or []
-                )
+                for item in (data.get("active_schedule_ids") or data.get("active_schedules") or [])
             ],
             raw=dict(data),
         )
@@ -465,7 +458,7 @@ class ClientDeviceInfo:
 
         if self._connected:
             self._connected = (now - self._last_activity).total_seconds() < consider_home
-        
+
         if not self._connected:
             self._ip_address = None
 

@@ -73,8 +73,7 @@ async def async_setup_entry(
     if hub.feature_enabled(FEATURE_PARENTAL_CONTROL):
         entities.append(GLinetParentalControlGlobalSwitch(hub))
         entities.extend(
-            GLinetParentalControlGroupSwitch(hub, group)
-            for group in hub.parental_groups.values()
+            GLinetParentalControlGroupSwitch(hub, group) for group in hub.parental_groups.values()
         )
     entities.append(LedSwitch(hub))
     async_add_entities(entities, True)
@@ -163,7 +162,6 @@ class WifiApSwitch(GLinetSwitchBase):
         await self._hub.async_request_refresh()
 
 
-
 class TailscaleSwitch(GLinetSwitchBase):
     _attr_icon = "mdi:vpn"
 
@@ -203,12 +201,14 @@ class TailscaleSwitch(GLinetSwitchBase):
             return
         await self._hub.async_request_refresh()
 
+
 class WireGuardSwitch(GLinetSwitchBase):
     _attr_icon = "mdi:vpn"
 
     def __init__(self, hub: GLinetHub, client: WireGuardClient) -> None:
         super().__init__(hub)
         self._client = client
+
     @property
     def unique_id(self) -> str:
         return f"glinet_switch/{self._hub.device_mac}/{self._client.name}/wireguard_client"
@@ -288,7 +288,6 @@ class WireGuardServerSwitch(GLinetSwitchBase):
             return
         await asyncio.sleep(10)
         await self._hub.async_request_refresh()
-
 
 
 class RepeaterAutoSwitchSwitch(GLinetSwitchBase):
@@ -397,7 +396,7 @@ class OpenVpnClientSwitch(GLinetSwitchBase):
     def name(self) -> str:
         name = f"OpenVPN {self._client.name}"
         if self._client.group_name:
-             name = f"OpenVPN {self._client.group_name} {self._client.name}"
+            name = f"OpenVPN {self._client.group_name} {self._client.name}"
         return name
 
     @property

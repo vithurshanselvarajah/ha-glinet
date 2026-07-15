@@ -63,6 +63,7 @@ SERVICE_GET_SMS = "get_sms"
 SERVICE_REMOVE_SMS = "remove_sms"
 SERVICE_REFRESH_SMS = "refresh_sms"
 SERVICE_SEND_SMS = "send_sms"
+SERVICE_REFRESH_CLIENTS = "refresh_clients"
 
 SERVICE_SCAN_WIFI = "scan_wifi"
 SERVICE_CONNECT_WIFI = "connect_wifi"

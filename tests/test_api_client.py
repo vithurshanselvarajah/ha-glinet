@@ -61,6 +61,7 @@ class FakeSession:
             return FakePostContext(payload)
         return FakePostContext(FakeResponse(payload))
 
+
 @pytest.mark.parametrize(
     ("version", "expected"),
     [
@@ -179,17 +180,20 @@ async def test_repeater_scan_and_connect_use_documented_payloads() -> None:
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
 
     assert await client.repeater.scan({"refresh": True}) == [{"ssid": "SecuredNet"}]
-    assert await client.repeater.connect(
-        {
-            "ssid": "SecuredNet",
-            "key": "secret-pass",
-            "remember": True,
-            "manual": False,
-            "protocol": "dhcp",
-            "disguise": False,
-            "auto_portal": False,
-        }
-    ) == {}
+    assert (
+        await client.repeater.connect(
+            {
+                "ssid": "SecuredNet",
+                "key": "secret-pass",
+                "remember": True,
+                "manual": False,
+                "protocol": "dhcp",
+                "disguise": False,
+                "auto_portal": False,
+            }
+        )
+        == {}
+    )
 
     assert [request["json"]["params"] for request in session.requests] == [
         ["sid-1", "repeater", "scan", {"refresh": True}],
@@ -273,9 +277,7 @@ async def test_send_sms_includes_slot_when_supplied() -> None:
     session = FakeSession([{"result": {"sent": True}}])
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
 
-    assert await client.modem.send_sms(
-        "cpu", "+441234567890", "hi", slot=2
-    ) == {"sent": True}
+    assert await client.modem.send_sms("cpu", "+441234567890", "hi", slot=2) == {"sent": True}
 
     assert session.requests[0]["json"]["params"] == [
         "sid-1",
@@ -415,15 +417,7 @@ async def test_modem_sms_list_uses_49_bus_payload_for_new_firmware() -> None:
 
 async def test_get_kmwan_status_uses_kmwan_endpoint() -> None:
     session = FakeSession(
-        [
-            {
-                "result": {
-                    "interfaces": [
-                        {"interface": "wan", "status_v4": 1, "status_v6": 0}
-                    ]
-                }
-            }
-        ]
+        [{"result": {"interfaces": [{"interface": "wan", "status_v4": 1, "status_v6": 0}]}}]
     )
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
 
@@ -641,4 +635,3 @@ async def test_custom_call_sends_expected_payloads() -> None:
             "id": 0,
         },
     ]
-

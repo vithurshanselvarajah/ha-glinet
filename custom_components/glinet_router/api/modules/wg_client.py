@@ -8,6 +8,7 @@ from .base import BaseModule
 if TYPE_CHECKING:
     from ..client import GLinetApiClient
 
+
 class WireGuardModule(BaseModule):
     async def get_all_config_list(self) -> dict[str, Any]:
         response = await self._call("wg-client", "get_all_config_list")
@@ -47,8 +48,8 @@ class VpnClientModule(BaseModule):
         response = await self._call("vpn-client", "set_tunnel", params)
         return dict(response)
 
-class WgClientModule(BaseModule):
 
+class WgClientModule(BaseModule):
     def __init__(self, client: GLinetApiClient) -> None:
         super().__init__(client)
         self.wireguard = WireGuardModule(client)
@@ -80,14 +81,10 @@ class WgClientModule(BaseModule):
         response = await self.wireguard.get_status()
         return [dict(response)]
 
-    async def start_wireguard_client(
-        self, group_id: int, peer_id: int
-    ) -> dict[str, Any]:
+    async def start_wireguard_client(self, group_id: int, peer_id: int) -> dict[str, Any]:
         return await self._toggle_wireguard_client(group_id, peer_id, True)
 
-    async def stop_wireguard_client(
-        self, group_id: int, peer_id: int
-    ) -> dict[str, Any]:
+    async def stop_wireguard_client(self, group_id: int, peer_id: int) -> dict[str, Any]:
         return await self._toggle_wireguard_client(group_id, peer_id, False)
 
     async def _toggle_wireguard_client(

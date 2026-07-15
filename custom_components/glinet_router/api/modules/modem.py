@@ -24,17 +24,17 @@ class ModemModule(BaseModule):
     async def get_modem_info(self) -> list[ModemInfo]:
         info_response = await self.get_info()
         status_response = await self.get_status()
-        
+
         info_modems = info_response.get("modems", [])
         status_modems = status_response.get("modems", [])
-        
+
         merged: dict[str, dict[str, Any]] = {}
         for modem in [*info_modems, *status_modems]:
             if not isinstance(modem, dict) or not modem.get("bus"):
                 continue
             bus = str(modem["bus"])
             merged[bus] = merged.get(bus, {}) | dict(modem)
-            
+
         return [
             ModemInfo(
                 bus=str(modem.get("bus", "")),
@@ -157,9 +157,7 @@ class ModemModule(BaseModule):
     ) -> dict[str, Any] | None:
         params = dict(target)
         try:
-            network_status_response = await self._call(
-                "modem", "get_network_status", params
-            )
+            network_status_response = await self._call("modem", "get_network_status", params)
             network_info_response = await self._call("modem", "get_network_info", params)
         except NonZeroResponse:
             return None
