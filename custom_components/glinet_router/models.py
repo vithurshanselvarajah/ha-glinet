@@ -132,6 +132,74 @@ class WireGuardClient:
     tunnel_id: int | None = None
 
 
+class VpnTunnelType(StrEnum):
+    WIREGUARD = "wireguard"
+    OPENVPN = "openvpn"
+    UNKNOWN = "unknown"
+
+
+@dataclass(slots=True)
+class VpnTunnel:
+
+    tunnel_id: int
+    name: str
+    tunnel_type: VpnTunnelType
+    enabled: bool = False
+    connected: bool = field(compare=False, default=False)
+    killswitch: bool = False
+    group_id: int | None = None
+    peer_id: int | None = None
+    client_id: int | None = None
+    via: str | None = None
+    is_default: bool = False
+
+    @classmethod
+    def from_api_response(cls, data: dict, *, is_default: bool = False) -> VpnTunnel:
+        via = data.get("via") or {}
+        raw_type = via.get("type") or data.get("type")
+        try:
+            tunnel_type = VpnTunnelType(raw_type) if raw_type else VpnTunnelType.UNKNOWN
+        except ValueError:
+            tunnel_type = VpnTunnelType.UNKNOWN
+
+        configs = via.get("configs") if isinstance(via, dict) else None
+        group_id: int | None = None
+        peer_id: int | None = None
+        client_id: int | None = None
+        if isinstance(configs, list) and configs:
+            first = configs[0] if isinstance(configs[0], dict) else {}
+            group_id = first.get("group_id")
+            id_list = first.get("id_list")
+            if isinstance(id_list, list) and id_list:
+                raw_inner = id_list[0]
+                if tunnel_type == VpnTunnelType.WIREGUARD:
+                    peer_id = int(raw_inner) if raw_inner is not None else None
+                elif tunnel_type == VpnTunnelType.OPENVPN:
+                    client_id = int(raw_inner) if raw_inner is not None else None
+        # Fallback keys in case via is shaped differently
+        if group_id is None and isinstance(via, dict):
+            group_id = via.get("group_id")
+        if peer_id is None and isinstance(via, dict) and tunnel_type == VpnTunnelType.WIREGUARD:
+            peer_id = via.get("peer_id")
+        if client_id is None and isinstance(via, dict) and tunnel_type == VpnTunnelType.OPENVPN:
+            client_id = via.get("client_id")
+
+        tunnel_id = data.get("tunnel_id")
+        return cls(
+            tunnel_id=int(tunnel_id) if tunnel_id is not None else 0,
+            name=str(data.get("name") or f"Tunnel {tunnel_id or ''}").strip()
+            or f"Tunnel {tunnel_id or ''}",
+            tunnel_type=tunnel_type,
+            enabled=bool(data.get("enabled", False)),
+            killswitch=bool(data.get("killswitch", False)),
+            group_id=int(group_id) if group_id is not None else None,
+            peer_id=int(peer_id) if peer_id is not None else None,
+            client_id=int(client_id) if client_id is not None else None,
+            via=str(via.get("via")) if isinstance(via, dict) and via.get("via") else None,
+            is_default=is_default,
+        )
+
+
 @dataclass(slots=True)
 class WireGuardServerStatus:
     enabled: bool

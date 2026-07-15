@@ -24,6 +24,13 @@ class VpnClientModule(BaseModule):
         response = await self._call("vpn-client", "get_status")
         return dict(response)
 
+    async def get_tunnel(self) -> dict[str, Any]:
+        try:
+            response = await self._call("vpn-client", "get_tunnel")
+        except Exception:  # noqa: BLE001 - older firmware returns a router error
+            return {"tunnels": [], "default_tunnels": []}
+        return dict(response)
+
     async def set_tunnel(self, tunnel_id: int, enabled: bool) -> dict[str, Any]:
         response = await self._call(
             "vpn-client", "set_tunnel", {"enabled": enabled, "tunnel_id": tunnel_id}

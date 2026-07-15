@@ -13,6 +13,11 @@ CONF_WAN_STATUS_MONITORS = "wan_status_monitors"
 CONF_UNKNOWN_DEVICES_FILTER_MODE = "unknown_devices_filter_mode"
 CONF_UNKNOWN_DEVICES_FILTER_SELECT = "unknown_devices_filter_select"
 CONF_UNKNOWN_DEVICES_FILTER_MANUAL = "unknown_devices_filter_manual"
+# When True, the hub fires the per-feature fetches in parallel during a
+# coordinator refresh. The default (False) keeps the legacy sequential
+# behaviour so low-powered travel routers are not overwhelmed.
+CONF_PARALLEL_REQUESTS = "parallel_requests"
+DEFAULT_PARALLEL_REQUESTS = False
 DEFAULT_UNKNOWN_DEVICES_FILTER_MODE = "blacklist"
 
 WAN_INTERFACE_NAMES = {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, TypeVar
@@ -41,11 +42,13 @@ from .const import (
     CONF_ADD_ALL_DEVICES,
     CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
+    CONF_PARALLEL_REQUESTS,
     CONF_SCAN_INTERVAL,
     CONF_UNKNOWN_DEVICES_FILTER_MANUAL,
     CONF_UNKNOWN_DEVICES_FILTER_MODE,
     CONF_UNKNOWN_DEVICES_FILTER_SELECT,
     CONF_WAN_STATUS_MONITORS,
+    DEFAULT_PARALLEL_REQUESTS,
     DEFAULT_USERNAME,
     DOMAIN,
     FEATURE_ADGUARD,
@@ -76,6 +79,7 @@ from .models import (
     RepeaterStatus,
     ScannedNetwork,
     SmsMessage,
+    VpnTunnel,
     WifiInterface,
     WireGuardClient,
     WireGuardServerStatus,
@@ -127,6 +131,8 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._default_modem_slot: int | str | None = None
         self._wireguard_clients: dict[int, WireGuardClient] = {}
         self._wireguard_connections: list[WireGuardClient] | None = None
+        self._vpn_tunnels: dict[int, VpnTunnel] = {}
+        self._vpn_tunnel_connections: list[VpnTunnel] | None = None
         self._tailscale_config: dict[str, Any] = {}
         self._tailscale_connection: bool | None = None
         self._sms_messages: dict[str, SmsMessage] = {}
@@ -182,6 +188,12 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
     def feature_enabled(self, feature: str) -> bool:
         return feature in self.enabled_features
+
+    @property
+    def parallel_requests(self) -> bool:
+        return bool(
+            self._settings.get(CONF_PARALLEL_REQUESTS, DEFAULT_PARALLEL_REQUESTS)
+        )
 
     def _wan_status_entity_selected(self, unique_id: str) -> bool:
         prefix = f"glinet_sensor/{self.device_mac}/"
@@ -239,12 +251,16 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 "wireguard_client",
                 "vpn_client",
                 "wg_client",
+                "vpn_tunnel/wg",
+                "vpn_tunnel/unknown",
             ],
             FEATURE_WG_SERVER: [
                 "wg_server",
             ],
             FEATURE_OVPN_CLIENT: [
                 "ovpn_client",
+                "vpn_tunnel/ovpn",
+                "vpn_tunnel/unknown",
             ],
             FEATURE_OVPN_SERVER: [
                 "ovpn_server",
@@ -452,6 +468,19 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._ovpn_clients = {}
             self._ovpn_connections = None
 
+        # 4.9+ exposes a unified VPN dashboard. When either feature is
+        # enabled we fetch the dashboard tunnels so the entity layer can
+        # surface them as switches. The legacy per-profile state is still
+        # populated above for 4.8 backward compatibility.
+        if (
+            self.feature_enabled(FEATURE_WG_CLIENT)
+            or self.feature_enabled(FEATURE_OVPN_CLIENT)
+        ):
+            tasks.append(self.fetch_vpn_tunnels())
+        else:
+            self._vpn_tunnels = {}
+            self._vpn_tunnel_connections = None
+
         if self.feature_enabled(FEATURE_OVPN_SERVER):
             tasks.append(self.fetch_ovpn_server_status())
         else:
@@ -529,8 +558,29 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._black_mac = []
             self._white_mac = []
 
-        for task in tasks:
-            await task
+        # The user can opt into running fetches concurrently via the
+        # ``parallel_requests`` option in the config / options flow.
+        # Concurrent execution cuts total refresh time roughly to the
+        # slowest single fetch but puts more load on the router, so it
+        # defaults to off and is intended for capable hardware.
+        if self.parallel_requests:
+            # ``return_exceptions=True`` ensures a single failing fetch
+            # does not abort the rest of the coordinator refresh. The
+            # per-feature fetchers already swallow their own errors via
+            # ``_invoke_api`` / ``_invoke_optional_api`` and return
+            # ``None``/empty payloads on failure, so this is belt and
+            # braces.
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for result in results:
+                if isinstance(result, Exception):
+                    _LOGGER.debug(
+                        "Parallel fetch raised: %s",
+                        result,
+                        exc_info=result,
+                    )
+        else:
+            for task in tasks:
+                await task
 
         if run_upgrade_check:
             self._last_upgrade_check = utcnow()
@@ -1035,6 +1085,129 @@ class GLinetHub(DataUpdateCoordinator[None]):
             lambda: self.router_api.wg_client.stop_wireguard_client(group_id, peer_id)
         )
         await self.fetch_wireguard_clients()
+
+    # ------------------------------------------------------------------
+    # 4.9+ VPN dashboard (unified tunnel management)
+    # ------------------------------------------------------------------
+
+    def _dashboard_vpn_client(self) -> Any | None:
+        api = getattr(self, "_api", None)
+        if api is None:
+            return None
+        wg_client = getattr(api, "wg_client", None)
+        if wg_client is None:
+            return None
+        return getattr(wg_client, "vpn_client", None)
+
+    async def _is_dashboard_supported(self) -> bool:
+        api = getattr(self, "_api", None)
+        if api is None or self._dashboard_vpn_client() is None:
+            return False
+        try:
+            return await api._is_firmware_at_least((4, 9, 0, 0))
+        except (APIClientError, OSError, ValueError):
+            return False
+
+    async def fetch_vpn_tunnels(self) -> None:
+        vpn_client = self._dashboard_vpn_client()
+        if not await self._is_dashboard_supported() or vpn_client is None:
+            # 4.8 / unsupported - clear any stale state from a previous run
+            self._vpn_tunnels = {}
+            self._vpn_tunnel_connections = []
+            return
+
+        tunnel_response = await self._invoke_optional_api(vpn_client.get_tunnel)
+        if not tunnel_response:
+            self._vpn_tunnels = {}
+            self._vpn_tunnel_connections = []
+            return
+
+        tunnels: dict[int, VpnTunnel] = {}
+        defaults = tunnel_response.get("default_tunnels") or []
+        user_tunnels = tunnel_response.get("tunnels") or []
+
+        for raw in defaults:
+            if not isinstance(raw, dict):
+                continue
+            try:
+                tunnel = VpnTunnel.from_api_response(raw, is_default=True)
+            except (TypeError, ValueError):
+                continue
+            if tunnel.tunnel_id:
+                tunnels[tunnel.tunnel_id] = tunnel
+
+        for raw in user_tunnels:
+            if not isinstance(raw, dict):
+                continue
+            try:
+                tunnel = VpnTunnel.from_api_response(raw, is_default=False)
+            except (TypeError, ValueError):
+                continue
+            if tunnel.tunnel_id:
+                tunnels[tunnel.tunnel_id] = tunnel
+
+        self._vpn_tunnels = tunnels
+
+        # Connection state from vpn-client.get_status
+        status_response = await self._invoke_optional_api(vpn_client.get_status)
+        active_ids: set[int] = set()
+        if isinstance(status_response, dict):
+            for item in status_response.get("status_list") or []:
+                if not isinstance(item, dict):
+                    continue
+                tid = item.get("tunnel_id")
+                if tid is None:
+                    continue
+                if int(item.get("status", 0)) == 1 or bool(item.get("enabled", False)):
+                    active_ids.add(int(tid))
+        elif isinstance(status_response, list):
+            for item in status_response:
+                if not isinstance(item, dict):
+                    continue
+                tid = item.get("tunnel_id")
+                if tid is None:
+                    continue
+                if int(item.get("status", 0)) == 1 or bool(item.get("enabled", False)):
+                    active_ids.add(int(tid))
+
+        connections: list[VpnTunnel] = []
+        for tunnel_id, tunnel in tunnels.items():
+            tunnel.connected = tunnel_id in active_ids
+            if tunnel.connected:
+                connections.append(tunnel)
+
+        self._vpn_tunnel_connections = connections
+
+        # Notify subscribers (e.g. the switch platform) so they can add new
+        # tunnel switches and remove ones that no longer exist on the router.
+        # The payload is the full set of tunnel ids so consumers can diff it
+        # against the entities they currently have registered.
+        try:
+            async_dispatcher_send(
+                self.hass, self.event_vpn_tunnels_updated, set(tunnels.keys())
+            )
+        except Exception:  # noqa: BLE001 - never fail the fetch on dispatcher errors
+            _LOGGER.debug(
+                "Failed to dispatch vpn tunnels updated event", exc_info=True
+            )
+
+    async def set_vpn_tunnel(self, tunnel_id: int, enabled: bool) -> None:
+        vpn_client = self._dashboard_vpn_client()
+        if vpn_client is None:
+            raise RuntimeError("VPN dashboard is not available on this firmware")
+        await self._invoke_api(
+            lambda: vpn_client.set_tunnel(
+                tunnel_id=int(tunnel_id),
+                enabled=bool(enabled),
+            )
+        )
+        # Refresh both the dashboard and the legacy per-profile state so
+        # consumers relying on either representation stay in sync.
+        await self.fetch_vpn_tunnels()
+        if self.feature_enabled(FEATURE_WG_CLIENT):
+            await self.fetch_wireguard_clients()
+        if self.feature_enabled(FEATURE_OVPN_CLIENT):
+            await self.fetch_ovpn_clients()
 
     async def fetch_wg_server_status(self) -> None:
         response = await self._invoke_api(self.router_api.wg_server.get_status)
@@ -1580,6 +1753,14 @@ class GLinetHub(DataUpdateCoordinator[None]):
         return self._wireguard_connections
 
     @property
+    def vpn_tunnels(self) -> dict[int, VpnTunnel]:
+        return self._vpn_tunnels
+
+    @property
+    def connected_vpn_tunnels(self) -> list[VpnTunnel] | None:
+        return self._vpn_tunnel_connections
+
+    @property
     def wg_server_status(self) -> WireGuardServerStatus | None:
         if not self._wg_server_status:
             return None
@@ -1614,6 +1795,8 @@ class GLinetHub(DataUpdateCoordinator[None]):
     @property
     def active_vpn_connections(self) -> list[Any]:
         connections = []
+        if self._vpn_tunnel_connections:
+            connections.extend(self._vpn_tunnel_connections)
         if self._wireguard_connections:
             connections.extend(self._wireguard_connections)
         if self._ovpn_connections:
@@ -1821,6 +2004,10 @@ class GLinetHub(DataUpdateCoordinator[None]):
     @property
     def event_networks_updated(self) -> str:
         return f"{DOMAIN}-networks-update-{self._factory_mac}"
+
+    @property
+    def event_vpn_tunnels_updated(self) -> str:
+        return f"{DOMAIN}-vpn-tunnels-updated-{self._factory_mac}"
 
 
 def _merge_modem_lists(

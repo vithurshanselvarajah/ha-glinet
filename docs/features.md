@@ -52,6 +52,7 @@ When adding the GL.iNet integration or modifying it via the **Configure** menu, 
 - **Router URL**: The network address of your router (e.g., `http://192.168.8.1`). HTTPS is supported if configured on the router.
 - **Admin Password**: The password for the `root` account used to access the GL.iNet admin panel.
 - **Update Interval**: The polling frequency in seconds, between 10s and 300s (default 30s). Increase this if you experience router slowdowns.
+- **Faster updates (parallel fetching)**: When enabled, the per-feature API requests are fired concurrently during each coordinator refresh using `asyncio.gather`. This can significantly reduce total refresh time on capable hardware but puts more load on the router — keep it off (the default) for low-powered travel routers. Errors raised by a single fetch are logged and do not abort the rest of the refresh.
 - **Consider Home**: The grace period in seconds before a device is marked as "Away". Prevents devices from flickering when they briefly drop off the network.
 - **Discover unknown devices**: When enabled, adds all newly discovered devices to the Home Assistant device registry rather than only known/tracked ones. Toggling this off automatically cleans up untracked devices.
 - **Auto-cleanup unknown devices (min)**: The inactivity period in minutes after which an untracked device is automatically removed from the registry. Set to `0` to disable.
@@ -77,7 +78,7 @@ The integration is a **local polling** integration (`iot_class: local_polling`) 
 - **Default polling interval**: 30 seconds, controlled by the **Update Interval** option.
 - **Allowed range**: 10–300 seconds. The config flow clamps the value to this range so the user cannot pick a value that would hammer the router.
 - **Coordinator-driven**: All entity platforms (sensors, switches, binary sensors, select, update, device tracker) read their state from a single coordinator update per cycle. This avoids each platform polling independently and keeps router load predictable.
-- **Sequential fetch**: Within a single update, the hub calls each JSON-RPC endpoint one at a time. This is intentional — see **Performance & Load Management** below.
+- **Sequential fetch**: Within a single update, the hub calls each JSON-RPC endpoint one at a time. This is intentional — see **Performance & Load Management** below. Users with capable routers can opt into concurrent execution via the **Faster updates (parallel fetching)** option in the config / options flow.
 - **Throttled firmware check**: Firmware upgrade metadata is refreshed at most once every 24 hours even if the polling interval is much shorter.
 - **Single source of truth for connection health**: A single failed token renewal or transient timeout does not stop the rest of the cycle. Errors are caught at the request boundary, surfaced through `UpdateFailed`, and the coordinator retries at the next interval.
 

@@ -143,3 +143,58 @@ async def test_future_versions_keep_using_4_9_peer_payload(
             "peer_id": 2001,
         },
     ]
+
+
+async def test_wg_vpn_client_exposes_get_tunnel() -> None:
+    from custom_components.glinet_router.api.modules.wg_client import (
+        VpnClientModule as WgVpnClientModule,
+    )
+
+    assert hasattr(WgVpnClientModule, "get_tunnel")
+    assert hasattr(WgVpnClientModule, "get_status")
+    assert hasattr(WgVpnClientModule, "set_tunnel")
+
+    client = _make_client(
+        [{"result": {"tunnels": [], "default_tunnels": []}}], FIRMWARE_4_9
+    )
+    response = await client.wg_client.vpn_client.get_tunnel()
+
+    assert response == {"tunnels": [], "default_tunnels": []}
+    assert client._session.requests[0]["json"]["params"] == [
+        "sid-1",
+        "vpn-client",
+        "get_tunnel",
+        {},
+    ]
+
+
+async def test_wg_vpn_client_get_tunnel_falls_back_on_legacy_firmware() -> None:
+    from custom_components.glinet_router.api.exceptions import NonZeroResponse
+
+    class _BoomSession(FakeSession):
+        def __init__(self) -> None:
+            super().__init__([])
+
+        def post(self, url: str, json: dict[str, Any], timeout: int):  # type: ignore[override]
+            from tests.test_api_client import FakePostContext, FakeResponse
+
+            return FakePostContext(
+                FakeResponse(
+                    {
+                        "jsonrpc": "2.0",
+                        "error": {"code": -32001, "message": "unsupported"},
+                    }
+                )
+            )
+
+    session = _BoomSession()
+    client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+    client._firmware_version = FIRMWARE_4_8
+
+    response = await client.wg_client.vpn_client.get_tunnel()
+
+    assert response == {"tunnels": [], "default_tunnels": []}
+    # The raised NonZeroResponse must not propagate to the caller.
+    assert isinstance(
+        NonZeroResponse.__mro__[0], type
+    )  # keeps the import alive for static analysis

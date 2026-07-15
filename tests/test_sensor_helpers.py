@@ -40,7 +40,7 @@ def _install_sensor_dependency_stubs() -> None:
 
     const = sys.modules["homeassistant.const"]
     const.PERCENTAGE = "%"
-    const.EntityCategory = types.SimpleNamespace(DIAGNOSTIC="diagnostic", CONFIG="config")
+    const.EntityCategory = types.SimpleNamespace(DIAGNOSTIC="diagnostic")
     const.UnitOfTemperature = types.SimpleNamespace(CELSIUS="C")
 
     core = types.ModuleType("homeassistant.core")

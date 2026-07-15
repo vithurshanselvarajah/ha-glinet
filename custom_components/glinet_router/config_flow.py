@@ -20,12 +20,14 @@ from .const import (
     CONF_ADD_ALL_DEVICES,
     CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
+    CONF_PARALLEL_REQUESTS,
     CONF_SCAN_INTERVAL,
     CONF_TITLE,
     CONF_UNKNOWN_DEVICES_FILTER_MANUAL,
     CONF_UNKNOWN_DEVICES_FILTER_MODE,
     CONF_UNKNOWN_DEVICES_FILTER_SELECT,
     CONF_WAN_STATUS_MONITORS,
+    DEFAULT_PARALLEL_REQUESTS,
     DEFAULT_PASSWORD,
     DEFAULT_UNKNOWN_DEVICES_FILTER_MODE,
     DEFAULT_URL,
@@ -150,6 +152,10 @@ def _config_schema(
         vol.Required(CONF_PASSWORD, default=DEFAULT_PASSWORD): selector.TextSelector(
             selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
         ),
+        vol.Optional(
+            CONF_PARALLEL_REQUESTS,
+            default=defaults.get(CONF_PARALLEL_REQUESTS, DEFAULT_PARALLEL_REQUESTS),
+        ): selector.BooleanSelector(),
         vol.Optional(
             CONF_CONSIDER_HOME,
             default=DEFAULT_CONSIDER_HOME.total_seconds(),
@@ -330,6 +336,10 @@ async def process_user_input(
             CONF_UNKNOWN_DEVICES_FILTER_MANUAL: data.get(
                 CONF_UNKNOWN_DEVICES_FILTER_MANUAL,
                 "",
+            ),
+            CONF_PARALLEL_REQUESTS: data.get(
+                CONF_PARALLEL_REQUESTS,
+                DEFAULT_PARALLEL_REQUESTS,
             ),
         },
     }

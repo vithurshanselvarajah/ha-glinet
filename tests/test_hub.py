@@ -41,7 +41,6 @@ async def _invoke_api_empty_clients(_: Any) -> dict[str, dict[str, Any]]:
 
 
 def test_router_traffic_sensors_sum_all_connected_clients() -> None:
-    """Traffic properties should aggregate from raw API data, not tracked devices."""
     hub = GLinetHub.__new__(GLinetHub)
     hub._devices = {}
     hub._all_connected_clients = {
@@ -56,7 +55,6 @@ def test_router_traffic_sensors_sum_all_connected_clients() -> None:
 
 
 def test_router_traffic_includes_untracked_devices() -> None:
-    """Traffic totals must include devices not tracked by HA (not in _devices)."""
     hub = GLinetHub.__new__(GLinetHub)
     # Only one device is tracked
     hub._devices = {"aa:bb:cc:dd:ee:ff": ClientDeviceInfo("aa:bb:cc:dd:ee:ff")}
@@ -270,6 +268,188 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
     assert hub._tailscale_connection is None
     assert hub._cellular_status == {}
     assert hub._modems == {}
+
+
+async def test_fetch_all_data_runs_tasks_in_parallel_when_enabled(
+    monkeypatch,
+) -> None:
+    import asyncio
+
+    from custom_components.glinet_router.const import CONF_PARALLEL_REQUESTS
+
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {CONF_ENABLED_FEATURES: [], CONF_PARALLEL_REQUESTS: True}
+    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._host = "192.168.8.1"
+    hub._last_upgrade_check = None
+    hub.hass = object()
+    hub.refresh_session_token = _noop
+
+    started: list[str] = []
+    completed: list[str] = []
+    events = asyncio.Event()
+
+    async def make_slow_fetch(name: str) -> Any:
+        async def _run() -> None:
+            started.append(name)
+            await events.wait()
+            completed.append(name)
+
+        return _run
+
+    async def fake_fetch_system_status() -> None:
+        started.append("system")
+        await events.wait()
+        completed.append("system")
+
+    async def fake_fetch_kmwan_status() -> None:
+        started.append("kmwan")
+        await events.wait()
+        completed.append("kmwan")
+
+    async def fake_fetch_connected_devices() -> None:
+        started.append("clients")
+        await events.wait()
+        completed.append("clients")
+
+    async def fake_fetch_wifi_interfaces() -> None:
+        started.append("wifi")
+        await events.wait()
+        completed.append("wifi")
+
+    async def fake_fetch_fan_status() -> None:
+        started.append("fan")
+        await events.wait()
+        completed.append("fan")
+
+    async def fake_fetch_led_status() -> None:
+        started.append("led")
+        await events.wait()
+        completed.append("led")
+
+    hub.fetch_system_status = fake_fetch_system_status
+    hub.fetch_kmwan_status = fake_fetch_kmwan_status
+    hub.fetch_connected_devices = fake_fetch_connected_devices
+    hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
+    hub.fetch_fan_status = fake_fetch_fan_status
+    hub.fetch_led_status = fake_fetch_led_status
+
+    async def _release() -> None:
+        # Give the loop a moment so all the per-feature tasks are
+        # scheduled and ``asyncio.gather`` is collecting them.
+        await asyncio.sleep(0)
+        events.set()
+
+    release_task = asyncio.create_task(_release())
+    await hub.fetch_all_data()
+    await release_task
+
+    # Sequential order would have each fetch finish before the next
+    # starts. With ``asyncio.gather`` all six core fetches start before
+    # any of them completes.
+    assert set(started) == {"system", "kmwan", "clients", "wifi", "fan", "led"}
+    assert completed == []  # none completed until the event was set
+
+
+async def test_fetch_all_data_runs_tasks_sequentially_by_default(
+    monkeypatch,
+) -> None:
+    import asyncio
+
+    from custom_components.glinet_router.const import CONF_PARALLEL_REQUESTS
+
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {
+        CONF_ENABLED_FEATURES: [],
+        CONF_PARALLEL_REQUESTS: False,  # explicit
+    }
+    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._host = "192.168.8.1"
+    hub._last_upgrade_check = None
+    hub.hass = object()
+    hub.refresh_session_token = _noop
+
+    order: list[str] = []
+    started: dict[str, asyncio.Event] = {}
+    completed: dict[str, asyncio.Event] = {}
+
+    async def _ordered_fetch(name: str) -> None:
+        order.append(f"{name}:start")
+        # Signal that we started, then wait for the test to release us.
+        started[name].set()
+        await completed[name].wait()
+        order.append(f"{name}:end")
+
+    for name in (
+        "system",
+        "kmwan",
+        "clients",
+        "wifi",
+        "fan",
+        "led",
+    ):
+        started[name] = asyncio.Event()
+        completed[name] = asyncio.Event()
+        setattr(
+            hub,
+            f"fetch_{name.replace('clients', 'connected_devices').replace('led', 'led_status')}",
+            _ordered_fetch(name),
+        )
+
+    # Correct attribute names are: fetch_system_status, fetch_kmwan_status,
+    # fetch_connected_devices, fetch_wifi_interfaces, fetch_fan_status,
+    # fetch_led_status. The previous loop misnamed some attributes; the
+    # block below reassigns them by the right name.
+    expected_names = [
+        "system_status",
+        "kmwan_status",
+        "connected_devices",
+        "wifi_interfaces",
+        "fan_status",
+        "led_status",
+    ]
+    for name, attr in zip(
+        ("system", "kmwan", "clients", "wifi", "fan", "led"),
+        expected_names,
+        strict=True,
+    ):
+        setattr(hub, f"fetch_{attr}", _ordered_fetch(name))
+
+    async def _drive() -> None:
+        # Wait until the first fetch has started, then release it. Repeat
+        # for the rest. If execution were parallel, the test would fail
+        # because later fetches would not start before earlier ones end.
+        for name in ("system", "kmwan", "clients", "wifi", "fan", "led"):
+            await started[name].wait()
+            completed[name].set()
+
+    drive_task = asyncio.create_task(_drive())
+    await hub.fetch_all_data()
+    await drive_task
+
+    # Each fetch fully completes before the next one starts.
+    expected_order = []
+    for name in ("system", "kmwan", "clients", "wifi", "fan", "led"):
+        expected_order.append(f"{name}:start")
+        expected_order.append(f"{name}:end")
+    assert order == expected_order
+
+
+def test_parallel_requests_property_default() -> None:
+    from custom_components.glinet_router.hub import GLinetHub
+
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {}
+    assert hub.parallel_requests is False
+
+
+def test_parallel_requests_property_explicit_true() -> None:
+    from custom_components.glinet_router.const import CONF_PARALLEL_REQUESTS
+    from custom_components.glinet_router.hub import GLinetHub
+
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {CONF_PARALLEL_REQUESTS: True}
+    assert hub.parallel_requests is True
 
 
 async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
