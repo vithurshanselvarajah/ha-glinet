@@ -16,14 +16,14 @@ def mock_api():
 
 
 @pytest.fixture
-def mock_hub(mock_api):
+def mock_hub(hass, mock_api):
     entry = AsyncMock()
     entry.options = {}
     entry.data = {"host": "http://192.168.8.1", "password": "pass"}
     entry.entry_id = "test_entry"
     entry.runtime_data = None
 
-    hub = GLinetHub(AsyncMock(), entry)
+    hub = GLinetHub(hass, entry)
     hub._api = mock_api
     return hub
 
