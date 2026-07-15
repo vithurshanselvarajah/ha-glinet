@@ -140,7 +140,6 @@ class VpnTunnelType(StrEnum):
 
 @dataclass(slots=True)
 class VpnTunnel:
-
     tunnel_id: int
     name: str
     tunnel_type: VpnTunnelType

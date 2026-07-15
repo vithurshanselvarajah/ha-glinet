@@ -21,6 +21,10 @@ class ModemModule(BaseModule):
         response = await self._call("modem", "get_info")
         return dict(response)
 
+    async def get_sim_config(self, bus: str) -> dict[str, Any]:
+        response = await self._call("modem", "get_sim_config", {"bus": bus})
+        return dict(response)
+
     async def get_modem_info(self) -> list[ModemInfo]:
         info_response = await self.get_info()
         status_response = await self.get_status()
@@ -77,7 +81,7 @@ class ModemModule(BaseModule):
             "timeout": timeout,
         }
         if slot is not None:
-            params["slot"] = slot
+            params["slot"] = int(slot) if isinstance(slot, str) else slot
         payload = self._client._build_sid_payload(
             "call",
             ["modem", "send_sms", params],
@@ -94,13 +98,10 @@ class ModemModule(BaseModule):
         bus: str,
         scope: int,
         message_id: str | None = None,
-        slot: int | str | None = None,
     ) -> dict[str, Any]:
-        params = {"bus": bus, "scope": scope}
+        params: dict[str, Any] = {"bus": bus, "scope": scope}
         if message_id:
             params["name"] = message_id
-        if slot is not None:
-            params["slot"] = slot
         response = await self._call("modem", "remove_sms", params)
         return dict(response)
 
@@ -130,9 +131,13 @@ class ModemModule(BaseModule):
         except NonZeroResponse:
             signals = {}
 
+        network_statuses, network_infos = await self._fetch_networks_49()
+
         modems: list[dict[str, Any]] = []
         for target in targets:
-            modem = await self._get_modem_49_status(target, signals)
+            modem = await self._get_modem_49_status(
+                target, signals, network_statuses, network_infos
+            )
             if modem is not None:
                 modems.append(modem)
         return {"modems": modems}
@@ -150,20 +155,46 @@ class ModemModule(BaseModule):
             return _deduplicate_targets(targets)
         return [{"bus": "cpu", "slot": 1}, {"bus": "cpu", "slot": 2}]
 
+    async def _fetch_networks_49(
+        self,
+    ) -> tuple[
+        dict[tuple[str, str], dict[str, Any]],
+        dict[tuple[str, str], dict[str, Any]],
+    ]:
+        try:
+            network_status_response = await self._call("modem", "get_network_status", {})
+        except NonZeroResponse:
+            network_status_response = {}
+        try:
+            network_info_response = await self._call("modem", "get_network_info", {})
+        except NonZeroResponse:
+            network_info_response = {}
+
+        return (
+            _index_networks_by_bus_slot(network_status_response),
+            _index_networks_by_bus_slot(network_info_response),
+        )
+
     async def _get_modem_49_status(
         self,
         target: dict[str, Any],
         signals: dict[str, dict[str, Any]],
+        network_statuses: dict[tuple[str, str], dict[str, Any]] | None = None,
+        network_infos: dict[tuple[str, str], dict[str, Any]] | None = None,
     ) -> dict[str, Any] | None:
-        params = dict(target)
-        try:
-            network_status_response = await self._call("modem", "get_network_status", params)
-            network_info_response = await self._call("modem", "get_network_info", params)
-        except NonZeroResponse:
-            return None
-
-        network_status = _first_dict(dict(network_status_response).get("networks"))
-        network_info = _first_dict(dict(network_info_response).get("networks"))
+        if network_statuses is not None and network_infos is not None:
+            network_status, network_info = _lookup_network_pair(
+                target, network_statuses, network_infos
+            )
+        else:
+            params = dict(target)
+            try:
+                network_status_response = await self._call("modem", "get_network_status", params)
+                network_info_response = await self._call("modem", "get_network_info", params)
+            except NonZeroResponse:
+                return None
+            network_status = _first_dict(dict(network_status_response).get("networks"))
+            network_info = _first_dict(dict(network_info_response).get("networks"))
         signal = signals.get(str(target.get("slot", "")), {})
         cell_info = dict(network_info.get("cell_info") or {})
         bus = str(network_status.get("bus") or network_info.get("bus") or target["bus"])
@@ -195,17 +226,38 @@ class ModemModule(BaseModule):
 
     async def _get_sms_list_49(self) -> list[dict[str, Any]]:
         targets = await self._get_modem_49_targets()
+        try:
+            network_statuses, network_infos = await self._fetch_networks_49()
+        except Exception:  # noqa: BLE001
+            network_statuses, network_infos = {}, {}
+
         messages: list[dict[str, Any]] = []
-        for bus in dict.fromkeys(str(target["bus"]) for target in targets):
-            try:
-                response = await self._call("modem", "get_sms_list", {"bus": bus})
-            except NonZeroResponse:
-                continue
-            if isinstance(response, list):
-                messages.extend(dict(item) for item in response)
-            else:
-                messages.extend(dict(item) for item in dict(response).get("list", []))
+        for target in targets:
+            bus_aliases = _bus_aliases(str(target.get("bus", "")))
+            network_info = _lookup_network_pair(target, network_statuses, network_infos)[1]
+            candidate_buses: list[str] = []
+            info_bus = network_info.get("bus")
+            if info_bus:
+                candidate_buses.append(str(info_bus))
+            candidate_buses.extend(bus_aliases)
+
+            seen: set[str] = set()
+            for bus in candidate_buses:
+                if not bus or bus in seen:
+                    continue
+                seen.add(bus)
+                response = await self._dispatch_sms_list_49(bus)
+                if response is None:
+                    continue
+                messages.extend(_flatten_sms_messages(response))
+                break
         return messages
+
+    async def _dispatch_sms_list_49(self, bus: str) -> Any:
+        try:
+            return await self._call("modem", "get_sms_list", {"bus": bus})
+        except NonZeroResponse:
+            return None
 
 
 def _targets_from_interface(interface: str) -> list[dict[str, Any]]:
@@ -226,11 +278,14 @@ def _targets_from_interface(interface: str) -> list[dict[str, Any]]:
         return [{"bus": "cpu", "slot": slot}]
 
     parts = [part for part in value.split("_") if part]
-    if len(parts) < 2:
+    if not parts:
         return []
-    bus = "-".join(parts[:2])
-    if len(parts) > 2:
-        bus = f"{bus}.{'.'.join(parts[2:])}"
+    if len(parts) == 1:
+        bus = parts[0]
+    else:
+        bus = "-".join(parts[:2])
+        if len(parts) > 2:
+            bus = f"{bus}.{'.'.join(parts[2:])}"
 
     target: dict[str, Any] = {"bus": bus}
     if slot is not None:
@@ -290,3 +345,84 @@ def _normalize_ip_info(value: Any) -> dict[str, Any]:
     if value not in (None, ""):
         return {"ip": str(value)}
     return {}
+
+
+def _target_lookup_key(target: dict[str, Any]) -> tuple[str, str]:
+    bus = str(target.get("bus", "") or "")
+    slot_value = target.get("slot")
+    slot = "" if slot_value is None else str(slot_value)
+    return bus, slot
+
+
+def _bus_aliases(bus: str) -> list[str]:
+    if not bus:
+        return [""]
+    aliases: list[str] = [bus]
+    if ":" in bus:
+        aliases.append(bus.split(":", 1)[0])
+    if "-" in bus and ":" not in bus:
+        head = bus.split(".", 1)[0]
+        aliases.append(head)
+    if bus.endswith(".0"):
+        aliases.append(bus[: -len(".0")])
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for alias in aliases:
+        if alias not in seen:
+            seen.add(alias)
+            deduped.append(alias)
+    return deduped
+
+
+def _lookup_network_pair(
+    target: dict[str, Any],
+    network_statuses: dict[tuple[str, str], dict[str, Any]],
+    network_infos: dict[tuple[str, str], dict[str, Any]],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    bus, slot = _target_lookup_key(target)
+    for alias in _bus_aliases(bus):
+        key = (alias, slot)
+        if key in network_statuses or key in network_infos:
+            return (
+                dict(network_statuses.get(key) or {}),
+                dict(network_infos.get(key) or {}),
+            )
+    return {}, {}
+
+
+def _flatten_sms_messages(response: Any) -> list[dict[str, Any]]:
+    if isinstance(response, list):
+        return [dict(item) for item in response if isinstance(item, dict)]
+    if isinstance(response, dict):
+        raw = response.get("list", [])
+        if isinstance(raw, list):
+            return [dict(item) for item in raw if isinstance(item, dict)]
+    return []
+
+
+def _index_networks_by_bus_slot(
+    response: dict[str, Any] | list[Any],
+) -> dict[tuple[str, str], dict[str, Any]]:
+    payload: Any = response
+    if isinstance(payload, dict):
+        payload = payload.get("networks")
+    networks: list[Any]
+    if isinstance(payload, list):
+        networks = payload
+    else:
+        first = _first_dict(payload)
+        networks = [first] if first else []
+
+    indexed: dict[tuple[str, str], dict[str, Any]] = {}
+    for network in networks:
+        if not isinstance(network, dict):
+            continue
+        bus_value = network.get("bus")
+        slot_value = network.get("slot")
+        if bus_value is None or slot_value is None:
+            continue
+        slot_str = str(slot_value)
+        record = dict(network)
+        for alias in _bus_aliases(str(bus_value)):
+            indexed[(alias, slot_str)] = record
+    return indexed

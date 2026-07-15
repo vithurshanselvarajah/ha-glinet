@@ -66,18 +66,16 @@ async def async_setup_entry(
             elif tunnel.tunnel_type == VpnTunnelType.UNKNOWN:
                 # Show unknown-typed tunnels if either client feature is on;
                 # the user can still toggle them via the dashboard.
-                if hub.feature_enabled(
-                    FEATURE_WG_CLIENT
-                ) or hub.feature_enabled(FEATURE_OVPN_CLIENT):
+                if hub.feature_enabled(FEATURE_WG_CLIENT) or hub.feature_enabled(
+                    FEATURE_OVPN_CLIENT
+                ):
                     dashboard_tunnels.append(tunnel)
 
     if dashboard_tunnels:
         entities.extend(VpnTunnelSwitch(hub, tunnel) for tunnel in dashboard_tunnels)
     else:
         if hub.feature_enabled(FEATURE_WG_CLIENT):
-            entities.extend(
-                WireGuardSwitch(hub, client) for client in hub.vpn_clients.values()
-            )
+            entities.extend(WireGuardSwitch(hub, client) for client in hub.vpn_clients.values())
         if hub.feature_enabled(FEATURE_OVPN_CLIENT):
             entities.extend(
                 OpenVpnClientSwitch(hub, client) for client in hub.ovpn_clients.values()
@@ -127,9 +125,7 @@ async def async_setup_entry(
     # VpnTunnelSwitch is defined further down in this module; the type
     # annotation has to be a string here because of the forward reference.
     vpn_tunnel_switches: "dict[int, VpnTunnelSwitch]" = {  # noqa: UP037
-        entity._tunnel_id: entity
-        for entity in entities
-        if isinstance(entity, VpnTunnelSwitch)
+        entity._tunnel_id: entity for entity in entities if isinstance(entity, VpnTunnelSwitch)
     }
 
     def _candidate_tunnels_for_features() -> list[VpnTunnel]:
@@ -144,8 +140,7 @@ async def async_setup_entry(
             ):
                 result.append(tunnel)
             elif tunnel.tunnel_type == VpnTunnelType.UNKNOWN and (
-                hub.feature_enabled(FEATURE_WG_CLIENT)
-                or hub.feature_enabled(FEATURE_OVPN_CLIENT)
+                hub.feature_enabled(FEATURE_WG_CLIENT) or hub.feature_enabled(FEATURE_OVPN_CLIENT)
             ):
                 result.append(tunnel)
         return result
@@ -167,8 +162,7 @@ async def async_setup_entry(
         new_tunnels = [
             tunnel
             for tunnel in _candidate_tunnels_for_features()
-            if tunnel.tunnel_id not in existing_ids
-            and tunnel.tunnel_id in current_ids
+            if tunnel.tunnel_id not in existing_ids and tunnel.tunnel_id in current_ids
         ]
         if new_tunnels:
             new_entities = [VpnTunnelSwitch(hub, tunnel) for tunnel in new_tunnels]
@@ -560,7 +554,6 @@ class OpenVpnClientSwitch(GLinetSwitchBase):
 
 
 class VpnTunnelSwitch(GLinetSwitchBase):
-
     _attr_icon = "mdi:vpn"
 
     def __init__(self, hub: GLinetHub, tunnel: VpnTunnel) -> None:
@@ -582,19 +575,11 @@ class VpnTunnelSwitch(GLinetSwitchBase):
     @property
     def unique_id(self) -> str:
         if self._tunnel_type in {VpnTunnelType.WIREGUARD, VpnTunnelType.OPENVPN}:
-            type_token = (
-                "wg" if self._tunnel_type == VpnTunnelType.WIREGUARD else "ovpn"
-            )
-            return (
-                f"glinet_switch/{self._hub.device_mac}"
-                f"/vpn_tunnel/{type_token}/{self._tunnel_id}"
-            )
+            type_token = "wg" if self._tunnel_type == VpnTunnelType.WIREGUARD else "ovpn"
+            return f"glinet_switch/{self._hub.device_mac}/vpn_tunnel/{type_token}/{self._tunnel_id}"
         # Unknown type - keep the tunnel prefix so both WG and OVPN feature
         # cleanup can find it if either feature is later disabled.
-        return (
-            f"glinet_switch/{self._hub.device_mac}"
-            f"/vpn_tunnel/unknown/{self._tunnel_id}"
-        )
+        return f"glinet_switch/{self._hub.device_mac}/vpn_tunnel/unknown/{self._tunnel_id}"
 
     @property
     def name(self) -> str:

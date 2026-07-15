@@ -30,4 +30,4 @@ For entities related to optional features, visit their respective pages:
 | [Device Trackers](device-trackers.md) | Per-client device tracking. |
 | [System Sensors](system-sensors.md) | CPU, load, memory, flash, WAN status, and client bandwidth sensors. |
 | [Core Switches](core-switches.md) | WiFi interface and system LED switches. |
-| [Core Binary Sensors](core-binary-sensors.md) | Fan status and other core binary sensors. |
+

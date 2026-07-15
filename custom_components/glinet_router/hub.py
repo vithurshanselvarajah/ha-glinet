@@ -35,8 +35,10 @@ from .api import (
     TailscaleConnection,
     TokenError,
 )
+from .api.const import FIRMWARE_4_9
 from .api.exceptions import AuthenticationError
 from .api.models import RouterStatus
+from .api.utils import decode_firmware_version
 from .const import (
     API_PATH,
     CONF_ADD_ALL_DEVICES,
@@ -191,9 +193,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
     @property
     def parallel_requests(self) -> bool:
-        return bool(
-            self._settings.get(CONF_PARALLEL_REQUESTS, DEFAULT_PARALLEL_REQUESTS)
-        )
+        return bool(self._settings.get(CONF_PARALLEL_REQUESTS, DEFAULT_PARALLEL_REQUESTS))
 
     def _wan_status_entity_selected(self, unique_id: str) -> bool:
         prefix = f"glinet_sensor/{self.device_mac}/"
@@ -227,6 +227,13 @@ class GLinetHub(DataUpdateCoordinator[None]):
             suffix == interface or suffix == f"{interface}_{protocol}"
             for interface, protocol in selected_parts
         )
+
+    def _is_legacy_cellular_signal_sensor(self, unique_id: str) -> bool:
+        prefix = f"glinet_sensor/{self.device_mac}/"
+        if not unique_id.startswith(prefix):
+            return False
+        suffix = unique_id.removeprefix(prefix)
+        return suffix in {"cellular_signal", "cellular_rssi", "cellular_network"}
 
     async def async_initialize_hub(self) -> None:
         if not self._late_init_complete:
@@ -312,6 +319,18 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 _LOGGER.debug(
                     "Removing unselected WAN status entity %s",
                     entry.entity_id,
+                )
+                entity_registry.async_remove(entry.entity_id)
+                removed = True
+
+            if (
+                not removed
+                and self.is_firmware_4_9_or_above
+                and self._is_legacy_cellular_signal_sensor(entry.unique_id)
+            ):
+                _LOGGER.debug(
+                    "Removing legacy cellular signal sensor %s (firmware 4.9+)",
+                    entry.unique_id,
                 )
                 entity_registry.async_remove(entry.entity_id)
                 removed = True
@@ -472,10 +491,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         # enabled we fetch the dashboard tunnels so the entity layer can
         # surface them as switches. The legacy per-profile state is still
         # populated above for 4.8 backward compatibility.
-        if (
-            self.feature_enabled(FEATURE_WG_CLIENT)
-            or self.feature_enabled(FEATURE_OVPN_CLIENT)
-        ):
+        if self.feature_enabled(FEATURE_WG_CLIENT) or self.feature_enabled(FEATURE_OVPN_CLIENT):
             tasks.append(self.fetch_vpn_tunnels())
         else:
             self._vpn_tunnels = {}
@@ -1183,13 +1199,9 @@ class GLinetHub(DataUpdateCoordinator[None]):
         # The payload is the full set of tunnel ids so consumers can diff it
         # against the entities they currently have registered.
         try:
-            async_dispatcher_send(
-                self.hass, self.event_vpn_tunnels_updated, set(tunnels.keys())
-            )
+            async_dispatcher_send(self.hass, self.event_vpn_tunnels_updated, set(tunnels.keys()))
         except Exception:  # noqa: BLE001 - never fail the fetch on dispatcher errors
-            _LOGGER.debug(
-                "Failed to dispatch vpn tunnels updated event", exc_info=True
-            )
+            _LOGGER.debug("Failed to dispatch vpn tunnels updated event", exc_info=True)
 
     async def set_vpn_tunnel(self, tunnel_id: int, enabled: bool) -> None:
         vpn_client = self._dashboard_vpn_client()
@@ -1433,6 +1445,10 @@ class GLinetHub(DataUpdateCoordinator[None]):
             dict(status_response or {}).get("modems", []),
         )
         self._modems = {_modem_key(modem): modem for modem in modems if modem.get("bus")}
+
+        if self.is_firmware_4_9_or_above and self._modems:
+            await self._apply_49_sim_config_to_modems(self._modems)
+
         default_modem = _select_sms_modem(self._modems)
         self._default_modem_bus = str(default_modem.get("bus")) if default_modem else None
         self._default_modem_slot = default_modem.get("slot") if default_modem else None
@@ -1441,6 +1457,66 @@ class GLinetHub(DataUpdateCoordinator[None]):
             "default_bus": self._default_modem_bus,
             "default_slot": self._default_modem_slot,
         }
+
+    async def _apply_49_sim_config_to_modems(
+        self,
+        modems: dict[str, dict[str, Any]],
+    ) -> None:
+        if not modems:
+            return
+        seen_buses: set[str] = set()
+        for modem in modems.values():
+            bus = modem.get("bus")
+            if not bus or bus in seen_buses:
+                continue
+            seen_buses.add(bus)
+            sim_response = await self._invoke_optional_api(
+                lambda b=bus: self.router_api.modem.get_sim_config(b)
+            )
+            if not sim_response:
+                continue
+            self._merge_sim_config(modem, sim_response)
+
+    def _merge_sim_config(
+        self,
+        modem: dict[str, Any],
+        sim_response: dict[str, Any],
+    ) -> None:
+        if not isinstance(sim_response, dict):
+            return
+        modem_iccid = str(modem.get("iccid") or "")
+        chosen: dict[str, Any] | None = None
+        if modem_iccid and modem_iccid in sim_response:
+            chosen = sim_response[modem_iccid]
+        else:
+            for value in sim_response.values():
+                if isinstance(value, dict):
+                    chosen = value
+                    break
+        if not isinstance(chosen, dict):
+            return
+        apn = chosen.get("apn")
+        if not apn:
+            return
+        simcard = modem.get("simcard")
+        if not isinstance(simcard, dict):
+            simcard = {}
+        simcard["apn"] = apn
+        sim_fields = (
+            "iccid",
+            "username",
+            "password",
+            "pincode",
+            "auth",
+            "ip_type",
+            "roaming",
+            "cid",
+        )
+        for key in sim_fields:
+            value = chosen.get(key)
+            if value is not None and key not in simcard:
+                simcard[key] = value
+        modem["simcard"] = simcard
 
     async def fetch_repeater_status(self) -> None:
         response = await self._invoke_optional_api(self.router_api.repeater.get_status)
@@ -1617,28 +1693,15 @@ class GLinetHub(DataUpdateCoordinator[None]):
     async def remove_sms(self, scope: int, message_id: str | None = None) -> None:
         message = self._sms_messages.get(message_id) if message_id else None
         bus = message.bus if message else self._default_modem_bus
-        slot = (
-            getattr(message, "slot", None)
-            if message
-            else getattr(self, "_default_modem_slot", None)
-        )
 
         if bus is None:
             await self.fetch_cellular_status()
             bus = self._default_modem_bus
-            slot = self._default_modem_slot
         if bus is None:
             raise RuntimeError("No GL.iNet modem bus is available for SMS removal")
 
-        if slot is None:
-
-            async def api_call():
-                return await self.router_api.modem.remove_sms(bus, scope, message_id)
-
-        else:
-
-            async def api_call():
-                return await self.router_api.modem.remove_sms(bus, scope, message_id, slot=slot)
+        async def api_call():
+            return await self.router_api.modem.remove_sms(bus, scope, message_id)
 
         await self._invoke_optional_api(api_call)
         if scope == 10 and message_id:
@@ -1723,6 +1786,25 @@ class GLinetHub(DataUpdateCoordinator[None]):
     @property
     def firmware_version(self) -> str:
         return self._sw_version
+
+    @property
+    def firmware_version_tuple(self) -> tuple[int, int, int, int] | None:
+        version = (self._sw_version or "").strip()
+        if not version or version == "UNKNOWN":
+            return None
+        try:
+            return decode_firmware_version(version)
+        except (TypeError, ValueError):
+            return None
+
+    @property
+    def is_firmware_4_9_or_above(self) -> bool:
+        version_tuple = self.firmware_version_tuple
+        if version_tuple is not None:
+            return version_tuple >= FIRMWARE_4_9
+        api = getattr(self, "_api", None)
+        cached = getattr(api, "_firmware_version", None) if api is not None else None
+        return cached is not None and cached >= FIRMWARE_4_9
 
     @property
     def upgrade_info(self) -> dict[str, Any]:

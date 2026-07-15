@@ -164,6 +164,131 @@ async def test_fetch_cellular_status_extracts_apn() -> None:
     assert hub.cellular_status["modems"][0]["simcard"]["apn"] == "test.apn"
 
 
+async def test_fetch_cellular_status_fetches_sim_config_on_firmware_4_9() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._cached_modem_info = None
+    hub._settings = {}
+    hub._cellular_status = {}
+    hub._default_modem_bus = None
+    hub._sw_version = "4.9.0"
+    hub._api = None
+    hub.is_firmware_4_9_or_above = True
+
+    info_response = {
+        "modems": [{"bus": "0001:01:00.0", "iccid": "8944200204977051694F", "slot": "1"}]
+    }
+    status_response = {
+        "modems": [
+            {
+                "bus": "0001:01:00.0",
+                "slot": "1",
+                "iccid": "8944200204977051694F",
+                "simcard": {"iccid": "8944200204977051694F"},
+            }
+        ]
+    }
+    sim_config_response = {
+        "8944200204977051694F": {
+            "manual": True,
+            "username": "",
+            "pincode": "",
+            "ip_type": 1,
+            "cid": 1,
+            "roaming": False,
+            "apn": "mob.asm.net",
+            "password": "",
+            "auth": "NONE",
+        }
+    }
+
+    sim_calls: list[str] = []
+    info_calls: list[Any] = []
+    status_calls: list[Any] = []
+
+    async def invoke_optional_api(callable_: Any) -> Any:
+        callable_()
+        if callable_ is hub._api.modem.get_info:
+            info_calls.append(callable_)
+            return info_response
+        if callable_ is hub._api.modem.get_status:
+            status_calls.append(callable_)
+            return status_response
+        if callable_.__name__ == "<lambda>" or "get_sim_config" in str(callable_):
+            # Capture the bus arg from the lambda's closure
+            sim_calls.append(str(callable_.__closure__[0].cell_contents))
+            return sim_config_response
+        return None
+
+    hub._invoke_optional_api = invoke_optional_api
+    hub._api = types.SimpleNamespace(
+        modem=types.SimpleNamespace(
+            get_info=lambda: info_response,
+            get_status=lambda: status_response,
+            get_sim_config=lambda bus: sim_config_response,
+        )
+    )
+
+    await hub.fetch_cellular_status()
+
+    # The APN from get_sim_config must land on the modem's simcard.
+    modem = hub.cellular_status["modems"][0]
+    assert modem["simcard"]["apn"] == "mob.asm.net"
+    assert sim_calls == ["0001:01:00.0"]
+
+
+async def test_fetch_cellular_status_keeps_4_8_apn_source() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._cached_modem_info = None
+    hub._settings = {}
+    hub._cellular_status = {}
+    hub._default_modem_bus = None
+    hub._sw_version = "4.8.3"
+    hub._api = None
+    hub.is_firmware_4_9_or_above = False
+
+    info_response = {"modems": [{"bus": "0001:01:00.0", "iccid": "ICCID-1"}]}
+    status_response = {
+        "modems": [
+            {
+                "bus": "0001:01:00.0",
+                "iccid": "ICCID-1",
+                "simcard": {"iccid": "ICCID-1", "apn": "legacy.apn"},
+            }
+        ]
+    }
+
+    sim_calls: list[Any] = []
+
+    async def invoke_optional_api(callable_: Any) -> Any:
+        if callable_.__name__ == "<lambda>" or "get_sim_config" in str(callable_):
+            sim_calls.append(callable_)
+        return None
+
+    hub._invoke_optional_api = invoke_optional_api
+    hub._api = types.SimpleNamespace(
+        modem=types.SimpleNamespace(
+            get_info=lambda: info_response,
+            get_status=lambda: status_response,
+            get_sim_config=lambda bus: None,
+        )
+    )
+
+    # Stub the actual info/status responses inline.
+    queue = iter([info_response, status_response])
+
+    async def invoke(_: Any) -> Any:
+        return next(queue, None)
+
+    hub._invoke_optional_api = invoke
+
+    await hub.fetch_cellular_status()
+
+    modem = hub.cellular_status["modems"][0]
+    # 4.8 should NOT have called get_sim_config.
+    assert sim_calls == []
+    assert modem["simcard"]["apn"] == "legacy.apn"
+
+
 async def test_send_sms_uses_default_modem_bus() -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {}
@@ -450,6 +575,54 @@ def test_parallel_requests_property_explicit_true() -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {CONF_PARALLEL_REQUESTS: True}
     assert hub.parallel_requests is True
+
+
+def test_firmware_version_tuple_decodes_sw_version() -> None:
+    from custom_components.glinet_router.hub import GLinetHub
+
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._sw_version = "4.9.0"
+    assert hub.firmware_version_tuple == (4, 9, 0, 0)
+
+    hub._sw_version = "4.8.1-rc2"
+    assert hub.firmware_version_tuple == (4, 8, 1, 2)
+
+    hub._sw_version = "UNKNOWN"
+    assert hub.firmware_version_tuple is None
+
+    hub._sw_version = ""
+    assert hub.firmware_version_tuple is None
+
+
+def test_is_firmware_4_9_or_above_uses_sw_version() -> None:
+    from custom_components.glinet_router.hub import GLinetHub
+
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._api = None
+
+    hub._sw_version = "4.9.0"
+    assert hub.is_firmware_4_9_or_above is True
+
+    hub._sw_version = "4.9.1"
+    assert hub.is_firmware_4_9_or_above is True
+
+    hub._sw_version = "4.8.3"
+    assert hub.is_firmware_4_9_or_above is False
+
+    hub._sw_version = "4.8.0"
+    assert hub.is_firmware_4_9_or_above is False
+
+    # Placeholder values (pre-init) should fall back to the cached API
+    # firmware version so the property can be evaluated early in setup.
+    hub._sw_version = "UNKNOWN"
+    hub._api = types.SimpleNamespace(_firmware_version=(4, 9, 0, 0))
+    assert hub.is_firmware_4_9_or_above is True
+
+    hub._api = types.SimpleNamespace(_firmware_version=(4, 8, 0, 0))
+    assert hub.is_firmware_4_9_or_above is False
+
+    hub._api = types.SimpleNamespace(_firmware_version=None)
+    assert hub.is_firmware_4_9_or_above is False
 
 
 async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
@@ -959,6 +1132,118 @@ async def test_async_initialize_hub_cleans_up_orphaned_entities(monkeypatch) -> 
     await hub.async_initialize_hub()
 
     mock_er.async_remove.assert_called_once_with("sensor.glinet_cellular_signal")
+
+
+async def test_async_initialize_hub_removes_legacy_cellular_sensors_on_firmware_4_9(
+    monkeypatch,
+) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {CONF_ENABLED_FEATURES: ["cellular"]}
+    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub.hass = MagicMock()
+    hub._late_init_complete = True
+    hub._factory_mac = "00:11:22:33:44:55"
+    hub._sw_version = "4.9.0"
+    hub._api = None
+
+    legacy_signal = types.SimpleNamespace(
+        entity_id="sensor.glinet_cellular_signal",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_signal",
+        domain="sensor",
+    )
+    legacy_rssi = types.SimpleNamespace(
+        entity_id="sensor.glinet_cellular_rssi",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_rssi",
+        domain="sensor",
+    )
+    # IPv4/IPv6 sensors stay on 4.9+ because the bodyless
+    # ``modem/get_network_info`` response still provides the IP.
+    kept_ipv4 = types.SimpleNamespace(
+        entity_id="sensor.cellular_wan_ipv4",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_ipv4",
+        domain="sensor",
+    )
+    kept_rsrp = types.SimpleNamespace(
+        entity_id="sensor.glinet_cellular_rsrp",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_rsrp",
+        domain="sensor",
+    )
+
+    mock_er = MagicMock()
+    mock_er.async_remove = MagicMock()
+
+    import homeassistant.helpers.entity_registry as er
+
+    monkeypatch.setattr(er, "async_get", lambda _: mock_er)
+    monkeypatch.setattr(
+        er,
+        "async_entries_for_config_entry",
+        MagicMock(
+            return_value=[
+                legacy_signal,
+                legacy_rssi,
+                kept_ipv4,
+                kept_rsrp,
+            ]
+        ),
+    )
+
+    hub.refresh_session_token = _noop
+    hub.fetch_all_data = _noop
+
+    await hub.async_initialize_hub()
+
+    assert mock_er.async_remove.call_count == 2
+    mock_er.async_remove.assert_any_call("sensor.glinet_cellular_signal")
+    mock_er.async_remove.assert_any_call("sensor.glinet_cellular_rssi")
+    # The IPv4 sensor and other cellular sensors must remain registered.
+    for call in mock_er.async_remove.call_args_list:
+        assert call.args[0] != "sensor.cellular_wan_ipv4"
+        assert call.args[0] != "sensor.glinet_cellular_rsrp"
+
+
+async def test_async_initialize_hub_keeps_legacy_cellular_sensors_on_firmware_4_8(
+    monkeypatch,
+) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {CONF_ENABLED_FEATURES: ["cellular"]}
+    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub.hass = MagicMock()
+    hub._late_init_complete = True
+    hub._factory_mac = "00:11:22:33:44:55"
+    hub._sw_version = "4.8.3"
+    hub._api = None
+
+    legacy_signal = types.SimpleNamespace(
+        entity_id="sensor.glinet_cellular_signal",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_signal",
+        domain="sensor",
+    )
+    legacy_rssi = types.SimpleNamespace(
+        entity_id="sensor.glinet_cellular_rssi",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_rssi",
+        domain="sensor",
+    )
+
+    mock_er = MagicMock()
+    mock_er.async_remove = MagicMock()
+
+    import homeassistant.helpers.entity_registry as er
+
+    monkeypatch.setattr(er, "async_get", lambda _: mock_er)
+    monkeypatch.setattr(
+        er,
+        "async_entries_for_config_entry",
+        MagicMock(return_value=[legacy_signal, legacy_rssi]),
+    )
+
+    hub.refresh_session_token = _noop
+    hub.fetch_all_data = _noop
+
+    await hub.async_initialize_hub()
+
+    # Neither the cellular signal nor the RSSI sensor is removed on 4.8.
+    assert mock_er.async_remove.call_count == 0
 
 
 async def test_async_initialize_hub_cleans_up_repeater_entities_when_disabled(

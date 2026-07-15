@@ -34,11 +34,102 @@ newer from `system/get_info` and normalizes the new responses back into the exis
 
 | API | Purpose |
 | --- | --- |
-| `modem/get_modem_current_interface` | Discovers active modem interface names. The integration maps names such as `modem_1_1_s1` to `bus: "1-1", slot: 1`. |
-| `modem/get_network_status` | Reads per-slot dial status, ICCID, protocol, and traffic counters. |
-| `modem/get_network_info` | Reads per-slot IP address data, network interface, and cell information. |
-| `modem/get_signals` | Reads per-slot signal values such as RSRP, RSRQ, SINR, strength, and network type. |
+| `modem/get_modem_current_interface` | Discovers active modem interface names. The integration maps names such as `modem_0001_s1` to `bus: "0001", slot: 1`. On the user's 4.9 router the response carries one entry per active SIM slot (e.g. `modem_0001_s1`, `modem_0001_s2`). |
+| `modem/get_signals` | Reads per-slot signal values such as RSRP, RSRQ, SINR, strength, and network type. The integration issues one bodyless call per refresh and indexes the response by slot. |
+| `modem/get_network_status` (bodyless) | Reads per-slot dial status, ICCID, protocol, and traffic counters. The 4.9 firmware exposes this as a **bodyless** call — the response carries a `networks` array with one entry per active slot. |
+| `modem/get_network_info` (bodyless) | Reads per-slot IP address data (IPv4/IPv6 lease, gateway, DNS), network interface name, and cell information (band, mode, RSRP, RSRQ, SINR). The 4.9 firmware exposes this as a **bodyless** call — the response carries a `networks` array with one entry per active slot. |
+| `modem/get_sim_config` | Reads the per-SIM APN and configuration. The 4.9 firmware exposes this as a **per-bus** call — the integration issues one call per distinct modem bus and merges the ICCID-keyed APN onto each modem's `simcard` record. |
 | `modem/get_sms_list` | Lists SMS messages. On 4.9+ the integration calls this once per discovered bus. |
+
+#### Bodyless request shape (4.9+)
+
+The 4.9 bodyless calls have **empty params** and return every active network in a
+single response. Example for `modem/get_network_info`:
+
+```json
+{
+  "method": "call",
+  "jsonrpc": "2.0",
+  "params": ["<sid>", "modem", "get_network_info", {}],
+  "id": 0
+}
+```
+
+Response:
+
+```json
+{
+  "result": {
+    "ret": 0,
+    "resp": "Success",
+    "networks": [
+      {
+        "network_interface": "modem_0001_s1",
+        "bus": "0001:01:00.0",
+        "slot": "1",
+        "ipv4": {
+          "ip": "10.77.58.41",
+          "gateway": "10.77.58.42",
+          "netmask": "255.255.255.252",
+          "dns": ["188.31.250.128", "188.31.250.129"]
+        },
+        "cell_info": {
+          "mode": "NR5G-NSA",
+          "band": 78,
+          "rsrp": "-86",
+          "rsrq": "-10",
+          "sinr": "22"
+        }
+      }
+    ]
+  }
+}
+```
+
+The integration indexes the bodyless response by `(bus, slot)` and tries every bus
+alias for each target so the short logical bus (`0001`) and the full PCI bus
+(`0001:01:00.0`) both resolve to the same modem record. If the bodyless response
+returns no entries for a given target, the integration falls back to the per-target
+request shape (`{"bus": ..., "slot": ...}`) so older 4.9 builds that haven't
+flipped the endpoint still work.
+
+#### Per-bus SIM config (4.9+)
+
+The 4.9 firmware exposes the APN through a separate per-bus call:
+
+```json
+{
+  "method": "call",
+  "jsonrpc": "2.0",
+  "params": ["<sid>", "modem", "get_sim_config", {"bus": "0001:01:00.0"}],
+  "id": 0
+}
+```
+
+Response:
+
+```json
+{
+  "result": {
+    "8944200204977051694F": {
+      "manual": true,
+      "username": "",
+      "pincode": "",
+      "ip_type": 1,
+      "cid": 1,
+      "roaming": false,
+      "apn": "mob.asm.net",
+      "password": "",
+      "auth": "NONE"
+    }
+  }
+}
+```
+
+The response is keyed by ICCID. The integration picks the record whose ICCID matches
+the modem's ICCID (falling back to the first record) and copies the `apn` (plus
+other SIM fields when present) onto the modem's `simcard` so the `Cellular APN`
+sensor continues to resolve the value.
 
 ## Write APIs Used
 
@@ -48,17 +139,6 @@ newer from `system/get_info` and normalizes the new responses back into the exis
 | `modem/remove_sms` | Deletes SMS. The integration uses `scope: 10` with the message `name` for a single-message delete and includes `slot` on 4.9+ when known. |
 
 ## SMS Error Codes
-
-`modem/send_sms` may return:
-
-- `-1`: Cellular modem was not found
-- `-2`: Unknown error
-- `-3`: Sending failed
-- `-4`: Sending timeout
-- `-5`: Cellular modem does not support SMS
-- `-6`: Current network environment does not support SMS
-
-## Bus And Slot Selection
 
 Most modem APIs require `bus`; firmware 4.9+ may also require `slot`. The integration
 selects a default modem by:

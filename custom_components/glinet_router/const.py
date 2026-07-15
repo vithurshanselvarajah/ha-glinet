@@ -25,6 +25,8 @@ WAN_INTERFACE_NAMES = {
     "wwan": "Repeater",
     "tethering": "Tethering",
     "modem_0001": "Cellular",
+    "modem_0001_s1": "Cellular SIM 1",
+    "modem_0001_s2": "Cellular SIM 2",
     "secondwan": "Ethernet 2",
 }
 

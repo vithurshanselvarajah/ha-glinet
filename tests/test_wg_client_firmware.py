@@ -154,9 +154,7 @@ async def test_wg_vpn_client_exposes_get_tunnel() -> None:
     assert hasattr(WgVpnClientModule, "get_status")
     assert hasattr(WgVpnClientModule, "set_tunnel")
 
-    client = _make_client(
-        [{"result": {"tunnels": [], "default_tunnels": []}}], FIRMWARE_4_9
-    )
+    client = _make_client([{"result": {"tunnels": [], "default_tunnels": []}}], FIRMWARE_4_9)
     response = await client.wg_client.vpn_client.get_tunnel()
 
     assert response == {"tunnels": [], "default_tunnels": []}

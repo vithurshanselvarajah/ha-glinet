@@ -363,7 +363,6 @@ def test_reconcile_vpn_tunnels_removes_stale_switches() -> None:
     stub_hub.feature_enabled = _feature_enabled
 
     class _StubVpnTunnelSwitch:
-
         def __init__(self, hub: Any, tunnel: Any, entity_id: str) -> None:
             self._tunnel_id = tunnel.tunnel_id
             self._hub = hub
@@ -373,16 +372,10 @@ def test_reconcile_vpn_tunnels_removes_stale_switches() -> None:
 
     # Build the registry the same way async_setup_entry does.
     entities = [
-        _StubVpnTunnelSwitch(
-            stub_hub, stub_hub.vpn_tunnels[1], "switch.tunnel_1"
-        ),
-        _StubVpnTunnelSwitch(
-            stub_hub, stub_hub.vpn_tunnels[2], "switch.tunnel_2"
-        ),
+        _StubVpnTunnelSwitch(stub_hub, stub_hub.vpn_tunnels[1], "switch.tunnel_1"),
+        _StubVpnTunnelSwitch(stub_hub, stub_hub.vpn_tunnels[2], "switch.tunnel_2"),
     ]
-    vpn_tunnel_switches: dict[int, Any] = {
-        entity._tunnel_id: entity for entity in entities
-    }
+    vpn_tunnel_switches: dict[int, Any] = {entity._tunnel_id: entity for entity in entities}
     registry = _StubRegistry()
 
     # Simulate the router reporting only tunnel 1 (tunnel 2 was removed).
