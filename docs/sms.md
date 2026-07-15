@@ -8,8 +8,6 @@ To enable this feature, check the **SMS** option under **Enabled Features** in t
 
 - **Option key**: `sms`
 
----
-
 ## Exposed Entities
 
 ### Sensors
@@ -29,38 +27,49 @@ The `messages` attribute contains objects with the following fields:
 | `text` | Message body. |
 | `timestamp` | Message timestamp (if available). |
 
----
-
 ## Actions (Services)
 
 The following services are registered under the `glinet_router` domain when the SMS feature is enabled:
 
 ### `send_sms`
+
 Sends a text message.
 
-- **`recipient`**: The destination phone number including country code.
-- **`text`**: The message body. Messages longer than 160 characters are automatically split and sent sequentially.
-- **`mac`** (Optional): Target a specific router by MAC address.
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `recipient` | string | Yes | The destination phone number including country code. |
+| `text` | string | Yes | The message body. Messages longer than 160 characters are automatically split and sent sequentially. |
+| `mac` | string | No | Target a specific router by MAC address. |
 
 ### `get_sms`
+
 Retrieves the list of SMS messages currently stored on the router. Supports response data.
 
-- **`mac`** (Optional): Target a specific router by MAC address.
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `mac` | string | No | Target a specific router by MAC address. |
 
 **Response Format**: Returns a `messages` array (same structure as the sensor attributes above).
 
 ### `remove_sms`
+
 Deletes SMS messages from the router based on a scope or specific ID.
 
-- **`scope`**: The deletion scope:
-  - `10` — Specific single SMS (requires `message_id`).
-  - `11` — All SMS.
-  - `0` — All unread SMS.
-  - `1` — All read SMS.
-- **`message_id`** (Optional): The unique ID of the message to delete. Found in the `Unread messages` sensor attributes. Required if `scope` is `10`.
-- **`mac`** (Optional): Target a specific router by MAC address.
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `scope` | integer | Yes | The deletion scope: `10` — Specific single SMS (requires `message_id`). `11` — All SMS. `0` — All unread SMS. `1` — All read SMS. |
+| `message_id` | string | No | The unique ID of the message to delete. Found in the `Unread messages` sensor attributes. Required if `scope` is `10`. |
+| `mac` | string | No | Target a specific router by MAC address. |
 
 ### `refresh_sms`
+
 Manually triggers a poll for new SMS messages.
 
-- **`mac`** (Optional): Target a specific router by MAC address.
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `mac` | string | No | Target a specific router by MAC address. |
+
+## Related Pages
+
+- [Services & Actions](services.md) — How to use Home Assistant services with this integration.
+- [Entity Reference](entities.md) — All core and optional entities.

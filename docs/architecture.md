@@ -23,6 +23,30 @@
 
 ## Polling
 
-The integration uses a user-configurable polling interval (defaulting to 30 seconds) managed by a `DataUpdateCoordinator`. This ensures efficient data fetching and automatic entity updates across all platforms without flooding the router.
+The integration uses a user-configurable polling interval (defaulting to 30 seconds, clamped to the 10–300s range by the config flow) managed by a `DataUpdateCoordinator`. This ensures efficient data fetching and automatic entity updates across all platforms without flooding the router.
 
 Optional modules (Cellular, SMS, VPNs, WAN policy, AdGuard Home) are handled defensively. If a router does not support an optional API (e.g., no modem present) or if it is disabled in the options flow, the coordinator logs a debug message and skips that data point, ensuring the core integration remains functional.
+
+## Config Flow & Setup
+
+- The config flow (`config_flow.py`) is the only supported setup path — `config_flow: true` is set in `manifest.json`.
+- During the user step, the flow calls `process_user_input` which:
+  1. Sends a reachability check (`is_router_reachable`) to the router.
+  2. Performs a full login (`authenticate` + `system.get_info`) to validate the password.
+  3. Discovers available WAN interfaces and rebuilds the WAN monitor selector.
+- On success, the unique ID is set to the lowercase, colon-separated MAC address via `format_mac` and the entry is rejected with `already_configured` if that MAC is already present. This guarantees a single config entry per physical router.
+- DHCP discovery (`async_step_dhcp`) is configured for hostnames starting with `gl-*` and the GL.iNet OUI `94:83:C4*`. Discovery pre-fills the host field and reuses the validation path with `raise_on_invalid_auth=False` so the user is not blocked by a temporary bad password during discovery.
+
+## Runtime Data
+
+Per the `runtime-data` quality scale rule, the hub instance is stored on `ConfigEntry.runtime_data` (not on `hass.data[DOMAIN]`). All entity platforms read it through `entry.runtime_data`, and platform/entity cleanup uses the standard Home Assistant lifecycle (`async_on_unload`, `entry.async_on_unload`).
+
+## Service Registration
+
+Services are registered in `async_setup_entry` (via `services.async_register_services`) rather than during `async_setup`, so each config entry drives the service registration that owns its router. Services are dynamically added or removed as features are enabled/disabled at the option-flow level, and removal is performed on entry unload.
+
+## Related Pages
+
+- [Developer Reference](developer-reference.md) — Contributing, tooling, and project structure.
+- [Runtime State & Poller (Hub)](hub.md) — Details on the `GLinetHub` and `DataUpdateCoordinator`.
+- [Router API Notes](router-api.md) — Endpoints, authentication, and module inventory.

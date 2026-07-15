@@ -68,3 +68,11 @@ python -m ruff format custom_components tests
 
 ### Dependencies
 Do not add massive third-party library dependencies unless absolutely necessary. Home Assistant integrations should remain lightweight. The core integration relies only on `aiohttp` (which is native to HA).
+
+## Related Pages
+
+- [Architecture](architecture.md) — How the integration is structured and interacts with Home Assistant.
+- [Runtime State & Poller (Hub)](hub.md) — Details on the `GLinetHub` and `DataUpdateCoordinator`.
+- [Router API Notes](router-api.md) — Endpoints, authentication, and module inventory.
+- [Modem API Coverage](modem-api.md) — Details on the optional cellular modem API.
+- [CI and Release Workflows](ci-release.md) — How automated testing and releases work.

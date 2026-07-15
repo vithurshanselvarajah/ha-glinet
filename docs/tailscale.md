@@ -17,3 +17,8 @@ To enable this feature, check the **Tailscale** option under **Enabled Features*
 | Entity | Description | API Source |
 | --- | --- | --- |
 | **Tailscale** | Toggles the Tailscale service on or off. Only created when Tailscale is configured on the router. | `tailscale/get_status` / `tailscale/set_config` |
+
+## Related Pages
+
+- [Services & Actions](services.md) — How to use Home Assistant services with this integration.
+- [Entity Reference](entities.md) — All core and optional entities.

@@ -35,3 +35,9 @@ To enable this feature, check the **Cellular** option under **Enabled Features**
 ## Developer Reference
 
 For details on how the modem APIs are queried and parsed, see the [Modem API Coverage](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/modem-api) documentation.
+
+## Related Pages
+
+- [Modem API Coverage](modem-api.md) — Details on how the modem APIs are queried and parsed.
+- [Services & Actions](services.md) — How to use Home Assistant services with this integration.
+- [Entity Reference](entities.md) — All core and optional entities.

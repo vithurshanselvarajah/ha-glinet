@@ -56,3 +56,8 @@ actions:
           enabled: true
 mode: single
 ```
+
+## Related Pages
+
+- [Automation Templates](automations.md) — Index of available automation templates.
+- [SMS](sms.md) — SMS feature reference.

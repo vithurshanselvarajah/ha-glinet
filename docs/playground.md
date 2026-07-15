@@ -171,3 +171,9 @@ data:
   "hash-method": "sha256"
 }
 ```
+
+## Related Pages
+
+- [Services & Actions](services.md) — How to use Home Assistant services with this integration.
+- [Targeting a Specific Router](router-targeting.md) — The optional `mac` parameter.
+- [Router API Notes](router-api.md) — Endpoints, authentication, and module inventory.

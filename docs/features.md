@@ -34,10 +34,10 @@ The integration treats several advanced capabilities as optional modules selecta
 - [OpenVPN Server](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/openvpn-server) - Manage the built-in OpenVPN server.
 - [ZeroTier](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/zerotier) - Enable or disable ZeroTier VPN connections.
 - [AdGuard Home](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/adguard-home) - Enable/disable AdGuard Home and DNS redirection.
-- [KMWAN](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/router-api) - Read and update GL.iNet's KMWAN multi-WAN configuration through actions.
-- [MWAN3](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/router-api) - Read and update MWAN3 multi-WAN configuration through actions.
+- [KMWAN](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/kmwan) - Read and update GL.iNet's KMWAN multi-WAN configuration through actions.
+- [MWAN3](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/mwan3) - Read and update MWAN3 multi-WAN configuration through actions.
 - [Firewall](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/firewall) - Manage firewall rules, port forwarding, and DMZ settings.
-- [Smart Fan Controls](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/smart-fan) - Monitor fan status, speed, and set temperature thresholds.
+- [Smart Fan](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/smart-fan) - Monitor fan status, speed, and set temperature thresholds.
 - [MCU Battery](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/mcu-battery) - Monitor battery status and configure high/low temperature warnings.
 - [MCU OLED](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/mcu-oled) - Configure what is displayed on the router's OLED screen.
 - [Parental & Access Control](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/parental-control) - Manage internet access blocks and parental group rules per client.
@@ -69,6 +69,19 @@ To ensure reliable communication and minimise session expiration issues:
 - **Retry Mechanism**: Token renewal is retried up to 3 times on authentication or token errors.
 - **Detailed Logging**: Failed renewals log the specific error response or exception for easier troubleshooting.
 - **Graceful Failure**: If all retries fail, a re-authentication flow is triggered in Home Assistant to prompt the user for credentials.
+
+## Polling
+
+The integration is a **local polling** integration (`iot_class: local_polling`) and uses Home Assistant's `DataUpdateCoordinator` to refresh router state on a single, user-configurable interval.
+
+- **Default polling interval**: 30 seconds, controlled by the **Update Interval** option.
+- **Allowed range**: 10–300 seconds. The config flow clamps the value to this range so the user cannot pick a value that would hammer the router.
+- **Coordinator-driven**: All entity platforms (sensors, switches, binary sensors, select, update, device tracker) read their state from a single coordinator update per cycle. This avoids each platform polling independently and keeps router load predictable.
+- **Sequential fetch**: Within a single update, the hub calls each JSON-RPC endpoint one at a time. This is intentional — see **Performance & Load Management** below.
+- **Throttled firmware check**: Firmware upgrade metadata is refreshed at most once every 24 hours even if the polling interval is much shorter.
+- **Single source of truth for connection health**: A single failed token renewal or transient timeout does not stop the rest of the cycle. Errors are caught at the request boundary, surfaced through `UpdateFailed`, and the coordinator retries at the next interval.
+
+If you have a slow router (e.g., a low-end travel router) or you see timeouts in the log, raise the **Update Interval** to 60–120 seconds. If you want near-real-time device tracking, lower it to 10–15 seconds — but be aware this increases the number of JSON-RPC calls per minute.
 
 ## Performance & Load Management
 

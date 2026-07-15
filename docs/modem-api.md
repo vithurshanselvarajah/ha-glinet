@@ -84,3 +84,8 @@ exposes `default_bus` for compatibility and also includes `default_slot` when av
 ## APIs Not Exposed
 
 The modem PDF also documents mutating APIs for reconnecting, auto-connect, SIM config, tower locking, traffic limits, firmware upgrade, and SIM unlock. Those are not exposed yet because they can disrupt router connectivity or require more UI/confirmation work.
+
+## Related Pages
+
+- [Cellular](cellular.md) — Cellular feature user reference.
+- [Router API Notes](router-api.md) — Endpoints, authentication, and module inventory.
