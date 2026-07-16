@@ -40,7 +40,26 @@ Recommended rules:
   - [x] Dismiss stale pull request approvals when new commits are pushed
   - [x] Require review from Code Owners
   - [ ] **Require approval of the most recent reviewable push** —
-    leave **off** for solo-maintainer repos (it blocks self-approval).
+    leave **off** for solo-maintainer repos (it blocks self-approval;
+    see the callout below).
+
+> **Solo-maintainer note: leave the self-approval rule OFF.**
+>
+> The "Require approval of the most recent reviewable push" rule
+> exists to prevent a multi-maintainer attack where one person
+> approves a PR, another person pushes a malicious change, and
+> the first person's stale approval still counts. In a single-
+> maintainer project this rule is **purely destructive** — it
+> blocks the only person who can approve from ever self-merging,
+> so the merge button is permanently disabled. GitHub will show:
+>
+> > Cannot update this protected ref. New changes require
+> > approval from someone other than the last pusher.
+>
+> When you add a second trusted maintainer with **Write** or
+> **Maintain** access, re-enable this rule. Until then, leave it
+> off.
+
 - [x] **Require status checks to pass before merging**
   - Required check: **`test`** (from `.github/workflows/ci.yml`)
   - [x] Require branches to be up to date before merging
@@ -182,6 +201,9 @@ Recommended rules:
   - Required approvals: **1**
   - [x] Dismiss stale pull request approvals when new commits are pushed
   - [x] Require review from Code Owners
+  - [ ] **Require approval of the most recent reviewable push** —
+    leave **off** for solo-maintainer repos (see the callout in the
+    `main` section above). Re-enable when a second maintainer is added.
 - [x] **Require status checks to pass before merging**
   - Required check: **`test`**
   - [x] Require branches to be up to date before merging

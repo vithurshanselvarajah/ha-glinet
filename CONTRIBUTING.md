@@ -62,6 +62,14 @@ The repository uses a two-branch model:
    requires 1 approval from a code owner and a passing `test`
    check. `development` is unconstrained so day-to-day work and
    Dependabot updates don't get blocked.
+6. **Self-merge is allowed for solo maintainers.** The
+   `protect-main` ruleset intentionally leaves the
+   *"Require approval of the most recent reviewable push"* rule
+   off so the only maintainer can self-merge release PRs without
+   needing a second approver. This rule will be re-enabled when a
+   second trusted maintainer is added. See
+   [`.github/BRANCH_PROTECTION.md`](.github/BRANCH_PROTECTION.md)
+   for the rationale.
 
 ### Typical contribution flow
 

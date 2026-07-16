@@ -89,6 +89,11 @@ to fight branch protection. See
 [`.github/BRANCH_PROTECTION.md`](../.github/BRANCH_PROTECTION.md)
 for the full ruleset and rationale.
 
+> **Solo-maintainer note:** the `main` ruleset leaves the
+> *"Require approval of the most recent reviewable push"* rule
+> **off** so the only maintainer can self-merge release PRs.
+> Re-enable it when a second maintainer is added.
+
 For the full contribution flow, see
 [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
