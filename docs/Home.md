@@ -85,6 +85,7 @@ These pages cover what the integration provides, how to configure it, and how to
 - [Automation Templates](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/automations) - Ready-made automations you can paste into Home Assistant.
 - [Smart Fan](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/smart-fan) - Fan status, speed, and temperature threshold controls.
 - [Unknown Device Management](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/unknown-devices) - Discovery, cleanup, and allow/blocklist handling for unknown devices.
+- [SSL Verification](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/ssl-verification) - Manage TLS certificate validation for self-signed router certificates.
 - [Refresh Clients](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/refresh-clients) - Force a client list refresh outside the normal polling cycle.
 - [Targeting a Specific Router](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/router-targeting) - Use the optional `mac` parameter to address a single router.
 - [Triggers](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/triggers) - Building automations that react to GL.iNet router state.
