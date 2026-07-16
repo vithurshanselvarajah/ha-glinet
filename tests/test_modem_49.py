@@ -77,8 +77,8 @@ def test_index_networks_by_bus_slot_skips_records_without_bus_or_slot() -> None:
         {
             "networks": [
                 {"bus": "0001:01:00.0", "slot": "1"},
-                {"slot": "2"},  # missing bus
-                {"bus": "0001:01:00.0"},  # missing slot
+                {"slot": "2"},
+                {"bus": "0001:01:00.0"},
             ]
         }
     )
@@ -459,10 +459,6 @@ async def test_get_sms_list_49_falls_back_to_short_bus_when_no_network_info() ->
 
 
 def test_send_sms_coerces_string_slot_to_int() -> None:
-    """Firmware 4.9+ only tags the sent message with the SIM when
-    ``slot`` is an integer. The bodyless ``get_network_status`` response
-    surfaces it as a string, so the integration must coerce it.
-    """
 
     async def run() -> None:
         modem, session = _make_module(
@@ -581,3 +577,42 @@ def test_remove_sms_omits_name_when_no_message_id() -> None:
     import asyncio
 
     asyncio.run(run())
+
+
+async def test_get_traffic_config_calls_endpoint_with_discovered_bus() -> None:
+    expected = {
+        "save_to_flash": True,
+        "traffic": [
+            {
+                "slot": 1,
+                "type": 0,
+                "traffic_total": 1000,
+            }
+        ],
+        "limit": [
+            {
+                "slot": 1,
+                "type": 0,
+                "enable": True,
+                "threshold": 100,
+                "unit": "MB",
+                "reset_period": "month",
+                "day": 1,
+                "hour": 0,
+                "month": 0,
+            }
+        ],
+    }
+
+    modem, session = _make_module([{"result": expected}])
+
+    result = await modem.get_traffic_config("0001")
+
+    assert result == expected
+    request = session.requests[0]
+    assert request["json"]["params"] == [
+        "sid-1",
+        "modem",
+        "get_traffic_config",
+        {"bus": "0001"},
+    ]

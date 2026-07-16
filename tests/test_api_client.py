@@ -650,9 +650,7 @@ async def test_send_request_forwards_verify_ssl_to_session(
     verify_ssl: bool, expected_ssl: bool | None
 ) -> None:
     session = FakeSession([{"jsonrpc": "2.0", "result": {"ok": True}, "id": 0}])
-    client = GLinetApiClient(
-        "http://router/rpc", session, verify_ssl=verify_ssl
-    )
+    client = GLinetApiClient("http://router/rpc", session, verify_ssl=verify_ssl)
 
     assert await client.is_router_reachable() is True
 

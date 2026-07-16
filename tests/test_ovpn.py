@@ -73,7 +73,6 @@ async def test_ovpn_client_start() -> None:
 
     await client.ovpn_client.start(65395, 2034, tunnel_id=10)
 
-    # Check start call (should be set_tunnel)
     expected_params = [
         "sid-1",
         "vpn-client",
@@ -93,7 +92,6 @@ async def test_ovpn_client_stop() -> None:
 
     await client.ovpn_client.stop(65395, 2034, tunnel_id=10)
 
-    # Check stop call (should be set_tunnel)
     expected_params = ["sid-1", "vpn-client", "set_tunnel", {"enabled": False, "tunnel_id": 10}]
     assert session.requests[0]["json"]["params"] == expected_params
 

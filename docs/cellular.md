@@ -51,6 +51,28 @@ To enable this feature, check the **Cellular** option under **Enabled Features**
 
 > **Removed sensors**: `Cellular signal`, `Cellular RSSI`, and `Cellular network` are no longer registered. The 4.9 firmware no longer surfaces the underlying values for the first two, and `Cellular network` duplicated `Cellular band`. The `Cellular band` sensor above is the canonical replacement.
 
+### Per-SIM Traffic & Data Limit Sensors
+
+A `CellularTrafficSensor` triplet is created for **every SIM slot the router actually reports** (i.e. slots whose `traffic_total` is non-zero). Each triplet is a `(slot, sim_type)` keyed bundle of three diagnostics:
+
+| Entity | Description | 4.8 source | 4.9+ source |
+| --- | --- | --- | --- |
+| **`Cellular SIM {slot} traffic total`** | Cumulative bytes consumed by this SIM since the last reset. `TOTAL_INCREASING` state class so Home Assistant can compute deltas / dashboard statistics. | `modem/get_traffic_config` → `sim{slot}_traffic_total` | `modem/get_traffic_config` → `traffic[slot].traffic_total` |
+| **`Cellular SIM {slot} days until reset`** | Whole-day countdown to the data limit's next reset. `None` when the limit is disabled or the period is unsupported. | `modem/get_traffic_config` → `sim{slot}_limit.{reset_period,day,hour,month}` | `modem/get_traffic_config` → `limit[slot].{reset_period,day,hour,month}` |
+| **`Cellular SIM {slot} data limit`** | Configured data limit for this SIM in bytes. The router reports the threshold in `KB`/`MB`/`GB`/`TB`; the integration converts to bytes using decimal (1000-based) units. `None` when the limit is disabled. | `modem/get_traffic_config` → `sim{slot}_limit.{threshold,unit,enable}` | `modem/get_traffic_config` → `limit[slot].{threshold,unit,enable}` |
+
+The `data limit` sensor carries the following diagnostic attributes for automation / template use:
+
+- `slot` — the SIM slot index (1 or 2).
+- `sim_type` — `0` for a physical SIM, `1` for an eSIM (4.9+ only).
+- `limit_enabled` — mirrors the `enable` flag returned by the router.
+- `unit` — the unit string the router returned (`KB`, `MB`, `GB`, `TB`).
+- `reset_period` — `day`, `week`, `month`, `season`, or `year`.
+- `day` / `hour` / `month` — the anchor fields used to compute the next reset.
+- `save_to_flash` — whether the router persists the counter across reboots.
+
+> **Conditional visibility**: the sensors are only registered for SIMs whose `traffic_total` is non-zero. If a SIM has no recorded traffic it won't show up at all, and disabling the **Cellular** feature clears the registered entities during the next reload (the standard orphan-cleanup pass in `async_initialize_hub` removes anything matching the `cellular_` prefix when the feature is off).
+
 ### WAN Status Sensors
 
 A `WanStatusSensor` is created for every interface in the `kmwan/get_status` response that you monitor (see the **Wan Status Monitors** option in the integration configuration).
@@ -82,6 +104,7 @@ Each `fetch_cellular_status` refresh issues the following JSON-RPC calls (4.9 fi
 | 3 | `modem/get_network_status` | `{}` (bodyless) | Aggregated dial / status info for every active network. |
 | 4 | `modem/get_network_info` | `{}` (bodyless) | Per-slot IPv4/IPv6 lease + cell-info (band, RSRP, RSRQ, SINR, mode). |
 | 5 | `modem/get_sim_config` (per bus) | `{"bus": "0001:01:00.0"}` | ICCID-keyed SIM records carrying the APN. One call per distinct modem bus. |
+| 6 | `modem/get_traffic_config` (per bus) | `{"bus": "<discovered>"}` | Per-SIM cumulative traffic and (optional) data-limit configuration. Drives the per-SIM traffic / days-until-reset / data-limit sensors. The bus is read off the discovered modem record: the full PCI bus (e.g. `0001:01:00.0`) on 4.8, or the short bus extracted from the per-slot interface name (e.g. `0001` for `modem_0001_s1` / `modem_0001_s2`) on 4.9+. |
 
 Steps 3 and 4 use the bodyless form on 4.9 — the response carries a `networks` array with one entry per active slot, indexed by `(bus, slot)`. The integration tries every bus alias for each target so the short logical bus (`0001`) and the full PCI bus (`0001:01:00.0`) both resolve to the same modem record.
 

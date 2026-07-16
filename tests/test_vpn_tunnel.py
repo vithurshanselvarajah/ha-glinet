@@ -140,7 +140,6 @@ def test_feature_map_keywords_target_tunnel_unique_ids() -> None:
     assert "vpn_tunnel/wg" in source
     assert "vpn_tunnel/ovpn" in source
     assert "vpn_tunnel/unknown" in source
-    # Sanity: feature flags exist.
     assert FEATURE_WG_CLIENT
     assert FEATURE_OVPN_CLIENT
 
@@ -235,7 +234,7 @@ async def test_fetch_vpn_tunnels_handles_missing_vpn_client_submodule() -> None:
     hub._vpn_tunnel_connections = ["stale"]
 
     class _StubApi:
-        wg_client = object()  # no vpn_client attribute
+        wg_client = object()
 
     hub._api = _StubApi()
 
@@ -260,13 +259,11 @@ async def test_fetch_vpn_tunnels_dispatches_update_event() -> None:
         captured["signal"] = signal
         captured["payload"] = payload
 
-    # Patch the module-level ``async_dispatcher_send`` used by hub.py.
     import custom_components.glinet_router.hub as hub_module
 
     original = hub_module.async_dispatcher_send
     hub_module.async_dispatcher_send = _capture
     try:
-        # Make a fake dashboard with a single WireGuard tunnel.
         tunnel_payload = {
             "tunnels": [
                 {
@@ -333,10 +330,6 @@ def test_reconcile_vpn_tunnels_removes_stale_switches() -> None:
         def __init__(self, tunnel_id: int, entity_id: str) -> None:
             self._tunnel_id = tunnel_id
             self.entity_id = entity_id
-            # ``async_remove`` is a coroutine on the real entity; the
-            # AsyncMock makes the call awaitable so the test mirrors the
-            # production behaviour and surfaces a warning if it is not
-            # awaited.
             self.async_remove = AsyncMock(
                 side_effect=lambda *, force_remove=False: removed_states.append(
                     (self._tunnel_id, self.entity_id, force_remove)
@@ -370,7 +363,6 @@ def test_reconcile_vpn_tunnels_removes_stale_switches() -> None:
             self.entity_id = entity_id
             self.async_remove = AsyncMock()
 
-    # Build the registry the same way async_setup_entry does.
     entities = [
         _StubVpnTunnelSwitch(stub_hub, stub_hub.vpn_tunnels[1], "switch.tunnel_1"),
         _StubVpnTunnelSwitch(stub_hub, stub_hub.vpn_tunnels[2], "switch.tunnel_2"),
@@ -378,11 +370,8 @@ def test_reconcile_vpn_tunnels_removes_stale_switches() -> None:
     vpn_tunnel_switches: dict[int, Any] = {entity._tunnel_id: entity for entity in entities}
     registry = _StubRegistry()
 
-    # Simulate the router reporting only tunnel 1 (tunnel 2 was removed).
     current_ids = {1}
 
-    # Inline the reconcile body (matches the implementation in switch.py)
-    # and ``await`` async_remove just like the real platform does.
     async def _run_reconcile() -> None:
         existing_ids = set(vpn_tunnel_switches.keys())
         stale_ids = existing_ids - current_ids
@@ -390,21 +379,15 @@ def test_reconcile_vpn_tunnels_removes_stale_switches() -> None:
             entity = vpn_tunnel_switches.pop(stale_id, None)
             if entity is None:
                 continue
-            # ``await`` is required for ``Entity.async_remove`` to
-            # actually run on the real platform.
             await entity.async_remove(force_remove=True)
             if entity.entity_id:
                 registry.async_remove(entity.entity_id)
 
     asyncio.run(_run_reconcile())
 
-    # The state-removal coroutine ran and was awaited.
     assert (2, "switch.tunnel_2", True) in removed_states
-    # The registry entry was also removed so the entity fully disappears.
     assert "switch.tunnel_2" in removed_registry
-    # Tunnel 1 was not touched.
     assert 2 not in vpn_tunnel_switches
     assert 1 in vpn_tunnel_switches
-    # Every entity.async_remove call must have been awaited.
     for entity in entities:
         entity.async_remove.assert_awaited()

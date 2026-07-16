@@ -59,7 +59,16 @@ def _install_sensor_dependency_stubs() -> None:
 def _homeassistant_is_importable() -> bool:
     import importlib.util
 
-    return importlib.util.find_spec("homeassistant") is not None
+    try:
+        spec = importlib.util.find_spec("homeassistant")
+    except (ValueError, ImportError):
+        return False
+    if spec is None:
+        return False
+    module = sys.modules.get("homeassistant")
+    if module is not None and getattr(module, "__spec__", None) is None:
+        return False
+    return True
 
 
 _install_sensor_dependency_stubs()
@@ -174,7 +183,6 @@ def test_cellular_ip_sensors_are_enabled() -> None:
     desc_v4 = next(d for d in HUB_SENSORS if d.key == "cellular_ipv4")
     desc_v6 = next(d for d in HUB_SENSORS if d.key == "cellular_ipv6")
 
-    # Case 1: wan_status_monitors is None (default), modem_0001 is in _wan_interfaces
     hub = types.SimpleNamespace(
         wan_status_monitors=None,
         kmwan_status={
@@ -187,7 +195,6 @@ def test_cellular_ip_sensors_are_enabled() -> None:
     assert _sensor_is_enabled(hub, desc_v4) is True
     assert _sensor_is_enabled(hub, desc_v6) is True
 
-    # Case 2: wan_status_monitors is None (default), modem_0001 is NOT in _wan_interfaces
     hub = types.SimpleNamespace(
         wan_status_monitors=None,
         kmwan_status={
@@ -200,14 +207,12 @@ def test_cellular_ip_sensors_are_enabled() -> None:
     assert _sensor_is_enabled(hub, desc_v4) is False
     assert _sensor_is_enabled(hub, desc_v6) is False
 
-    # Case 3: wan_status_monitors is configured, and modem_0001:ipv4 is selected
     hub = types.SimpleNamespace(
         wan_status_monitors={"modem_0001:ipv4", "wan:ipv4"}, kmwan_status={}
     )
     assert _sensor_is_enabled(hub, desc_v4) is True
     assert _sensor_is_enabled(hub, desc_v6) is False
 
-    # Case 4: wan_status_monitors is configured, and modem_0001:ipv6 is selected
     hub = types.SimpleNamespace(
         wan_status_monitors={"modem_0001:ipv6", "wwan:ipv4"}, kmwan_status={}
     )
@@ -218,7 +223,6 @@ def test_cellular_ip_sensors_are_enabled() -> None:
 def test_get_cellular_ip_resolves_correctly() -> None:
     from custom_components.glinet_router.entities.sensor import _get_cellular_ip
 
-    # Case 1: IPv4 is available, IPv6 is not available
     hub = types.SimpleNamespace(
         cellular_status={
             "modems": [
@@ -239,7 +243,6 @@ def test_get_cellular_ip_resolves_correctly() -> None:
     assert _get_cellular_ip(hub, "ipv4") == "10.164.158.131"
     assert _get_cellular_ip(hub, "ipv6") is None
 
-    # Case 2: Both IPv4 and IPv6 are available
     hub = types.SimpleNamespace(
         cellular_status={
             "modems": [
@@ -262,9 +265,6 @@ def test_get_cellular_ip_resolves_correctly() -> None:
     assert _get_cellular_ip(hub, "ipv4") == "10.164.158.131"
     assert _get_cellular_ip(hub, "ipv6") == "2001:db8::1"
 
-    # Case 3: 4.9 bodyless response puts ipv4/ipv6 at the top level of the
-    # modem object. The helper should still resolve them via the fallback
-    # path that bypasses the normalised ``network`` subdict.
     hub = types.SimpleNamespace(
         cellular_status={
             "modems": [
@@ -295,8 +295,6 @@ def test_legacy_cellular_sensors_no_longer_registered() -> None:
     assert "cellular_signal" not in keys
     assert "cellular_rssi" not in keys
     assert "cellular_network" not in keys
-    # ``cellular_band`` and the more granular signal measurements
-    # remain on every firmware version.
     for expected in (
         "cellular_band",
         "cellular_rsrp",
@@ -350,22 +348,18 @@ def test_cellular_status_resolves_to_active_slot_on_firmware_4_9() -> None:
             "interfaces": [
                 {"interface": "wan", "status_v4": 0, "status_v6": 1},
                 {"interface": "wwan", "status_v4": 1, "status_v6": 0},
-                # The aggregate the 4.9 router always reports as Down.
                 {"interface": "modem_0001", "status_v4": 1, "status_v6": 1},
-                # The real per-slot status — slot 1 is Up on IPv4.
                 {"interface": "modem_0001_s1", "status_v4": 0, "status_v6": 1},
                 {"interface": "modem_0001_s2", "status_v4": 1, "status_v6": 1},
             ]
         },
     )
 
-    # The aggregate resolves to the active per-slot interface.
     resolved = _wan_interface_by_name(hub, "modem_0001")
     assert resolved is not None
     assert resolved["interface"] == "modem_0001_s1"
     assert resolved["status_v4"] == 0
 
-    # The sensor reports Up because the active slot is Up.
     sensor = WanStatusSensor(hub, "modem_0001", {"ipv4", "ipv6"})
     assert sensor.native_value == "Up"
     attrs = sensor.extra_state_attributes
@@ -430,7 +424,327 @@ def test_cellular_status_keeps_aggregate_on_firmware_4_8() -> None:
     sensor = WanStatusSensor(hub, "modem_0001", {"ipv4", "ipv6"})
     assert sensor.native_value == "Up"
     attrs = sensor.extra_state_attributes
-    # On 4.8 there's no fallback, so the resolved interface matches the
-    # requested one and ``requested_interface`` is informational only.
     assert attrs["interface"] == "modem_0001"
     assert attrs["requested_interface"] == "modem_0001"
+
+
+def test_normalise_traffic_config_4_8_with_one_sim_present() -> None:
+    from custom_components.glinet_router.hub import _normalise_traffic_config
+
+    response = {
+        "save_to_flash": True,
+        "sim1_traffic_total": 1234,
+        "sim1_limit": {
+            "enable": True,
+            "threshold": 500,
+            "unit": "MB",
+            "reset_period": "month",
+            "day": 15,
+            "hour": 4,
+        },
+        "sim2_traffic_total": 0,
+        "sim2_limit": {
+            "enable": False,
+            "threshold": 0,
+            "unit": "GB",
+            "reset_period": "month",
+            "day": 1,
+            "hour": 0,
+        },
+    }
+
+    sims = _normalise_traffic_config(response, is_firmware_4_9=False)
+
+    assert len(sims) == 2
+    sim1, sim2 = sims
+    assert sim1["slot"] == 1
+    assert sim1["sim_type"] == 0
+    assert sim1["traffic_total"] == 1234
+    assert sim1["present"] is True
+    assert sim1["limit_enabled"] is True
+    assert sim1["threshold"] == 500
+    assert sim1["unit"] == "MB"
+    assert sim1["reset_period"] == "month"
+    assert sim1["day"] == 15
+    assert sim1["hour"] == 4
+    assert sim1["save_to_flash"] is True
+    assert isinstance(sim1["days_until_reset"], int)
+    assert sim1["days_until_reset"] >= 0
+
+    assert sim2["slot"] == 2
+    assert sim2["traffic_total"] == 0
+    assert sim2["present"] is False
+    assert sim2["limit_enabled"] is False
+    assert sim2["days_until_reset"] is None
+
+
+def test_normalise_traffic_config_4_8_when_no_sim_has_traffic() -> None:
+    from custom_components.glinet_router.hub import _normalise_traffic_config
+
+    response = {
+        "save_to_flash": False,
+        "sim1_traffic_total": 0,
+        "sim2_traffic_total": 0,
+    }
+
+    sims = _normalise_traffic_config(response, is_firmware_4_9=False)
+
+    assert len(sims) == 2
+    assert all(sim["present"] is False for sim in sims)
+    assert all(sim["days_until_reset"] is None for sim in sims)
+    assert all(sim["save_to_flash"] is False for sim in sims)
+
+
+def test_normalise_traffic_config_4_8_tolerates_missing_limit_block() -> None:
+    from custom_components.glinet_router.hub import _normalise_traffic_config
+
+    response = {
+        "sim1_traffic_total": 42,
+    }
+
+    sims = _normalise_traffic_config(response, is_firmware_4_9=False)
+
+    sim1 = sims[0]
+    assert sim1["slot"] == 1
+    assert sim1["traffic_total"] == 42
+    assert sim1["limit_enabled"] is False
+    assert sim1["threshold"] is None
+    assert sim1["unit"] is None
+    assert sim1["reset_period"] is None
+
+
+def test_normalise_traffic_config_4_9_with_traffic_and_limit() -> None:
+    from custom_components.glinet_router.hub import _normalise_traffic_config
+
+    response = {
+        "save_to_flash": True,
+        "traffic": [
+            {"slot": 1, "type": 0, "traffic_total": 5000},
+            {"slot": 2, "type": 0, "traffic_total": 0},
+        ],
+        "limit": [
+            {
+                "slot": 1,
+                "type": 0,
+                "enable": True,
+                "threshold": 10,
+                "unit": "GB",
+                "reset_period": "month",
+                "day": 5,
+                "hour": 12,
+            }
+        ],
+    }
+
+    sims = _normalise_traffic_config(response, is_firmware_4_9=True)
+
+    sim1, sim2 = sims
+    assert sim1["slot"] == 1
+    assert sim1["sim_type"] == 0
+    assert sim1["traffic_total"] == 5000
+    assert sim1["present"] is True
+    assert sim1["limit_enabled"] is True
+    assert sim1["threshold"] == 10
+    assert sim1["unit"] == "GB"
+    assert sim1["reset_period"] == "month"
+    assert sim1["day"] == 5
+    assert sim1["hour"] == 12
+    assert sim1["save_to_flash"] is True
+
+    assert sim2["slot"] == 2
+    assert sim2["present"] is False
+    assert sim2["limit_enabled"] is False
+    assert sim2["threshold"] is None
+
+
+def test_normalise_traffic_config_4_9_handles_only_traffic_array() -> None:
+    from custom_components.glinet_router.hub import _normalise_traffic_config
+
+    response = {
+        "save_to_flash": False,
+        "traffic": [
+            {"slot": 1, "type": 0, "traffic_total": 100},
+        ],
+    }
+
+    sims = _normalise_traffic_config(response, is_firmware_4_9=True)
+
+    assert len(sims) == 1
+    sim1 = sims[0]
+    assert sim1["slot"] == 1
+    assert sim1["traffic_total"] == 100
+    assert sim1["present"] is True
+    assert sim1["limit_enabled"] is False
+    assert sim1["save_to_flash"] is False
+
+
+def test_normalise_traffic_config_4_9_handles_esim_type() -> None:
+    from custom_components.glinet_router.hub import _normalise_traffic_config
+
+    response = {
+        "traffic": [
+            {"slot": 1, "type": 1, "traffic_total": 2500},
+        ],
+    }
+
+    sims = _normalise_traffic_config(response, is_firmware_4_9=True)
+
+    assert sims[0]["sim_type"] == 1
+    assert sims[0]["present"] is True
+
+
+def test_normalise_traffic_config_returns_empty_for_non_dict() -> None:
+    from custom_components.glinet_router.hub import _normalise_traffic_config
+
+    assert _normalise_traffic_config(None, is_firmware_4_9=True) == []
+    assert _normalise_traffic_config("not-a-dict", is_firmware_4_9=False) == []
+
+
+def test_compute_days_until_reset_disabled_returns_none() -> None:
+    from custom_components.glinet_router.hub import _compute_days_until_reset
+
+    record = {
+        "limit_enabled": False,
+        "reset_period": "month",
+        "day": 1,
+        "hour": 0,
+        "month": 1,
+    }
+    assert _compute_days_until_reset(record) is None
+
+
+def test_compute_days_until_reset_unknown_period_returns_none() -> None:
+    from custom_components.glinet_router.hub import _compute_days_until_reset
+
+    record = {
+        "limit_enabled": True,
+        "reset_period": "fortnight",
+        "day": 1,
+        "hour": 0,
+        "month": 1,
+    }
+    assert _compute_days_until_reset(record) is None
+
+
+def test_compute_days_until_reset_month_anchor_in_future() -> None:
+    from datetime import datetime
+
+    from custom_components.glinet_router.hub import _compute_days_until_reset
+
+    now = datetime.now()
+    target_day = 5 if now.day < 5 else 20
+    record = {
+        "limit_enabled": True,
+        "reset_period": "month",
+        "day": target_day,
+        "hour": 0,
+        "month": now.month,
+    }
+    result = _compute_days_until_reset(record)
+    assert isinstance(result, int)
+    assert 0 <= result <= 31
+
+
+def test_cellular_traffic_sensor_value_fns_return_per_slot_values() -> None:
+    from custom_components.glinet_router.entities.sensor import (
+        CellularTrafficSensor,
+        _build_cellular_traffic_descriptions,
+        _get_traffic_sim,
+        _traffic_sim_present,
+    )
+
+    hub = types.SimpleNamespace(
+        device_mac="00:11:22:33:44:55",
+        device_info={},
+        hass=object(),
+        traffic_sim_data={
+            1: {
+                "slot": 1,
+                "sim_type": 0,
+                "traffic_total": 4096,
+                "limit_enabled": True,
+                "threshold": 10,
+                "unit": "GB",
+                "reset_period": "month",
+                "day": 1,
+                "hour": 0,
+                "month": 1,
+                "save_to_flash": True,
+                "present": True,
+                "days_until_reset": 12,
+            },
+            2: {
+                "slot": 2,
+                "sim_type": 0,
+                "traffic_total": 0,
+                "limit_enabled": False,
+                "threshold": None,
+                "unit": None,
+                "reset_period": None,
+                "day": None,
+                "hour": None,
+                "month": None,
+                "save_to_flash": False,
+                "present": False,
+                "days_until_reset": None,
+            },
+        },
+    )
+
+    assert _traffic_sim_present(hub, 1) is True
+    assert _get_traffic_sim(hub, 1)["traffic_total"] == 4096
+    assert _traffic_sim_present(hub, 2) is False
+
+    descs = _build_cellular_traffic_descriptions(1, 0)
+    by_key = {d.key: d for d in descs}
+    assert by_key["traffic_total"].value_fn(hub, 1, 0) == 4096
+    assert by_key["days_until_reset"].value_fn(hub, 1, 0) == 12
+    assert by_key["data_limit"].value_fn(hub, 1, 0) == 10 * (1000**3)
+
+    for d in descs:
+        assert d.value_fn(hub, 2, 0) is None
+
+    traffic_sensor = CellularTrafficSensor(hub=hub, entity_description=by_key["traffic_total"])
+    assert traffic_sensor.unique_id == (
+        "glinet_sensor/00:11:22:33:44:55/cellular_traffic_sim_1_0_traffic_total"
+    )
+    assert traffic_sensor._attr_name == "SIM 1 Traffic total"
+    assert traffic_sensor.native_value == 4096
+    assert traffic_sensor.available is True
+
+    data_limit_sensor = CellularTrafficSensor(hub=hub, entity_description=by_key["data_limit"])
+    attrs = data_limit_sensor.extra_state_attributes
+    assert attrs["slot"] == 1
+    assert attrs["sim_type"] == 0
+    assert attrs["limit_enabled"] is True
+    assert attrs["unit"] == "GB"
+    assert attrs["reset_period"] == "month"
+    assert attrs["day"] == 1
+    assert attrs["hour"] == 0
+    assert attrs["save_to_flash"] is True
+
+    slot2_sensor = CellularTrafficSensor(
+        hub=hub,
+        entity_description=_build_cellular_traffic_descriptions(2, 0)[0],
+    )
+    assert slot2_sensor.available is False
+    assert slot2_sensor.native_value is None
+
+
+def test_cellular_traffic_sensor_unavailable_when_sim_missing() -> None:
+    from custom_components.glinet_router.entities.sensor import (
+        CellularTrafficSensor,
+        _build_cellular_traffic_descriptions,
+    )
+
+    hub = types.SimpleNamespace(
+        device_mac="AA:BB:CC:DD:EE:FF",
+        device_info={},
+        hass=object(),
+        traffic_sim_data={},
+    )
+
+    descs = _build_cellular_traffic_descriptions(3, 0)
+    sensor = CellularTrafficSensor(hub=hub, entity_description=descs[0])
+    assert sensor.available is False
+    assert sensor.native_value is None

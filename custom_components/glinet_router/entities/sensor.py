@@ -62,6 +62,119 @@ def _get_cellular_ip(hub: GLinetHub, version: str) -> str | None:
     return None
 
 
+def _get_traffic_sim(hub: GLinetHub, slot: int) -> dict[str, Any] | None:
+    sim_data = getattr(hub, "traffic_sim_data", None)
+    if not isinstance(sim_data, dict):
+        return None
+    record = sim_data.get(slot)
+    return record if isinstance(record, dict) else None
+
+
+def _traffic_sim_present(hub: GLinetHub, slot: int) -> bool:
+    record = _get_traffic_sim(hub, slot)
+    if record is None:
+        return False
+    if "present" in record:
+        return bool(record.get("present"))
+    return int(record.get("traffic_total") or 0) > 0
+
+
+def _traffic_sim_label(slot: int) -> str:
+    return f"SIM {slot}"
+
+
+CELLULAR_TRAFFIC_SIM_PREFIX = "cellular_traffic_sim"
+
+
+@dataclass(frozen=True, kw_only=True)
+class CellularTrafficSensorDescription(SensorEntityDescription):
+    slot: int = 1
+    sim_type: int = 0
+    value_fn: Callable[[GLinetHub, int, int], int | float | None] = lambda hub, slot, sim_type: None
+    extra_attributes_fn: Callable[[GLinetHub, int, int], dict[str, Any] | None] | None = None
+
+
+def _build_cellular_traffic_descriptions(
+    slot: int, sim_type: int
+) -> tuple[CellularTrafficSensorDescription, ...]:
+    return (
+        CellularTrafficSensorDescription(
+            key="traffic_total",
+            name="Traffic total",
+            has_entity_name=True,
+            icon="mdi:counter",
+            entity_category=EntityCategory.DIAGNOSTIC,
+            device_class=SensorDeviceClass.DATA_SIZE,
+            native_unit_of_measurement="B",
+            state_class=SensorStateClass.TOTAL_INCREASING,
+            slot=slot,
+            sim_type=sim_type,
+            value_fn=lambda hub, current_slot, current_sim_type: (
+                int(_get_traffic_sim(hub, current_slot).get("traffic_total") or 0)
+                if _traffic_sim_present(hub, current_slot)
+                else None
+            ),
+        ),
+        CellularTrafficSensorDescription(
+            key="days_until_reset",
+            name="Days until reset",
+            has_entity_name=True,
+            icon="mdi:calendar-clock",
+            entity_category=EntityCategory.DIAGNOSTIC,
+            state_class=SensorStateClass.MEASUREMENT,
+            native_unit_of_measurement="d",
+            slot=slot,
+            sim_type=sim_type,
+            value_fn=lambda hub, current_slot, current_sim_type: (
+                _get_traffic_sim(hub, current_slot).get("days_until_reset")
+                if _traffic_sim_present(hub, current_slot)
+                else None
+            ),
+        ),
+        CellularTrafficSensorDescription(
+            key="data_limit",
+            name="Data limit",
+            has_entity_name=True,
+            icon="mdi:database-cog",
+            entity_category=EntityCategory.DIAGNOSTIC,
+            device_class=SensorDeviceClass.DATA_SIZE,
+            native_unit_of_measurement="B",
+            state_class=SensorStateClass.MEASUREMENT,
+            slot=slot,
+            sim_type=sim_type,
+            value_fn=lambda hub, current_slot, current_sim_type: (
+                _get_traffic_sim(hub, current_slot).get("threshold_bytes")
+                if _traffic_sim_present(hub, current_slot)
+                else None
+            ),
+            extra_attributes_fn=lambda hub, current_slot, current_sim_type: (
+                _cellular_traffic_attributes(hub, current_slot)
+                if _traffic_sim_present(hub, current_slot)
+                else None
+            ),
+        ),
+    )
+
+
+def _cellular_traffic_attributes(hub: GLinetHub, slot: int) -> dict[str, Any] | None:
+    record = _get_traffic_sim(hub, slot)
+    if record is None:
+        return None
+    attrs: dict[str, Any] = {
+        "slot": slot,
+        "sim_type": record.get("sim_type"),
+        "limit_enabled": bool(record.get("limit_enabled")),
+        "unit": record.get("unit"),
+        "reset_period": record.get("reset_period"),
+        "day": record.get("day"),
+        "hour": record.get("hour"),
+        "month": record.get("month"),
+        "save_to_flash": bool(record.get("save_to_flash")),
+    }
+    cleaned = {key: value for key, value in attrs.items() if value is not None}
+    return cleaned or None
+
+
 @dataclass(frozen=True, kw_only=True)
 class SystemStatusEntityDescription(SensorEntityDescription):
     value_fn: Callable[[RouterStatus | None], int | float | None]
@@ -772,6 +885,21 @@ async def async_setup_entry(
     if hub.feature_enabled(FEATURE_REPEATER):
         entities.append(RepeaterChannelSensor(hub=hub))
 
+    if hub.feature_enabled(FEATURE_CELLULAR):
+        for slot, sim_record in sorted(
+            (hub.traffic_sim_data or {}).items(),
+            key=lambda item: item[0] if isinstance(item[0], int) else int(item[0]),
+        ):
+            if not isinstance(sim_record, dict):
+                continue
+            if not sim_record.get("present"):
+                continue
+            sim_type = int(sim_record.get("sim_type") or 0)
+            entities.extend(
+                CellularTrafficSensor(hub=hub, entity_description=description)
+                for description in _build_cellular_traffic_descriptions(slot, sim_type)
+            )
+
     async_add_entities(entities, True)
 
     @callback
@@ -861,6 +989,49 @@ class HubStatusSensor(CoordinatorEntity[GLinetHub], SensorEntity):
         }:
             return _repeater_network_sensor_available(self.hub)
         return True
+
+
+class CellularTrafficSensor(CoordinatorEntity[GLinetHub], SensorEntity):
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        hub: GLinetHub,
+        entity_description: CellularTrafficSensorDescription,
+    ) -> None:
+        super().__init__(hub)
+        self.hub = hub
+        self.entity_description = entity_description
+        self._slot = entity_description.slot
+        self._sim_type = entity_description.sim_type
+        self._attr_name = f"{_traffic_sim_label(self._slot)} {entity_description.name}".strip()
+        self._attr_device_info = hub.device_info
+
+    @property
+    def unique_id(self) -> str:
+        return (
+            f"glinet_sensor/{self.hub.device_mac}/"
+            f"{CELLULAR_TRAFFIC_SIM_PREFIX}_{self._slot}_{self._sim_type}_"
+            f"{self.entity_description.key}"
+        )
+
+    @property
+    def native_value(self) -> int | float | None:
+        return self.entity_description.value_fn(self.hub, self._slot, self._sim_type)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        if self.entity_description.extra_attributes_fn is None:
+            return None
+        return self.entity_description.extra_attributes_fn(self.hub, self._slot, self._sim_type)
+
+    @property
+    def available(self) -> bool:
+        if not super().available:
+            return False
+        if not _traffic_sim_present(self.hub, self._slot):
+            return False
+        return self.native_value is not None
 
 
 class WanStatusSensor(CoordinatorEntity[GLinetHub], SensorEntity):

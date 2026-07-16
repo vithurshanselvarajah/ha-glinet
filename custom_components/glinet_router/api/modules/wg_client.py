@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from aiohttp import ClientError
+
 from ..const import FIRMWARE_4_9
+from ..exceptions import APIClientError
 from .base import BaseModule
 
 if TYPE_CHECKING:
@@ -27,7 +30,7 @@ class VpnClientModule(BaseModule):
     async def get_tunnel(self) -> dict[str, Any]:
         try:
             response = await self._call("vpn-client", "get_tunnel")
-        except Exception:  # noqa: BLE001 - older firmware returns a router error
+        except (APIClientError, ClientError, TimeoutError, OSError):
             return {"tunnels": [], "default_tunnels": []}
         return dict(response)
 

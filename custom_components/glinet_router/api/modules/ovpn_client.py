@@ -103,7 +103,6 @@ class OvpnClientModule(BaseModule):
         self, group_id: int, client_id: int, tunnel_id: int | None = None
     ) -> dict[str, Any]:
         if tunnel_id is None:
-            # Just find any active openvpn tunnel to stop it
             status = await self.get_status()
             for state in status:
                 if state.get("type") == "openvpn" and state.get("status") == 1:
@@ -111,6 +110,6 @@ class OvpnClientModule(BaseModule):
                     break
 
         if tunnel_id is None:
-            return {"ok": True}  # Already stopped
+            return {"ok": True}
 
         return await self.vpn_client.set_tunnel(tunnel_id, False)

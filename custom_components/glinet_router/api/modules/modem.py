@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from aiohttp import ClientError
+
 from ..const import FIRMWARE_4_9, LONG_TIMEOUT
-from ..exceptions import NonZeroResponse
+from ..exceptions import APIClientError, NonZeroResponse
 from ..models import ModemInfo
 from .base import BaseModule
 
@@ -23,6 +25,10 @@ class ModemModule(BaseModule):
 
     async def get_sim_config(self, bus: str) -> dict[str, Any]:
         response = await self._call("modem", "get_sim_config", {"bus": bus})
+        return dict(response)
+
+    async def get_traffic_config(self, bus: str) -> dict[str, Any]:
+        response = await self._call("modem", "get_traffic_config", {"bus": bus})
         return dict(response)
 
     async def get_modem_info(self) -> list[ModemInfo]:
@@ -228,7 +234,7 @@ class ModemModule(BaseModule):
         targets = await self._get_modem_49_targets()
         try:
             network_statuses, network_infos = await self._fetch_networks_49()
-        except Exception:  # noqa: BLE001
+        except (APIClientError, ClientError, TimeoutError, OSError):
             network_statuses, network_infos = {}, {}
 
         messages: list[dict[str, Any]] = []

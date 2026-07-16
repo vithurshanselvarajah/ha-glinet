@@ -24,6 +24,7 @@ The modem API uses the same JSON-RPC `/rpc` structure as the rest of the router 
 | `modem/get_info` | Lists modem hardware, bus identifiers, ports, SIM data, SMS support, IMEI, modem name/version/vendor. |
 | `modem/get_status` | Lists modem status, current SIM, SIM registration, carrier, signal, network state, IP data, traffic counters, unread SMS count. |
 | `modem/get_sms_list` | Lists SMS messages with identifier, phone number, text, and timestamp. |
+| `modem/get_traffic_config` | Reads the per-SIM cumulative traffic counters and (optional) data-limit configuration. The 4.8 response uses flat keys: `sim{slot}_traffic_total` and `sim{slot}_limit` (`enable`, `threshold`, `unit`, `reset_period`, `day`, `hour`, `month`). |
 
 ### Firmware 4.9+
 
@@ -40,6 +41,7 @@ newer from `system/get_info` and normalizes the new responses back into the exis
 | `modem/get_network_info` (bodyless) | Reads per-slot IP address data (IPv4/IPv6 lease, gateway, DNS), network interface name, and cell information (band, mode, RSRP, RSRQ, SINR). The 4.9 firmware exposes this as a **bodyless** call — the response carries a `networks` array with one entry per active slot. |
 | `modem/get_sim_config` | Reads the per-SIM APN and configuration. The 4.9 firmware exposes this as a **per-bus** call — the integration issues one call per distinct modem bus and merges the ICCID-keyed APN onto each modem's `simcard` record. |
 | `modem/get_sms_list` | Lists SMS messages. On 4.9+ the integration calls this once per discovered bus. |
+| `modem/get_traffic_config` | Reads the per-SIM cumulative traffic counters and (optional) data-limit configuration. The 4.9 response shape uses two arrays: `traffic[].{slot, type, traffic_total}` for the per-SIM traffic totals and `limit[].{slot, type, enable, threshold, unit, reset_period, day, hour, month}` for the per-SIM data limit. The integration sends the bus taken from the discovered modem record (e.g. `"0001"` for `modem_0001_s1` / `modem_0001_s2`); the literal `"cpu"` is only used as a placeholder when the firmware returns no per-slot interfaces. |
 
 #### Bodyless request shape (4.9+)
 

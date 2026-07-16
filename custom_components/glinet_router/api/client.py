@@ -92,7 +92,7 @@ class GLinetApiClient:
         base_url: str,
         session: ClientSession,
         sid: str | None = None,
-        verify_ssl: bool = False
+        verify_ssl: bool = False,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._ssl_setting = None if verify_ssl else False
@@ -155,10 +155,7 @@ class GLinetApiClient:
         self, payload: dict[str, Any], timeout_seconds: int = DEFAULT_TIMEOUT
     ) -> dict[str, Any] | list[Any]:
         async with self._session.post(
-            self._base_url,
-            json=payload,
-            timeout=timeout_seconds,
-            ssl=self._ssl_setting
+            self._base_url, json=payload, timeout=timeout_seconds, ssl=self._ssl_setting
         ) as response:
             return await _extract_response_data(response)
 

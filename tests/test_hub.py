@@ -57,15 +57,12 @@ def test_router_traffic_sensors_sum_all_connected_clients() -> None:
 
 def test_router_traffic_includes_untracked_devices() -> None:
     hub = GLinetHub.__new__(GLinetHub)
-    # Only one device is tracked
     hub._devices = {"aa:bb:cc:dd:ee:ff": ClientDeviceInfo("aa:bb:cc:dd:ee:ff")}
-    # But the API reports two devices
     hub._all_connected_clients = {
         "aa:bb:cc:dd:ee:ff": {"rx": 10, "tx": 20, "total_rx": 100, "total_tx": 200},
         "11:22:33:44:55:66": {"rx": 5, "tx": 8, "total_rx": 50, "total_tx": 80},
     }
 
-    # Both devices should contribute to traffic
     assert hub.current_traffic_download == 15
     assert hub.current_traffic_upload == 28
     assert hub.total_traffic_download == 150
@@ -215,7 +212,6 @@ async def test_fetch_cellular_status_fetches_sim_config_on_firmware_4_9() -> Non
             status_calls.append(callable_)
             return status_response
         if callable_.__name__ == "<lambda>" or "get_sim_config" in str(callable_):
-            # Capture the bus arg from the lambda's closure
             sim_calls.append(str(callable_.__closure__[0].cell_contents))
             return sim_config_response
         return None
@@ -231,7 +227,6 @@ async def test_fetch_cellular_status_fetches_sim_config_on_firmware_4_9() -> Non
 
     await hub.fetch_cellular_status()
 
-    # The APN from get_sim_config must land on the modem's simcard.
     modem = hub.cellular_status["modems"][0]
     assert modem["simcard"]["apn"] == "mob.asm.net"
     assert sim_calls == ["0001:01:00.0"]
@@ -274,7 +269,6 @@ async def test_fetch_cellular_status_keeps_4_8_apn_source() -> None:
         )
     )
 
-    # Stub the actual info/status responses inline.
     queue = iter([info_response, status_response])
 
     async def invoke(_: Any) -> Any:
@@ -285,7 +279,6 @@ async def test_fetch_cellular_status_keeps_4_8_apn_source() -> None:
     await hub.fetch_cellular_status()
 
     modem = hub.cellular_status["modems"][0]
-    # 4.8 should NOT have called get_sim_config.
     assert sim_calls == []
     assert modem["simcard"]["apn"] == "legacy.apn"
 
@@ -314,6 +307,42 @@ async def test_send_sms_uses_default_modem_bus() -> None:
     await hub.send_sms("+441234567890", "hello")
 
     assert sent == [("1-1", "+441234567890", "hello")]
+
+
+def test_traffic_config_bus_uses_modem_record_bus_when_present() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._modems = {"1-1:00.0": {"bus": "0001:01:00.0"}}
+    hub._default_modem_bus = "1-1:00.0"
+
+    assert hub._traffic_config_bus() == "0001:01:00.0"
+
+
+def test_traffic_config_bus_uses_short_bus_from_4_9_modem_record() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._modems = {
+        "modem_0001_s1": {"bus": "0001", "slot": 1},
+        "modem_0001_s2": {"bus": "0001", "slot": 2},
+    }
+    hub._default_modem_bus = "cpu"
+    hub._sw_version = "4.9.0"
+
+    assert hub._traffic_config_bus() == "0001"
+
+
+def test_traffic_config_bus_falls_back_to_default_modem_bus() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._modems = {}
+    hub._default_modem_bus = "1-1:00.0"
+
+    assert hub._traffic_config_bus() == "1-1:00.0"
+
+
+def test_traffic_config_bus_returns_none_when_no_bus_known() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._modems = {}
+    hub._default_modem_bus = None
+
+    assert hub._traffic_config_bus() is None
 
 
 async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
@@ -461,8 +490,6 @@ async def test_fetch_all_data_runs_tasks_in_parallel_when_enabled(
     hub.fetch_led_status = fake_fetch_led_status
 
     async def _release() -> None:
-        # Give the loop a moment so all the per-feature tasks are
-        # scheduled and ``asyncio.gather`` is collecting them.
         await asyncio.sleep(0)
         events.set()
 
@@ -470,11 +497,8 @@ async def test_fetch_all_data_runs_tasks_in_parallel_when_enabled(
     await hub.fetch_all_data()
     await release_task
 
-    # Sequential order would have each fetch finish before the next
-    # starts. With ``asyncio.gather`` all six core fetches start before
-    # any of them completes.
     assert set(started) == {"system", "kmwan", "clients", "wifi", "fan", "led"}
-    assert completed == []  # none completed until the event was set
+    assert completed == []
 
 
 async def test_fetch_all_data_runs_tasks_sequentially_by_default(
@@ -487,7 +511,7 @@ async def test_fetch_all_data_runs_tasks_sequentially_by_default(
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {
         CONF_ENABLED_FEATURES: [],
-        CONF_PARALLEL_REQUESTS: False,  # explicit
+        CONF_PARALLEL_REQUESTS: False,
     }
     hub._entry = types.SimpleNamespace(entry_id="test_entry")
     hub._host = "192.168.8.1"
@@ -501,7 +525,6 @@ async def test_fetch_all_data_runs_tasks_sequentially_by_default(
 
     async def _ordered_fetch(name: str) -> None:
         order.append(f"{name}:start")
-        # Signal that we started, then wait for the test to release us.
         started[name].set()
         await completed[name].wait()
         order.append(f"{name}:end")
@@ -522,10 +545,6 @@ async def test_fetch_all_data_runs_tasks_sequentially_by_default(
             _ordered_fetch(name),
         )
 
-    # Correct attribute names are: fetch_system_status, fetch_kmwan_status,
-    # fetch_connected_devices, fetch_wifi_interfaces, fetch_fan_status,
-    # fetch_led_status. The previous loop misnamed some attributes; the
-    # block below reassigns them by the right name.
     expected_names = [
         "system_status",
         "kmwan_status",
@@ -542,9 +561,6 @@ async def test_fetch_all_data_runs_tasks_sequentially_by_default(
         setattr(hub, f"fetch_{attr}", _ordered_fetch(name))
 
     async def _drive() -> None:
-        # Wait until the first fetch has started, then release it. Repeat
-        # for the rest. If execution were parallel, the test would fail
-        # because later fetches would not start before earlier ones end.
         for name in ("system", "kmwan", "clients", "wifi", "fan", "led"):
             await started[name].wait()
             completed[name].set()
@@ -553,7 +569,6 @@ async def test_fetch_all_data_runs_tasks_sequentially_by_default(
     await hub.fetch_all_data()
     await drive_task
 
-    # Each fetch fully completes before the next one starts.
     expected_order = []
     for name in ("system", "kmwan", "clients", "wifi", "fan", "led"):
         expected_order.append(f"{name}:start")
@@ -613,8 +628,6 @@ def test_is_firmware_4_9_or_above_uses_sw_version() -> None:
     hub._sw_version = "4.8.0"
     assert hub.is_firmware_4_9_or_above is False
 
-    # Placeholder values (pre-init) should fall back to the cached API
-    # firmware version so the property can be evaluated early in setup.
     hub._sw_version = "UNKNOWN"
     hub._api = types.SimpleNamespace(_firmware_version=(4, 9, 0, 0))
     assert hub.is_firmware_4_9_or_above is True
@@ -1157,8 +1170,6 @@ async def test_async_initialize_hub_removes_legacy_cellular_sensors_on_firmware_
         unique_id="glinet_sensor/00:11:22:33:44:55/cellular_rssi",
         domain="sensor",
     )
-    # IPv4/IPv6 sensors stay on 4.9+ because the bodyless
-    # ``modem/get_network_info`` response still provides the IP.
     kept_ipv4 = types.SimpleNamespace(
         entity_id="sensor.cellular_wan_ipv4",
         unique_id="glinet_sensor/00:11:22:33:44:55/cellular_ipv4",
@@ -1197,7 +1208,6 @@ async def test_async_initialize_hub_removes_legacy_cellular_sensors_on_firmware_
     assert mock_er.async_remove.call_count == 2
     mock_er.async_remove.assert_any_call("sensor.glinet_cellular_signal")
     mock_er.async_remove.assert_any_call("sensor.glinet_cellular_rssi")
-    # The IPv4 sensor and other cellular sensors must remain registered.
     for call in mock_er.async_remove.call_args_list:
         assert call.args[0] != "sensor.cellular_wan_ipv4"
         assert call.args[0] != "sensor.glinet_cellular_rsrp"
@@ -1243,7 +1253,6 @@ async def test_async_initialize_hub_keeps_legacy_cellular_sensors_on_firmware_4_
 
     await hub.async_initialize_hub()
 
-    # Neither the cellular signal nor the RSSI sensor is removed on 4.8.
     assert mock_er.async_remove.call_count == 0
 
 
@@ -1587,7 +1596,7 @@ async def test_cleanup_stale_devices_removes_known_device_entities(monkeypatch) 
     device = ClientDeviceInfo(mac)
     device.apply_update({"online": False})
     device._last_activity = hub_module.utcnow() - hub_module.timedelta(minutes=10)
-    device.is_known = True  # Known device should also be cleaned up
+    device.is_known = True
     hub._devices = {mac: device}
     hub._settings = {CONF_CLEANUP_DEVICES: 5}
     hub._entry = SimpleNamespace(entry_id="entry")
@@ -1743,9 +1752,7 @@ def test_create_api_client_defaults_verify_ssl_to_false(monkeypatch) -> None:
 
     monkeypatch.setattr(GLinetApiClient, "__init__", fake_constructor)
 
-    entry = _make_entry(
-        data={"host": "http://192.168.8.1", "password": "pass"}
-    )
+    entry = _make_entry(data={"host": "http://192.168.8.1", "password": "pass"})
     hub = GLinetHub(MagicMock(), entry)
 
     hub._create_api_client()

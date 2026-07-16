@@ -30,4 +30,3 @@ async def test_set_adguard_enabled() -> None:
     await hub.set_adguard_enabled(True)
 
     hub._invoke_api.assert_called_once()
-    # To test the lambda, we'd need more complex mocking, but this is a start

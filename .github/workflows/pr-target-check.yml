@@ -1,9 +1,5 @@
 name: PR target check
 
-# Warn (via comment + label) on any pull request opened against `main`
-# that is not a release PR. The only sanctioned way to land code on
-# `main` is a PR from `development` → `main`. See CONTRIBUTING.md.
-
 on:
   pull_request:
     types:
@@ -20,8 +16,6 @@ jobs:
   check-target:
     name: Validate PR target branch
     runs-on: ubuntu-latest
-    # Only run when the base branch is `main`. PRs against
-    # `development` are the normal case and need no action.
     if: github.event.pull_request.base.ref == 'main'
     steps:
       - name: Comment and label on wrong-target PR

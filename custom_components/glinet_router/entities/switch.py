@@ -50,8 +50,6 @@ async def async_setup_entry(
 ) -> None:
     hub: GLinetHub = entry.runtime_data
     entities: list[SwitchEntity] = []
-    # 4.9+ exposes a unified VPN dashboard. When tunnels are present we
-    # surface those as switches instead of the per-profile entries from 4.8.
     dashboard_tunnels: list[VpnTunnel] = []
     if hub.feature_enabled(FEATURE_WG_CLIENT) or hub.feature_enabled(FEATURE_OVPN_CLIENT):
         for tunnel in hub.vpn_tunnels.values():
@@ -64,8 +62,6 @@ async def async_setup_entry(
             ):
                 dashboard_tunnels.append(tunnel)
             elif tunnel.tunnel_type == VpnTunnelType.UNKNOWN:
-                # Show unknown-typed tunnels if either client feature is on;
-                # the user can still toggle them via the dashboard.
                 if hub.feature_enabled(FEATURE_WG_CLIENT) or hub.feature_enabled(
                     FEATURE_OVPN_CLIENT
                 ):
@@ -113,18 +109,7 @@ async def async_setup_entry(
     entities.append(LedSwitch(hub))
     async_add_entities(entities, True)
 
-    # ------------------------------------------------------------------
-    # Live reconciliation for VPN dashboard tunnels (4.9+)
-    # ------------------------------------------------------------------
-    # When a profile is removed from the router, the corresponding tunnel
-    # disappears from `vpn-client.get_tunnel`. The hub dispatches the
-    # ``event_vpn_tunnels_updated`` event after every fetch with the new set
-    # of tunnel ids, so we use it to add new switches and remove stale ones
-    # automatically. This keeps Home Assistant in lockstep with whatever is
-    # currently configured on the router.
-    # VpnTunnelSwitch is defined further down in this module; the type
-    # annotation has to be a string here because of the forward reference.
-    vpn_tunnel_switches: "dict[int, VpnTunnelSwitch]" = {  # noqa: UP037
+    vpn_tunnel_switches: dict[int, VpnTunnelSwitch] = {
         entity._tunnel_id: entity for entity in entities if isinstance(entity, VpnTunnelSwitch)
     }
 
@@ -158,7 +143,6 @@ async def async_setup_entry(
 
         existing_ids = set(vpn_tunnel_switches.keys())
 
-        # Add new tunnels that have appeared since the last fetch.
         new_tunnels = [
             tunnel
             for tunnel in _candidate_tunnels_for_features()
@@ -170,7 +154,6 @@ async def async_setup_entry(
                 vpn_tunnel_switches[entity._tunnel_id] = entity
             async_add_entities(new_entities, True)
 
-        # Remove tunnels that disappeared from the router.
         stale_ids = existing_ids - current_ids
         if stale_ids:
             registry = async_get_entity_registry(hub.hass)
@@ -178,17 +161,7 @@ async def async_setup_entry(
                 entity = vpn_tunnel_switches.pop(stale_id, None)
                 if entity is None:
                     continue
-                # ``Entity.async_remove`` is a coroutine; it must be
-                # awaited for the entity to be detached from the platform.
-                # ``force_remove=True`` clears the entity state immediately
-                # rather than marking it as unavailable.
                 await entity.async_remove(force_remove=True)
-                # ``Entity.async_remove`` only removes the state — the
-                # entry in the Entity Registry survives unless we also
-                # drop it. Without this, the user still sees the entity
-                # (with state "unavailable") and cannot delete it from
-                # the UI. Removing the registry entry makes the entity
-                # disappear from Home Assistant completely.
                 if entity.entity_id:
                     registry.async_remove(entity.entity_id)
 
@@ -577,8 +550,6 @@ class VpnTunnelSwitch(GLinetSwitchBase):
         if self._tunnel_type in {VpnTunnelType.WIREGUARD, VpnTunnelType.OPENVPN}:
             type_token = "wg" if self._tunnel_type == VpnTunnelType.WIREGUARD else "ovpn"
             return f"glinet_switch/{self._hub.device_mac}/vpn_tunnel/{type_token}/{self._tunnel_id}"
-        # Unknown type - keep the tunnel prefix so both WG and OVPN feature
-        # cleanup can find it if either feature is later disabled.
         return f"glinet_switch/{self._hub.device_mac}/vpn_tunnel/unknown/{self._tunnel_id}"
 
     @property

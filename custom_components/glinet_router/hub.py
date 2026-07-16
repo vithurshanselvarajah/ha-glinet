@@ -132,6 +132,8 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._cached_modem_info: dict[str, Any] | None = None
         self._default_modem_bus: str | None = None
         self._default_modem_slot: int | str | None = None
+        self._traffic_sim_data: dict[int, dict[str, Any]] = {}
+        self._traffic_config_save_to_flash: bool | None = None
         self._wireguard_clients: dict[int, WireGuardClient] = {}
         self._wireguard_connections: list[WireGuardClient] | None = None
         self._vpn_tunnels: dict[int, VpnTunnel] = {}
@@ -491,10 +493,6 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._ovpn_clients = {}
             self._ovpn_connections = None
 
-        # 4.9+ exposes a unified VPN dashboard. When either feature is
-        # enabled we fetch the dashboard tunnels so the entity layer can
-        # surface them as switches. The legacy per-profile state is still
-        # populated above for 4.8 backward compatibility.
         if self.feature_enabled(FEATURE_WG_CLIENT) or self.feature_enabled(FEATURE_OVPN_CLIENT):
             tasks.append(self.fetch_vpn_tunnels())
         else:
@@ -526,6 +524,8 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._cached_modem_info = None
             self._default_modem_bus = None
             self._default_modem_slot = None
+            self._traffic_sim_data = {}
+            self._traffic_config_save_to_flash = None
 
         if self.feature_enabled(FEATURE_REPEATER):
             tasks.extend(
@@ -578,18 +578,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._black_mac = []
             self._white_mac = []
 
-        # The user can opt into running fetches concurrently via the
-        # ``parallel_requests`` option in the config / options flow.
-        # Concurrent execution cuts total refresh time roughly to the
-        # slowest single fetch but puts more load on the router, so it
-        # defaults to off and is intended for capable hardware.
         if self.parallel_requests:
-            # ``return_exceptions=True`` ensures a single failing fetch
-            # does not abort the rest of the coordinator refresh. The
-            # per-feature fetchers already swallow their own errors via
-            # ``_invoke_api`` / ``_invoke_optional_api`` and return
-            # ``None``/empty payloads on failure, so this is belt and
-            # braces.
             results = await asyncio.gather(*tasks, return_exceptions=True)
             for result in results:
                 if isinstance(result, Exception):
@@ -1106,10 +1095,6 @@ class GLinetHub(DataUpdateCoordinator[None]):
         )
         await self.fetch_wireguard_clients()
 
-    # ------------------------------------------------------------------
-    # 4.9+ VPN dashboard (unified tunnel management)
-    # ------------------------------------------------------------------
-
     def _dashboard_vpn_client(self) -> Any | None:
         api = getattr(self, "_api", None)
         if api is None:
@@ -1131,7 +1116,6 @@ class GLinetHub(DataUpdateCoordinator[None]):
     async def fetch_vpn_tunnels(self) -> None:
         vpn_client = self._dashboard_vpn_client()
         if not await self._is_dashboard_supported() or vpn_client is None:
-            # 4.8 / unsupported - clear any stale state from a previous run
             self._vpn_tunnels = {}
             self._vpn_tunnel_connections = []
             return
@@ -1168,7 +1152,6 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
         self._vpn_tunnels = tunnels
 
-        # Connection state from vpn-client.get_status
         status_response = await self._invoke_optional_api(vpn_client.get_status)
         active_ids: set[int] = set()
         if isinstance(status_response, dict):
@@ -1198,13 +1181,9 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
         self._vpn_tunnel_connections = connections
 
-        # Notify subscribers (e.g. the switch platform) so they can add new
-        # tunnel switches and remove ones that no longer exist on the router.
-        # The payload is the full set of tunnel ids so consumers can diff it
-        # against the entities they currently have registered.
         try:
             async_dispatcher_send(self.hass, self.event_vpn_tunnels_updated, set(tunnels.keys()))
-        except Exception:  # noqa: BLE001 - never fail the fetch on dispatcher errors
+        except (RuntimeError, ValueError, TypeError, AttributeError, KeyError):
             _LOGGER.debug("Failed to dispatch vpn tunnels updated event", exc_info=True)
 
     async def set_vpn_tunnel(self, tunnel_id: int, enabled: bool) -> None:
@@ -1217,8 +1196,6 @@ class GLinetHub(DataUpdateCoordinator[None]):
                 enabled=bool(enabled),
             )
         )
-        # Refresh both the dashboard and the legacy per-profile state so
-        # consumers relying on either representation stay in sync.
         await self.fetch_vpn_tunnels()
         if self.feature_enabled(FEATURE_WG_CLIENT):
             await self.fetch_wireguard_clients()
@@ -1304,7 +1281,6 @@ class GLinetHub(DataUpdateCoordinator[None]):
         return self._ovpn_client_status
 
     async def start_ovpn_client(self, group_id: int, client_id: int) -> None:
-        # Match sample project: stop active OpenVPN first
         await self.stop_all_ovpns()
 
         key = f"{group_id}_{client_id}"
@@ -1461,6 +1437,38 @@ class GLinetHub(DataUpdateCoordinator[None]):
             "default_bus": self._default_modem_bus,
             "default_slot": self._default_modem_slot,
         }
+
+        await self.fetch_traffic_config()
+
+    async def fetch_traffic_config(self) -> None:
+        bus = self._traffic_config_bus()
+        if not bus:
+            self._traffic_sim_data = {}
+            self._traffic_config_save_to_flash = None
+            return
+
+        response = await self._invoke_optional_api(
+            lambda b=bus: self.router_api.modem.get_traffic_config(b)
+        )
+        if not response:
+            self._traffic_sim_data = {}
+            self._traffic_config_save_to_flash = None
+            return
+
+        save_to_flash = bool(response.get("save_to_flash"))
+        sims = _normalise_traffic_config(
+            response,
+            is_firmware_4_9=self.is_firmware_4_9_or_above,
+        )
+        self._traffic_sim_data = {sim["slot"]: sim for sim in sims}
+        self._traffic_config_save_to_flash = save_to_flash
+
+    def _traffic_config_bus(self) -> str | None:
+        for modem in self._modems.values():
+            bus = modem.get("bus")
+            if bus:
+                return str(bus)
+        return self._default_modem_bus
 
     async def _apply_49_sim_config_to_modems(
         self,
@@ -1909,6 +1917,14 @@ class GLinetHub(DataUpdateCoordinator[None]):
         return self._cellular_status
 
     @property
+    def traffic_sim_data(self) -> dict[int, dict[str, Any]]:
+        return self._traffic_sim_data
+
+    @property
+    def traffic_config_save_to_flash(self) -> bool | None:
+        return self._traffic_config_save_to_flash
+
+    @property
     def online_client_count(self) -> int:
         return sum(1 for device in self._devices.values() if device.is_connected)
 
@@ -2158,3 +2174,253 @@ def _access_mode_is_black(mode: str) -> bool:
 
 def _access_mode_is_white(mode: str) -> bool:
     return mode in {"white", "whitelist", "allow"}
+
+
+def _normalise_traffic_config(
+    response: dict[str, Any],
+    *,
+    is_firmware_4_9: bool,
+) -> list[dict[str, Any]]:
+    if not isinstance(response, dict):
+        return []
+    save_to_flash = bool(response.get("save_to_flash"))
+    records: dict[int, dict[str, Any]] = {}
+
+    def _coerce_int(value: Any) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+
+    def _coerce_str(value: Any) -> str | None:
+        if value is None:
+            return None
+        return str(value)
+
+    if is_firmware_4_9:
+        traffic_items = response.get("traffic") or []
+        if not isinstance(traffic_items, list):
+            traffic_items = []
+        for entry in traffic_items:
+            if not isinstance(entry, dict):
+                continue
+            slot_raw = entry.get("slot")
+            try:
+                slot = int(slot_raw)
+            except (TypeError, ValueError):
+                continue
+            sim_type = _coerce_int(entry.get("type"))
+            traffic_total = _coerce_int(entry.get("traffic_total"))
+            record = records.setdefault(
+                slot,
+                {
+                    "slot": slot,
+                    "sim_type": sim_type,
+                    "traffic_total": 0,
+                    "limit_enabled": False,
+                    "threshold": None,
+                    "unit": None,
+                    "reset_period": None,
+                    "day": None,
+                    "hour": None,
+                    "month": None,
+                    "save_to_flash": save_to_flash,
+                },
+            )
+            record["sim_type"] = sim_type
+            record["traffic_total"] = traffic_total
+
+        limit_items = response.get("limit") or []
+        if isinstance(limit_items, list):
+            for entry in limit_items:
+                if not isinstance(entry, dict):
+                    continue
+                slot_raw = entry.get("slot")
+                try:
+                    slot = int(slot_raw)
+                except (TypeError, ValueError):
+                    continue
+                record = records.setdefault(
+                    slot,
+                    {
+                        "slot": slot,
+                        "sim_type": _coerce_int(entry.get("type")),
+                        "traffic_total": 0,
+                        "limit_enabled": False,
+                        "threshold": None,
+                        "unit": None,
+                        "reset_period": None,
+                        "day": None,
+                        "hour": None,
+                        "month": None,
+                        "save_to_flash": save_to_flash,
+                    },
+                )
+                record["sim_type"] = _coerce_int(entry.get("type"))
+                record["limit_enabled"] = bool(entry.get("enable"))
+                threshold = entry.get("threshold")
+                if threshold is not None:
+                    try:
+                        record["threshold"] = int(threshold)
+                    except (TypeError, ValueError):
+                        record["threshold"] = _coerce_str(threshold)
+                record["unit"] = _coerce_str(entry.get("unit"))
+                record["reset_period"] = _coerce_str(entry.get("reset_period"))
+                day = entry.get("day")
+                if day is not None:
+                    try:
+                        record["day"] = int(day)
+                    except (TypeError, ValueError):
+                        record["day"] = _coerce_str(day)
+                hour = entry.get("hour")
+                if hour is not None:
+                    try:
+                        record["hour"] = int(hour)
+                    except (TypeError, ValueError):
+                        record["hour"] = _coerce_str(hour)
+                month = entry.get("month")
+                if month is not None:
+                    try:
+                        record["month"] = int(month)
+                    except (TypeError, ValueError):
+                        record["month"] = _coerce_str(month)
+    else:
+        for slot in (1, 2):
+            limit_block = response.get(f"sim{slot}_limit")
+            traffic_total = _coerce_int(response.get(f"sim{slot}_traffic_total"))
+            record = {
+                "slot": slot,
+                "sim_type": 0,
+                "traffic_total": traffic_total,
+                "limit_enabled": False,
+                "threshold": None,
+                "unit": None,
+                "reset_period": None,
+                "day": None,
+                "hour": None,
+                "month": None,
+                "save_to_flash": save_to_flash,
+            }
+            if isinstance(limit_block, dict):
+                record["limit_enabled"] = bool(limit_block.get("enable"))
+                threshold = limit_block.get("threshold")
+                if threshold is not None:
+                    try:
+                        record["threshold"] = int(threshold)
+                    except (TypeError, ValueError):
+                        record["threshold"] = _coerce_str(threshold)
+                record["unit"] = _coerce_str(limit_block.get("unit"))
+                record["reset_period"] = _coerce_str(limit_block.get("reset_period"))
+                for field in ("day", "hour", "month"):
+                    value = limit_block.get(field)
+                    if value is None:
+                        continue
+                    try:
+                        record[field] = int(value)
+                    except (TypeError, ValueError):
+                        record[field] = _coerce_str(value)
+            records[slot] = record
+
+    for record in records.values():
+        record["save_to_flash"] = save_to_flash
+        record["present"] = record["traffic_total"] > 0
+        record["days_until_reset"] = _compute_days_until_reset(record)
+
+    return [records[key] for key in sorted(records)]
+
+
+def _compute_days_until_reset(record: dict[str, Any]) -> int | None:
+    if not record.get("limit_enabled") or not record.get("reset_period"):
+        return None
+    period = str(record.get("reset_period"))
+    try:
+        from calendar import monthrange
+        from datetime import timedelta
+
+        now = utcnow().replace(tzinfo=None)
+        day = int(record["day"]) if record.get("day") is not None else 1
+        hour = int(record["hour"]) if record.get("hour") is not None else 0
+        month = int(record["month"]) if record.get("month") is not None else now.month
+    except (TypeError, ValueError):
+        return None
+
+    try:
+        if period == "day":
+            next_reset = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+            if next_reset <= now:
+                next_reset = next_reset + timedelta(days=1)
+            return (next_reset - now).days
+        if period == "week":
+            iso_day = max(1, min(7, day))
+            days_ahead = (iso_day - now.isoweekday()) % 7
+            next_reset = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+            next_reset = next_reset + timedelta(days=days_ahead)
+            if next_reset <= now:
+                next_reset = next_reset + timedelta(days=7)
+            return (next_reset - now).days
+        if period in {"month", "season", "year"}:
+            safe_anchor_day = max(1, min(28, day))
+            safe_anchor_hour = max(0, min(23, hour))
+            if period == "year":
+                try:
+                    candidate = now.replace(
+                        month=max(1, min(12, month)),
+                        day=safe_anchor_day,
+                        hour=safe_anchor_hour,
+                        minute=0,
+                        second=0,
+                        microsecond=0,
+                    )
+                except ValueError:
+                    return None
+                if candidate <= now:
+                    try:
+                        candidate = candidate.replace(year=now.year + 1)
+                    except ValueError:
+                        return None
+                return (candidate - now).days
+            if period == "season":
+                current_quarter = (now.month - 1) // 3
+                candidate_month = current_quarter * 3 + max(1, min(3, month))
+                try:
+                    candidate = now.replace(
+                        month=candidate_month,
+                        day=safe_anchor_day,
+                        hour=safe_anchor_hour,
+                        minute=0,
+                        second=0,
+                        microsecond=0,
+                    )
+                except ValueError:
+                    return None
+                if candidate <= now:
+                    candidate = candidate + timedelta(days=92)
+                return (candidate - now).days
+            days_in_month = monthrange(now.year, now.month)[1]
+            candidate_day = min(safe_anchor_day, days_in_month)
+            try:
+                candidate = now.replace(
+                    day=candidate_day,
+                    hour=safe_anchor_hour,
+                    minute=0,
+                    second=0,
+                    microsecond=0,
+                )
+            except ValueError:
+                return None
+            if candidate <= now:
+                next_month = now.month + 1
+                next_year = now.year
+                if next_month > 12:
+                    next_month = 1
+                    next_year += 1
+                next_days = monthrange(next_year, next_month)[1]
+                candidate = candidate.replace(
+                    year=next_year,
+                    month=next_month,
+                    day=min(safe_anchor_day, next_days),
+                )
+            return (candidate - now).days
+    except (ValueError, TypeError, OverflowError):
+        return None
+    return None

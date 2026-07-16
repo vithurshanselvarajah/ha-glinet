@@ -173,7 +173,13 @@ async def test_wg_vpn_client_get_tunnel_falls_back_on_legacy_firmware() -> None:
         def __init__(self) -> None:
             super().__init__([])
 
-        def post(self, url: str, json: dict[str, Any], timeout: int):  # type: ignore[override]
+        def post(
+            self,
+            url: str,
+            json: dict[str, Any],
+            timeout: int,
+            ssl: Any = None,  # matches the parent / aiohttp signature
+        ):
             from tests.test_api_client import FakePostContext, FakeResponse
 
             return FakePostContext(
