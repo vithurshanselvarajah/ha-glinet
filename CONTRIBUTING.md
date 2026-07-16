@@ -40,7 +40,7 @@ The repository uses a two-branch model:
 | Branch        | Purpose                                                                       | PRs accepted? |
 | ------------- | ----------------------------------------------------------------------------- | ------------- |
 | `main`        | Release branch. Always points at the latest released code.                   | **No** (except releases — see below) |
-| `development` | Integration branch. All day-to-day work lands here.                          | **Yes**       |
+| `development` | Integration branch. All day-to-day work lands here. **No ruleset** — maintainers may push directly. | **Yes**       |
 
 ### Rules
 
@@ -54,12 +54,14 @@ The repository uses a two-branch model:
    team has direct write access. Fork the repository, create a feature
    branch on your fork, and open a pull request back into
    `development`.
-4. **Squash-merge only.** The repository requires linear history. Each
-   PR should be a single squash-merge commit on `development`.
-5. **One approval required.** All PRs require review and approval from
-   a code owner before they can be merged.
-6. **CI must pass.** The `test` job in `ci.yml` must succeed before a PR
-   can be merged.
+4. **Merge method.** `main` is configured to allow normal merge
+   commits so the release history stays visible. `development` has
+   no ruleset — maintainers may push directly there for hotfixes,
+   rebases, or coordinating work.
+5. **Approvals and CI apply to `main` only.** The `main` ruleset
+   requires 1 approval from a code owner and a passing `test`
+   check. `development` is unconstrained so day-to-day work and
+   Dependabot updates don't get blocked.
 
 ### Typical contribution flow
 

@@ -4,10 +4,10 @@ The repository has several GitHub Actions workflows.
 
 ## Branching model
 
-| Branch        | Role                                                  | Direct pushes | PRs accepted from                  |
-| ------------- | ----------------------------------------------------- | ------------- | ---------------------------------- |
-| `main`        | Release branch — always points at the latest release  | ❌ No          | `development` only (release PRs)   |
-| `development` | Integration branch — where day-to-day work lands      | ❌ No          | forks, same-repo feature branches  |
+| Branch        | Role                                                  | Direct pushes | PRs accepted from                  | Ruleset |
+| ------------- | ----------------------------------------------------- | ------------- | ---------------------------------- | ------- |
+| `main`        | Release branch — always points at the latest release  | ❌ No          | `development` only (release PRs)   | ✅ yes   |
+| `development` | Integration branch — where day-to-day work lands      | ✅ Yes (maintainers only) | forks, same-repo feature branches  | ❌ no    |
 
 All day-to-day pull requests target `development`. The only PRs that
 ever open against `main` are **release PRs** opened by a maintainer
@@ -16,9 +16,14 @@ from `development` into `main`. A bot
 will comment and apply the `wrong-target` label on any other PR
 opened against `main`.
 
-See [`CONTRIBUTING.md`](../CONTRIBUTING.md#branching--prs) and
-[`.github/BRANCH_PROTECTION.md`](../.github/BRANCH_PROTECTION.md)
-for the full contribution flow and the GitHub-side ruleset.
+`development` intentionally has no branch ruleset so that
+Dependabot updates, the wiki-sync bot, and maintainer direct pushes
+can all proceed without friction. See
+[`.github/BRANCH_PROTECTION.md`](../.github/BRANCH_PROTECTION.md) for
+the rationale and an archived template if you ever want to add one.
+
+See [`CONTRIBUTING.md`](../CONTRIBUTING.md#branching--prs) for the
+full contribution flow.
 
 ## CI
 

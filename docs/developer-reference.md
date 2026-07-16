@@ -82,9 +82,15 @@ against `main` that is not a `development` → `main` release. Outside
 contributors fork the repository and submit from a fork — no one
 outside the maintainer team has direct write access.
 
+`main` is protected by a ruleset (1 approval, code-owner review,
+CI must pass). `development` has no ruleset on purpose: maintainers
+can push directly there, and Dependabot and bot updates don't need
+to fight branch protection. See
+[`.github/BRANCH_PROTECTION.md`](../.github/BRANCH_PROTECTION.md)
+for the full ruleset and rationale.
+
 For the full contribution flow, see
-[`CONTRIBUTING.md`](../CONTRIBUTING.md) and
-[`.github/BRANCH_PROTECTION.md`](../.github/BRANCH_PROTECTION.md).
+[`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 ## Related Pages
 
