@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -25,6 +27,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util.dt import utcnow
 
@@ -134,6 +137,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
         self._default_modem_slot: int | str | None = None
         self._traffic_sim_data: dict[int, dict[str, Any]] = {}
         self._traffic_config_save_to_flash: bool | None = None
+        self._entity_cleanup_rules: list[EntityCleanupRule] = []
         self._wireguard_clients: dict[int, WireGuardClient] = {}
         self._wireguard_connections: list[WireGuardClient] | None = None
         self._vpn_tunnels: dict[int, VpnTunnel] = {}
@@ -383,6 +387,29 @@ class GLinetHub(DataUpdateCoordinator[None]):
                     entry.original_name,
                 )
         await self.fetch_all_data()
+        self._register_periodic_cleanup()
+        await self._async_cleanup_orphaned_sensor_entities()
+
+    def _register_periodic_cleanup(self) -> None:
+        on_unload = getattr(self._entry, "async_on_unload", None)
+        if on_unload is None:
+            return
+        on_unload(
+            async_track_time_interval(
+                self.hass,
+                self._periodic_cleanup_callback,
+                timedelta(minutes=30),
+            )
+        )
+
+    async def _periodic_cleanup_callback(self, _now: datetime) -> None:
+        try:
+            await self._async_cleanup_orphaned_sensor_entities()
+        except (APIClientError, ClientError, TimeoutError, OSError):
+            _LOGGER.debug(
+                "Periodic entity cleanup deferred: hub state unavailable",
+                exc_info=True,
+            )
 
     def _create_api_client(self) -> GLinetApiClient:
         session = async_get_clientsession(self.hass)
@@ -526,6 +553,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
             self._default_modem_slot = None
             self._traffic_sim_data = {}
             self._traffic_config_save_to_flash = None
+            self._entity_cleanup_rules = []
 
         if self.feature_enabled(FEATURE_REPEATER):
             tasks.extend(
@@ -1462,6 +1490,73 @@ class GLinetHub(DataUpdateCoordinator[None]):
         )
         self._traffic_sim_data = {sim["slot"]: sim for sim in sims}
         self._traffic_config_save_to_flash = save_to_flash
+        self._refresh_cellular_limit_cleanup_rule()
+        await self._async_cleanup_orphaned_sensor_entities()
+        async_dispatcher_send(self.hass, self.event_cellular_traffic_config_updated)
+
+    async def _async_cleanup_orphaned_sensor_entities(self) -> None:
+        rules = getattr(self, "_entity_cleanup_rules", None) or []
+        entity_registry = er.async_get(self.hass)
+        entries = er.async_entries_for_config_entry(
+            entity_registry, self._entry.entry_id
+        )
+        for rule in rules:
+            for entry in entries:
+                if not rule.matches(entry):
+                    continue
+                if rule.should_keep(entry):
+                    continue
+                _LOGGER.debug(
+                    "Removing orphaned sensor %s (%s)",
+                    entry.entity_id,
+                    rule.description,
+                )
+                entity_registry.async_remove(entry.entity_id)
+
+    def _refresh_cellular_limit_cleanup_rule(self) -> None:
+        prefix = f"glinet_sensor/{self._factory_mac}/cellular_traffic_sim_"
+        limit_keys = {"data_limit", "days_until_reset"}
+        sim_data = self._traffic_sim_data
+
+        def _matches(entry: RegistryEntry) -> bool:
+            if not entry.unique_id.startswith(prefix):
+                return False
+            suffix = entry.unique_id[len(prefix):]
+            parts = suffix.split("_")
+            if len(parts) < 4:
+                return False
+            return "_".join(parts[2:]) in limit_keys
+
+        def _should_keep(entry: RegistryEntry) -> bool:
+            suffix = entry.unique_id[len(prefix):]
+            parts = suffix.split("_")
+            if len(parts) < 4:
+                return True
+            try:
+                slot = int(parts[0])
+            except (TypeError, ValueError):
+                return True
+            sim_type = parts[1]
+            record = sim_data.get(slot)
+            if not isinstance(record, dict):
+                return True
+            sim_type_record = record.get("sim_type")
+            if sim_type_record is None or str(sim_type_record) != sim_type:
+                return True
+            return bool(record.get("limit_enabled"))
+
+        self._entity_cleanup_rules = [
+            rule
+            for rule in self._entity_cleanup_rules
+            if rule.description != "cellular traffic limit disabled"
+        ]
+        self._entity_cleanup_rules.append(
+            EntityCleanupRule(
+                description="cellular traffic limit disabled",
+                matches=_matches,
+                should_keep=_should_keep,
+            )
+        )
 
     def _traffic_config_bus(self) -> str | None:
         for modem in self._modems.values():
@@ -2111,6 +2206,10 @@ class GLinetHub(DataUpdateCoordinator[None]):
     def event_vpn_tunnels_updated(self) -> str:
         return f"{DOMAIN}-vpn-tunnels-updated-{self._factory_mac}"
 
+    @property
+    def event_cellular_traffic_config_updated(self) -> str:
+        return f"{DOMAIN}-cellular-traffic-config-updated-{self._factory_mac}"
+
 
 def _merge_modem_lists(
     info_modems: list[dict[str, Any]],
@@ -2424,3 +2523,10 @@ def _compute_days_until_reset(record: dict[str, Any]) -> int | None:
     except (ValueError, TypeError, OverflowError):
         return None
     return None
+
+
+@dataclass(frozen=True)
+class EntityCleanupRule:
+    description: str
+    matches: Callable[[RegistryEntry], bool]
+    should_keep: Callable[[RegistryEntry], bool]

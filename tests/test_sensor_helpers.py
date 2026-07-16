@@ -750,6 +750,154 @@ def test_cellular_traffic_sensor_unavailable_when_sim_missing() -> None:
     assert sensor.native_value is None
 
 
+async def test_register_cellular_limit_sensors_creates_when_limit_enabled() -> None:
+    from custom_components.glinet_router.entities.sensor import (
+        CellularTrafficSensor,
+    )
+
+    added: list = []
+
+    async def _add(entities, _update=True):
+        for entity in entities:
+            added.append(entity.unique_id)
+
+    hub = types.SimpleNamespace(
+        device_mac="00:11:22:33:44:55",
+        device_info={},
+        hass=object(),
+        traffic_sim_data={
+            1: {
+                "slot": 1,
+                "sim_type": 0,
+                "traffic_total": 100,
+                "limit_enabled": True,
+                "threshold": 1000,
+                "unit": "MB",
+                "reset_period": "month",
+                "day": 1,
+                "hour": 0,
+                "month": 0,
+                "present": True,
+                "days_until_reset": 5,
+            },
+        },
+    )
+
+    def _feature_enabled(name):
+        return name == "cellular"
+
+    hub.feature_enabled = _feature_enabled
+
+    from custom_components.glinet_router.entities.sensor import (
+        _build_cellular_traffic_descriptions,
+    )
+
+    cellular_tracked: set = set()
+
+    def _register_cellular_limit_sensors():
+        if not hub.feature_enabled("cellular"):
+            return
+        new_entities = []
+        for slot, sim_record in sorted(
+            (hub.traffic_sim_data or {}).items(),
+            key=lambda item: item[0] if isinstance(item[0], int) else int(item[0]),
+        ):
+            if not isinstance(sim_record, dict):
+                continue
+            if not sim_record.get("present"):
+                continue
+            if not sim_record.get("limit_enabled"):
+                continue
+            sim_type = int(sim_record.get("sim_type") or 0)
+            for description in _build_cellular_traffic_descriptions(slot, sim_type):
+                if not description.requires_limit:
+                    continue
+                candidate = CellularTrafficSensor(hub=hub, entity_description=description)
+                if candidate.unique_id in cellular_tracked:
+                    continue
+                cellular_tracked.add(candidate.unique_id)
+                new_entities.append(candidate)
+        if new_entities:
+            import asyncio
+            asyncio.get_event_loop().create_task(_add(new_entities))
+
+    _register_cellular_limit_sensors()
+
+    import asyncio
+    await asyncio.sleep(0.01)
+
+    assert any("data_limit" in uid for uid in added)
+    assert any("days_until_reset" in uid for uid in added)
+
+
+async def test_register_cellular_limit_sensors_recreates_after_cleanup() -> None:
+    from unittest.mock import MagicMock
+
+    from custom_components.glinet_router.entities import sensor as sensor_module
+
+    registry_store: dict[str, MagicMock] = {}
+
+    def _make_entry(unique_id: str) -> MagicMock:
+        entry = MagicMock()
+        entry.unique_id = unique_id
+        entry.entity_id = f"sensor.{unique_id.split('/')[-1]}"
+        registry_store[unique_id] = entry
+        return entry
+
+    def _async_get(_hass):
+        return None
+
+    def _async_entries(_registry, _eid):
+        return list(registry_store.values())
+
+    sensor_module.er.async_get = _async_get
+    sensor_module.er.async_entries_for_config_entry = _async_entries
+
+    hub = MagicMock()
+    hub.feature_enabled.return_value = True
+    hub.device_mac = "00:11:22:33:44:55"
+    hub.hass = MagicMock()
+    hub._entry.entry_id = "test_entry"
+    hub.traffic_sim_data = {
+        1: {
+            "slot": 1,
+            "sim_type": 0,
+            "present": True,
+            "limit_enabled": True,
+            "traffic_total": 100,
+        },
+    }
+
+    added: list = []
+
+    def _capture(entities):
+        for entity in entities:
+            added.append(entity.unique_id)
+            _make_entry(entity.unique_id)
+
+    callback = sensor_module._make_register_cellular_limit_sensors_callback(
+        hub, _capture
+    )
+
+    _make_entry(
+        "glinet_sensor/00:11:22:33:44:55/cellular_traffic_sim_1_0_traffic_total"
+    )
+    callback()
+    assert any("data_limit" in uid for uid in added)
+    assert any("days_until_reset" in uid for uid in added)
+
+    added.clear()
+    callback()
+    assert added == []
+
+    for uid in list(registry_store):
+        if "data_limit" in uid or "days_until_reset" in uid:
+            registry_store.pop(uid)
+    callback()
+    assert any("data_limit" in uid for uid in added)
+    assert any("days_until_reset" in uid for uid in added)
+
+
 def test_cellular_traffic_data_limit_sensors_require_limit_enabled() -> None:
     from custom_components.glinet_router.entities.sensor import (
         _build_cellular_traffic_descriptions,

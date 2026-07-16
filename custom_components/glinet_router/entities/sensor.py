@@ -12,6 +12,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
@@ -845,6 +846,50 @@ def _resolve_uptime(seconds_uptime: float, last_value: datetime | None) -> datet
     return last_value
 
 
+def _make_register_cellular_limit_sensors_callback(
+    hub: GLinetHub, async_add_entities: AddEntitiesCallback
+) -> Callable[[], None]:
+    @callback
+    def _register() -> None:
+        if not hub.feature_enabled(FEATURE_CELLULAR):
+            return
+        entity_registry = er.async_get(hub.hass)
+        existing_ids = {
+            entry.unique_id
+            for entry in er.async_entries_for_config_entry(
+                entity_registry, hub._entry.entry_id
+            )
+            if entry.unique_id.startswith(
+                f"glinet_sensor/{hub.device_mac}/{CELLULAR_TRAFFIC_SIM_PREFIX}_"
+            )
+        }
+        new_entities: list[SensorEntity] = []
+        for slot, sim_record in sorted(
+            (hub.traffic_sim_data or {}).items(),
+            key=lambda item: item[0] if isinstance(item[0], int) else int(item[0]),
+        ):
+            if not isinstance(sim_record, dict):
+                continue
+            if not sim_record.get("present"):
+                continue
+            if not sim_record.get("limit_enabled"):
+                continue
+            sim_type = int(sim_record.get("sim_type") or 0)
+            for description in _build_cellular_traffic_descriptions(slot, sim_type):
+                if not description.requires_limit:
+                    continue
+                candidate = CellularTrafficSensor(
+                    hub=hub, entity_description=description
+                )
+                if candidate.unique_id in existing_ids:
+                    continue
+                new_entities.append(candidate)
+        if new_entities:
+            async_add_entities(new_entities)
+
+    return _register
+
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -928,12 +973,23 @@ async def async_setup_entry(
         if new_entities:
             async_add_entities(new_entities)
 
+    register_cellular_limit_sensors = _make_register_cellular_limit_sensors_callback(
+        hub, async_add_entities
+    )
+
     register_client_sensors()
     entry.async_on_unload(
         async_dispatcher_connect(
             hub.hass,
             hub.event_device_added,
             register_client_sensors,
+        )
+    )
+    entry.async_on_unload(
+        async_dispatcher_connect(
+            hub.hass,
+            hub.event_cellular_traffic_config_updated,
+            register_cellular_limit_sensors,
         )
     )
 

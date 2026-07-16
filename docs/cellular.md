@@ -59,7 +59,7 @@ A `CellularTrafficSensor` triplet is created for **every SIM slot the router act
 | --- | --- | --- | --- |
 | **`Cellular SIM {slot} traffic total`** | Cumulative bytes consumed by this SIM since the last reset. `TOTAL_INCREASING` state class so Home Assistant can compute deltas / dashboard statistics. | `modem/get_traffic_config` → `sim{slot}_traffic_total` | `modem/get_traffic_config` → `traffic[slot].traffic_total` |
 | **`Cellular SIM {slot} days until reset`** | Whole-day countdown to the data limit's next reset. `None` when the limit is disabled or the period is unsupported. | `modem/get_traffic_config` → `sim{slot}_limit.{reset_period,day,hour,month}` | `modem/get_traffic_config` → `limit[slot].{reset_period,day,hour,month}` |
-| **`Cellular SIM {slot} data limit`** | Configured data limit for this SIM in bytes. The router reports the threshold in `KB`/`MB`/`GB`/`TB`; the integration converts to bytes using decimal (1000-based) units. `None` when the limit is disabled. | `modem/get_traffic_config` → `sim{slot}_limit.{threshold,unit,enable}` | `modem/get_traffic_config` → `limit[slot].{threshold,unit,enable}` |
+| **`Cellular SIM {slot} data limit`** | Configured data limit for this SIM, presented literally as bytes. The router reports the threshold already scaled by its `unit` (`KB`/`MB`/`GB`/`TB`), so the integration forwards the raw value without any further conversion. `None` when the limit is disabled. | `modem/get_traffic_config` → `sim{slot}_limit.{threshold,unit,enable}` | `modem/get_traffic_config` → `limit[slot].{threshold,unit,enable}` |
 
 The `data limit` sensor carries the following diagnostic attributes for automation / template use:
 
@@ -71,7 +71,7 @@ The `data limit` sensor carries the following diagnostic attributes for automati
 - `day` / `hour` / `month` — the anchor fields used to compute the next reset.
 - `save_to_flash` — whether the router persists the counter across reboots.
 
-> **Conditional visibility**: the sensors are only registered for SIMs whose `traffic_total` is non-zero. If a SIM has no recorded traffic it won't show up at all, and disabling the **Cellular** feature clears the registered entities during the next reload (the standard orphan-cleanup pass in `async_initialize_hub` removes anything matching the `cellular_` prefix when the feature is off).
+> **Conditional visibility**: the `traffic total` sensor is only registered for SIMs whose `traffic_total` is non-zero. The `days until reset` and `data limit` sensors additionally require the SIM's `enable` flag (returned in the `limit` block) to be `true` — if the data limit is disabled on a SIM those two sensors are skipped even when the SIM has traffic. When you toggle a SIM's data limit off (or back on) in the router, the affected sensors are removed from — or re-added to — the entity registry on the next refresh; no reload required. Disabling the **Cellular** feature clears the registered entities during the next reload (the standard orphan-cleanup pass in `async_initialize_hub` removes anything matching the `cellular_` prefix when the feature is off).
 
 ### WAN Status Sensors
 
@@ -132,3 +132,4 @@ For details on how the modem APIs are queried and parsed, see the [Modem API Cov
 - [Modem API Coverage](modem-api.md) — Details on how the modem APIs are queried and parsed.
 - [Services & Actions](services.md) — How to use Home Assistant services with this integration.
 - [Entity Reference](entities.md) — All core and optional entities.
+- [Sensor Cleanup](sensor-cleanup.md) — How the integration keeps the entity registry in sync with the router.

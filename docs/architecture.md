@@ -50,3 +50,4 @@ Services are registered in `async_setup_entry` (via `services.async_register_ser
 - [Developer Reference](developer-reference.md) — Contributing, tooling, and project structure.
 - [Runtime State & Poller (Hub)](hub.md) — Details on the `GLinetHub` and `DataUpdateCoordinator`.
 - [Router API Notes](router-api.md) — Endpoints, authentication, and module inventory.
+- [Sensor Cleanup](sensor-cleanup.md) — How the integration keeps the entity registry in sync with the router.
