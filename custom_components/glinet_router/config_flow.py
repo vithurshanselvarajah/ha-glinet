@@ -246,7 +246,6 @@ class SetupHub:
     def __init__(
         self, host: str, hass: HomeAssistant, verify_ssl: bool = True
     ) -> None:
-    def __init__(self, host: str, hass: HomeAssistant) -> None:
         self.host = host
         self.username = DEFAULT_USERNAME
         self.router = GLinetApiClient(
