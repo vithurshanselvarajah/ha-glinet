@@ -144,6 +144,12 @@ For support, questions, or general discussion, join the Discord:
 
 [![Discord Banner](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Metvr5hC3m)
 
+Want to contribute a fix, feature, or docs improvement? See
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for the full guide. All pull
+requests target the `development` branch — PRs opened against
+`main` are flagged and will not be merged, except for release PRs
+cut by the maintainer team.
+
 ### Why I built this
 I use this integration at home and wanted something that fit the way I actually use GL.iNet hardware. Over time it grew into a broader setup for router control, monitoring, and automation.
 

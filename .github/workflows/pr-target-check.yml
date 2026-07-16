@@ -1,0 +1,140 @@
+name: PR target check
+
+# Warn (via comment + label) on any pull request opened against `main`
+# that is not a release PR. The only sanctioned way to land code on
+# `main` is a PR from `development` → `main`. See CONTRIBUTING.md.
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-target:
+    name: Validate PR target branch
+    runs-on: ubuntu-latest
+    # Only run when the base branch is `main`. PRs against
+    # `development` are the normal case and need no action.
+    if: github.event.pull_request.base.ref == 'main'
+    steps:
+      - name: Comment and label on wrong-target PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const headRef = pr.head.ref;
+            const baseRef = pr.base.ref;
+            const sender = pr.user.login;
+
+            // Allowed: a release PR from the `development` branch.
+            if (headRef === 'development') {
+              core.info(`PR #${pr.number} is a development → ${baseRef} release PR. Skipping.`);
+              return;
+            }
+
+            // Allowed (by repo policy, if you choose to): a release
+            // PR from a `release/*` branch. Uncomment to enable:
+            //
+            // if (headRef.startsWith('release/')) {
+            //   core.info(`PR #${pr.number} is a release branch → ${baseRef} PR. Skipping.`);
+            //   return;
+            // }
+
+            // Otherwise: wrong target. Comment once, apply labels.
+            const marker = '<!-- pr-target-check: wrong-target -->';
+            const comment = [
+              marker,
+              `## ⚠️ This PR targets \`${baseRef}\`, not \`development\``,
+              '',
+              'Thanks for opening this pull request! Unfortunately, the',
+              'base branch is wrong:',
+              '',
+              `- **Base branch:** \`${baseRef}\``,
+              `- **Expected base branch:** \`development\``,
+              '',
+              'All day-to-day work in this repository lands on the',
+              '`development` branch. Pull requests against `main` are',
+              'reserved for **releases** (a squash-merge of `development`',
+              'into `main`), which are managed by the maintainer team.',
+              '',
+              '### What to do',
+              '',
+              '1. Close this PR.',
+              '2. Open a new PR against `development` instead.',
+              '   See [`CONTRIBUTING.md`](./CONTRIBUTING.md#branching--prs)',
+              '   for the full contribution flow.',
+              '',
+              'If you believe this PR is genuinely a release, please ping',
+              'a maintainer (@vithurshanselvarajah) so we can confirm',
+              'and re-target it manually.',
+              '',
+              '_This message was posted automatically by `.github/workflows/pr-target-check.yml`._',
+            ].join('\n');
+
+            // Only post a fresh comment if we have not already
+            // posted one. Avoids spamming on every `synchronize`.
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              per_page: 100,
+            });
+            const alreadyCommented = comments.some(
+              (c) => c.user && c.user.login === 'github-actions[bot]' && c.body && c.body.includes(marker),
+            );
+            if (!alreadyCommented) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: comment,
+              });
+            }
+
+            // Apply labels (idempotent).
+            const labelsToApply = ['wrong-target', 'needs-triage'];
+            for (const label of labelsToApply) {
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  labels: [label],
+                });
+              } catch (err) {
+                // The label may not exist yet — create it best-effort,
+                // then retry once.
+                core.warning(`Could not add label "${label}": ${err.message}. Attempting to create it.`);
+                try {
+                  await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label,
+                    color: label === 'wrong-target' ? 'd93f0b' : 'fbca04',
+                    description:
+                      label === 'wrong-target'
+                        ? 'Opened against a protected branch (e.g. main) — should target `development`.'
+                        : 'Awaiting maintainer triage.',
+                  });
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: pr.number,
+                    labels: [label],
+                  });
+                } catch (innerErr) {
+                  core.warning(`Failed to create/apply label "${label}": ${innerErr.message}`);
+                }
+              }
+            }
+
+            core.setFailed(
+              `PR #${pr.number} targets \`${baseRef}\`; expected \`development\`. Comment posted and labelled.`,
+            );

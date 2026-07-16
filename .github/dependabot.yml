@@ -1,3 +1,8 @@
+# All Dependabot PRs are opened against the `development` branch,
+# which is the integration branch. Releases are cut from `development`
+# into `main`; Dependabot should never target `main` directly.
+# See CONTRIBUTING.md and .github/BRANCH_PROTECTION.md for context.
+
 version: 2
 updates:
   # Check for Python dependency updates
@@ -6,6 +11,7 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    target-branch: "development"
 
   # Check for GitHub Actions updates
   - package-ecosystem: "github-actions"
@@ -13,3 +19,4 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    target-branch: "development"

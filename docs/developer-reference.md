@@ -69,6 +69,23 @@ python -m ruff format custom_components tests
 ### Dependencies
 Do not add massive third-party library dependencies unless absolutely necessary. Home Assistant integrations should remain lightweight. The core integration relies only on `aiohttp` (which is native to HA).
 
+## Branching & PRs
+
+The repository uses a two-branch model: `main` is the release branch
+and `development` is the integration branch. **All day-to-day pull
+requests target `development`.** Releases are cut as a `development`
+→ `main` PR by the maintainer(s).
+
+A bot ([`pr-target-check.yml`](../.github/workflows/pr-target-check.yml))
+comments and applies the `wrong-target` label to any PR opened
+against `main` that is not a `development` → `main` release. Outside
+contributors fork the repository and submit from a fork — no one
+outside the maintainer team has direct write access.
+
+For the full contribution flow, see
+[`CONTRIBUTING.md`](../CONTRIBUTING.md) and
+[`.github/BRANCH_PROTECTION.md`](../.github/BRANCH_PROTECTION.md).
+
 ## Related Pages
 
 - [Architecture](architecture.md) — How the integration is structured and interacts with Home Assistant.
@@ -76,3 +93,4 @@ Do not add massive third-party library dependencies unless absolutely necessary.
 - [Router API Notes](router-api.md) — Endpoints, authentication, and module inventory.
 - [Modem API Coverage](modem-api.md) — Details on the optional cellular modem API.
 - [CI and Release Workflows](ci-release.md) — How automated testing and releases work.
+- [`CONTRIBUTING.md`](../CONTRIBUTING.md) — Full contributor guide.
