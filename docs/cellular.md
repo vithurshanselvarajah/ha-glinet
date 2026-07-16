@@ -129,7 +129,7 @@ For details on how the modem APIs are queried and parsed, see the [Modem API Cov
 
 ## Related Pages
 
-- [Modem API Coverage](modem-api.md) — Details on how the modem APIs are queried and parsed.
-- [Services & Actions](services.md) — How to use Home Assistant services with this integration.
-- [Entity Reference](entities.md) — All core and optional entities.
-- [Sensor Cleanup](sensor-cleanup.md) — How the integration keeps the entity registry in sync with the router.
+- [Modem API Coverage](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/modem-api) — Details on how the modem APIs are queried and parsed.
+- [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/services) — How to use Home Assistant services with this integration.
+- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities) — All core and optional entities.
+- [Sensor Cleanup](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/sensor-cleanup) — How the integration keeps the entity registry in sync with the router.

@@ -67,6 +67,6 @@ maintainer decides what to do with it.
 
 ## Related Pages
 
-- [Developer Reference](developer-reference.md) — Contributing, tooling, and project structure.
+- [Developer Reference](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/developer-reference) — Contributing, tooling, and project structure.
 - [`CONTRIBUTING.md`](https://github.com/vithurshanselvarajah/ha-glinet-router/blob/main/CONTRIBUTING.md) — Full contributor guide.
 - [`BRANCH_PROTECTION.md`](https://github.com/vithurshanselvarajah/ha-glinet-router/blob/main/.github/BRANCH_PROTECTION.md) — Intended branch-protection ruleset.

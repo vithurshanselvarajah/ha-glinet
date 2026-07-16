@@ -20,5 +20,5 @@ data:
 
 ## Related Pages
 
-- [Services & Actions](services.md) — How to use Home Assistant services with this integration.
-- [Refresh Clients](refresh-clients.md) — The `refresh_clients` service.
+- [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/services) — How to use Home Assistant services with this integration.
+- [Refresh Clients](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/refresh-clients) — The `refresh_clients` service.

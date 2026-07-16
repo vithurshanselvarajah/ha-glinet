@@ -12,5 +12,5 @@ To enable this feature, check the **Parental & Access Control** option under **E
 
 | Page | Description |
 | --- | --- |
-| [Parental Control](parental-control-feature.md) | Group switches, filtering mode, temporary overrides, and signature updates. |
-| [Access Control](access-control.md) | Per-client internet access switches, blacklist/whitelist mode, and device blocking. |
+| [Parental Control](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/parental-control-feature) | Group switches, filtering mode, temporary overrides, and signature updates. |
+| [Access Control](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/access-control) | Per-client internet access switches, blacklist/whitelist mode, and device blocking. |

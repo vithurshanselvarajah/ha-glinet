@@ -169,5 +169,5 @@ The modem PDF also documents mutating APIs for reconnecting, auto-connect, SIM c
 
 ## Related Pages
 
-- [Cellular](cellular.md) — Cellular feature user reference.
-- [Router API Notes](router-api.md) — Endpoints, authentication, and module inventory.
+- [Cellular](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/cellular) — Cellular feature user reference.
+- [Router API Notes](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/router-api) — Endpoints, authentication, and module inventory.

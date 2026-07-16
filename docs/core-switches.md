@@ -9,6 +9,6 @@ The integration exposes two core switches that are always available regardless o
 
 ## Related Pages
 
-- [Entity Reference parent page](entities.md)
-- [System Sensors](system-sensors.md) — CPU, load, memory, flash, and WAN status sensors.
-- [Binary Sensors](core-binary-sensors.md) — Fan status, repeater, and parental override sensors.
+- [Entity Reference parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities)
+- [System Sensors](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/system-sensors) — CPU, load, memory, flash, and WAN status sensors.
+- [Binary Sensors](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/core-binary-sensors) — Fan status, repeater, and parental override sensors.

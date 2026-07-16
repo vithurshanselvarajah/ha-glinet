@@ -8,8 +8,8 @@ These methods are used internally to apply configuration changes to a running hu
 
 ## Related Pages
 
-- [Hub Overview](hub.md)
-- [Hub Core Functions](hub-core.md)
-- [Data Fetching](hub-data-fetching.md)
-- [Action Functions](hub-action-functions.md)
-- [Parental Control Helpers](hub-parental-helpers.md)
+- [Hub Overview](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub)
+- [Hub Core Functions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-core)
+- [Data Fetching](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-data-fetching)
+- [Action Functions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-action-functions)
+- [Parental Control Helpers](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-parental-helpers)

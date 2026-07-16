@@ -57,5 +57,5 @@ Updates the KMWAN interface-failure sensitivity.
 
 ## Related Pages
 
-- [MWAN3](mwan3.md) — Alternative multi-WAN policy engine.
-- [Router API Notes](router-api.md) — Endpoints, authentication, and module inventory.
+- [MWAN3](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/mwan3) — Alternative multi-WAN policy engine.
+- [Router API Notes](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/router-api) — Endpoints, authentication, and module inventory.

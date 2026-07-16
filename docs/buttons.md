@@ -9,6 +9,6 @@ The integration exposes two core buttons that are always available regardless of
 
 ## Related Pages
 
-- [Entity Reference parent page](entities.md)
-- [Update](update-entity.md) — Firmware update entity.
-- [Device Trackers](device-trackers.md) — Per-client device tracking.
+- [Entity Reference parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities)
+- [Update](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/update-entity) — Firmware update entity.
+- [Device Trackers](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/device-trackers) — Per-client device tracking.

@@ -6,28 +6,28 @@ For entities related to optional features, visit their respective pages:
 
 | Optional Feature | Wiki Page |
 | --- | --- |
-| Cellular sensors | [Cellular](cellular.md) |
-| Repeater sensors, switches, selects & binary sensors | [Repeater](repeater.md) |
-| SMS sensor | [SMS](sms.md) |
-| Tailscale switch | [Tailscale](tailscale.md) |
-| WireGuard client switches | [WireGuard Client](wireguard-client.md) |
-| WireGuard server sensor & switch | [WireGuard Server](wireguard-server.md) |
-| OpenVPN client switches | [OpenVPN Client](openvpn-client.md) |
-| OpenVPN server sensor & switch | [OpenVPN Server](openvpn-server.md) |
-| ZeroTier switch | [ZeroTier](zerotier.md) |
-| AdGuard Home switches | [AdGuard Home](adguard-home.md) |
-| Firewall sensors & switches | [Firewall](firewall.md) |
-| Battery sensors & binary sensor | [MCU Battery](mcu-battery.md) |
-| MCU OLED (services only — no entities) | [MCU OLED](mcu-oled.md) |
-| Parental control sensors, switches, selects & binary sensors | [Parental & Access Control](parental-control.md) |
+| Cellular sensors | [Cellular](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/cellular) |
+| Repeater sensors, switches, selects & binary sensors | [Repeater](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/repeater) |
+| SMS sensor | [SMS](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/sms) |
+| Tailscale switch | [Tailscale](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/tailscale) |
+| WireGuard client switches | [WireGuard Client](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/wireguard-client) |
+| WireGuard server sensor & switch | [WireGuard Server](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/wireguard-server) |
+| OpenVPN client switches | [OpenVPN Client](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/openvpn-client) |
+| OpenVPN server sensor & switch | [OpenVPN Server](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/openvpn-server) |
+| ZeroTier switch | [ZeroTier](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/zerotier) |
+| AdGuard Home switches | [AdGuard Home](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/adguard-home) |
+| Firewall sensors & switches | [Firewall](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/firewall) |
+| Battery sensors & binary sensor | [MCU Battery](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/mcu-battery) |
+| MCU OLED (services only — no entities) | [MCU OLED](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/mcu-oled) |
+| Parental control sensors, switches, selects & binary sensors | [Parental & Access Control](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/parental-control) |
 
 ## Core Entity Pages
 
 | Page | Description |
 | --- | --- |
-| [Buttons](buttons.md) | Reboot and fan test buttons. |
-| [Firmware Update](update-entity.md) | Native Home Assistant firmware update entity. |
-| [Device Trackers](device-trackers.md) | Per-client device tracking. |
-| [System Sensors](system-sensors.md) | CPU, load, memory, flash, WAN status, and client bandwidth sensors. |
-| [Core Switches](core-switches.md) | WiFi interface and system LED switches. |
+| [Buttons](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/buttons) | Reboot and fan test buttons. |
+| [Firmware Update](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/update-entity) | Native Home Assistant firmware update entity. |
+| [Device Trackers](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/device-trackers) | Per-client device tracking. |
+| [System Sensors](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/system-sensors) | CPU, load, memory, flash, WAN status, and client bandwidth sensors. |
+| [Core Switches](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/core-switches) | WiFi interface and system LED switches. |
 

@@ -60,7 +60,7 @@ Returns configured firewall rules as action response data.
 
 ## Related Pages
 
-- [Port Forwards](port-forwards.md) — Add and remove port forwarding rules.
-- [DMZ](dmz.md) — Toggle the DMZ feature.
-- [WAN Access](wan-access.md) — Toggle WAN ping, HTTPS, and SSH access.
-- [Firewall parent page](firewall.md)
+- [Port Forwards](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/port-forwards) — Add and remove port forwarding rules.
+- [DMZ](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/dmz) — Toggle the DMZ feature.
+- [WAN Access](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/wan-access) — Toggle WAN ping, HTTPS, and SSH access.
+- [Firewall parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/firewall)

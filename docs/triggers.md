@@ -2,9 +2,9 @@
 
 This integration does **not** provide any custom trigger platform (e.g. integration-level event triggers or device automations of its own).
 
-You can still build automations that react to GL.iNet router state by using **state triggers** on the entities the integration exposes — for example, trigger when the `binary_sensor.repeater_connected` state changes, or when a `sensor.fan_speed` crosses a threshold. For a full list of entities, see the [Entity Reference](entities.md).
+You can still build automations that react to GL.iNet router state by using **state triggers** on the entities the integration exposes — for example, trigger when the `binary_sensor.repeater_connected` state changes, or when a `sensor.fan_speed` crosses a threshold. For a full list of entities, see the [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities).
 
-A ready-made pattern is also available for SMS events using Home Assistant's built-in `time_pattern` trigger — see [Automation Templates → SMS Notification](automation-sms-notification.md).
+A ready-made pattern is also available for SMS events using Home Assistant's built-in `time_pattern` trigger — see [Automation Templates → SMS Notification](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/automation-sms-notification).
 
 ## Examples
 
@@ -38,5 +38,5 @@ action:
 
 ## Related Pages
 
-- [Conditions](conditions.md)
-- [Services & Actions parent page](services.md)
+- [Conditions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/conditions)
+- [Services & Actions parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/services)

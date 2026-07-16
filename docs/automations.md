@@ -24,6 +24,6 @@ Ready-made Home Assistant automation templates for the GL.iNet integration. Thes
 
 ## Related Pages
 
-- [Services & Actions](services.md) — How to use Home Assistant services with this integration.
-- [Triggers](triggers.md) — Building automations that react to GL.iNet router state.
-- [Conditions](conditions.md) — Using Home Assistant's built-in conditions on integration entities.
+- [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/services) — How to use Home Assistant services with this integration.
+- [Triggers](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/triggers) — Building automations that react to GL.iNet router state.
+- [Conditions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/conditions) — Using Home Assistant's built-in conditions on integration entities.

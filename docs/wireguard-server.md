@@ -26,5 +26,5 @@ To enable this feature, check the **WireGuard Server** option under **Enabled Fe
 
 ## Related Pages
 
-- [Services & Actions](services.md) — How to use Home Assistant services with this integration.
-- [Entity Reference](entities.md) — All core and optional entities.
+- [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/services) — How to use Home Assistant services with this integration.
+- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities) — All core and optional entities.

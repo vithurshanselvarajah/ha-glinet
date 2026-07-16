@@ -28,5 +28,5 @@ If a device uses randomized MAC addresses, Home Assistant may see each randomize
 
 ## Related Pages
 
-- [Entity Reference parent page](entities.md)
-- [Unknown Devices](unknown-devices.md) — Allow/blocklist controls for unknown devices.
+- [Entity Reference parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities)
+- [Unknown Devices](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/unknown-devices) — Allow/blocklist controls for unknown devices.

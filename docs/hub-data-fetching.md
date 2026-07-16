@@ -33,8 +33,8 @@ These methods are called during the coordinator update cycle to pull data from t
 
 ## Related Pages
 
-- [Hub Overview](hub.md)
-- [Hub Core Functions](hub-core.md)
-- [Action Functions](hub-action-functions.md)
-- [Option Updates](hub-option-updates.md)
-- [Parental Control Helpers](hub-parental-helpers.md)
+- [Hub Overview](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub)
+- [Hub Core Functions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-core)
+- [Action Functions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-action-functions)
+- [Option Updates](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-option-updates)
+- [Parental Control Helpers](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-parental-helpers)

@@ -15,8 +15,8 @@ The `GLinetHub` class inherits from `DataUpdateCoordinator` and manages communic
 
 ## Related Pages
 
-- [Hub Overview](hub.md) — Index of Hub reference pages.
-- [Data Fetching](hub-data-fetching.md) — Per-feature polling functions.
-- [Action Functions](hub-action-functions.md) — Hub action methods.
-- [Option Updates](hub-option-updates.md) — Runtime options handling.
-- [Parental Control Helpers](hub-parental-helpers.md) — Group lookup and access control helpers.
+- [Hub Overview](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub) — Index of Hub reference pages.
+- [Data Fetching](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-data-fetching) — Per-feature polling functions.
+- [Action Functions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-action-functions) — Hub action methods.
+- [Option Updates](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-option-updates) — Runtime options handling.
+- [Parental Control Helpers](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-parental-helpers) — Group lookup and access control helpers.

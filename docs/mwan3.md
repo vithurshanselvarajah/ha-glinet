@@ -48,5 +48,5 @@ Updates a single MWAN3 interface.
 
 ## Related Pages
 
-- [KMWAN](kmwan.md) — GL.iNet's preferred multi-WAN policy engine.
-- [Router API Notes](router-api.md) — Endpoints, authentication, and module inventory.
+- [KMWAN](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/kmwan) — GL.iNet's preferred multi-WAN policy engine.
+- [Router API Notes](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/router-api) — Endpoints, authentication, and module inventory.

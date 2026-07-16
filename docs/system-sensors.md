@@ -35,6 +35,6 @@ These sensors are created only when the router reports bandwidth fields in the c
 
 ## Related Pages
 
-- [Entity Reference parent page](entities.md)
-- [Switches](core-switches.md) — WiFi and LED core switches.
-- [Binary Sensors](core-binary-sensors.md) — Fan status, repeater, and parental override sensors.
+- [Entity Reference parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities)
+- [Switches](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/core-switches) — WiFi and LED core switches.
+- [Binary Sensors](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/core-binary-sensors) — Fan status, repeater, and parental override sensors.

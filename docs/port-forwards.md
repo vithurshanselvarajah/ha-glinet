@@ -62,7 +62,7 @@ Removes a port forwarding rule. If `remove_all` is `true`, all port forwarding r
 
 ## Related Pages
 
-- [Firewall Rules](firewall-rules.md) — Add and remove custom firewall rules.
-- [DMZ](dmz.md) — Toggle the DMZ feature.
-- [WAN Access](wan-access.md) — Toggle WAN ping, HTTPS, and SSH access.
-- [Firewall parent page](firewall.md)
+- [Firewall Rules](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/firewall-rules) — Add and remove custom firewall rules.
+- [DMZ](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/dmz) — Toggle the DMZ feature.
+- [WAN Access](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/wan-access) — Toggle WAN ping, HTTPS, and SSH access.
+- [Firewall parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/firewall)

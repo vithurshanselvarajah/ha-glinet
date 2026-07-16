@@ -59,5 +59,5 @@ mode: single
 
 ## Related Pages
 
-- [Automation Templates](automations.md) — Index of available automation templates.
-- [SMS](sms.md) — SMS feature reference.
+- [Automation Templates](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/automations) — Index of available automation templates.
+- [SMS](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/sms) — SMS feature reference.

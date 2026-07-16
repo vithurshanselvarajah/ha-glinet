@@ -20,7 +20,7 @@ To enable this feature, check the **Firewall** option under **Enabled Features**
 
 ## Related Pages
 
-- [Firewall Rules](firewall-rules.md) — Add and remove custom firewall rules.
-- [Port Forwards](port-forwards.md) — Add and remove port forwarding rules.
-- [DMZ](dmz.md) — Toggle the DMZ feature.
-- [Firewall parent page](firewall.md)
+- [Firewall Rules](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/firewall-rules) — Add and remove custom firewall rules.
+- [Port Forwards](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/port-forwards) — Add and remove port forwarding rules.
+- [DMZ](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/dmz) — Toggle the DMZ feature.
+- [Firewall parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/firewall)

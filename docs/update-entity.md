@@ -13,5 +13,5 @@ The integration exposes a native Home Assistant update entity that surfaces the 
 
 ## Related Pages
 
-- [Entity Reference parent page](entities.md)
-- [Buttons](buttons.md) — Reboot and fan test buttons.
+- [Entity Reference parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities)
+- [Buttons](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/buttons) — Reboot and fan test buttons.

@@ -49,8 +49,8 @@ Action methods perform a write to the router or trigger a router-side behavior. 
 
 ## Related Pages
 
-- [Hub Overview](hub.md)
-- [Hub Core Functions](hub-core.md)
-- [Data Fetching](hub-data-fetching.md)
-- [Option Updates](hub-option-updates.md)
-- [Parental Control Helpers](hub-parental-helpers.md)
+- [Hub Overview](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub)
+- [Hub Core Functions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-core)
+- [Data Fetching](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-data-fetching)
+- [Option Updates](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-option-updates)
+- [Parental Control Helpers](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-parental-helpers)

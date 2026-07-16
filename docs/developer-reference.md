@@ -33,7 +33,7 @@ The `GLinetHub` is the heart of the integration. It inherits from `DataUpdateCoo
 - **Polling Loop:** Executing API requests sequentially every scan interval (user-configurable, default 30s) to prevent overwhelming the router's lighttpd server.
 - **Caching:** Storing the latest fetched values from the API models so Home Assistant entities can read them instantly without making network calls.
 
-> For more details on the Hub's functions and data fetching logic, see the [Runtime State & Poller Reference](hub.md).
+> For more details on the Hub's functions and data fetching logic, see the [Runtime State & Poller Reference](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub).
 
 ### Diagnostics (`diagnostics.py`)
 The integration implements the Home Assistant `diagnostics` platform. This allows users to download a sanitized JSON snapshot of the router's state for debugging. 
@@ -99,9 +99,9 @@ For the full contribution flow, see
 
 ## Related Pages
 
-- [Architecture](architecture.md) — How the integration is structured and interacts with Home Assistant.
-- [Runtime State & Poller (Hub)](hub.md) — Details on the `GLinetHub` and `DataUpdateCoordinator`.
-- [Router API Notes](router-api.md) — Endpoints, authentication, and module inventory.
-- [Modem API Coverage](modem-api.md) — Details on the optional cellular modem API.
-- [CI and Release Workflows](ci-release.md) — How automated testing and releases work.
+- [Architecture](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/architecture) — How the integration is structured and interacts with Home Assistant.
+- [Runtime State & Poller (Hub)](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub) — Details on the `GLinetHub` and `DataUpdateCoordinator`.
+- [Router API Notes](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/router-api) — Endpoints, authentication, and module inventory.
+- [Modem API Coverage](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/modem-api) — Details on the optional cellular modem API.
+- [CI and Release Workflows](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/ci-release) — How automated testing and releases work.
 - [`CONTRIBUTING.md`](../CONTRIBUTING.md) — Full contributor guide.

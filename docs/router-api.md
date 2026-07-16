@@ -51,6 +51,6 @@ sid, module-name, function-name, optional parameters
 
 ## Related Pages
 
-- [KMWAN](kmwan.md) — KMWAN multi-WAN services.
-- [MWAN3](mwan3.md) — MWAN3 multi-WAN services.
-- [Modem API Coverage](modem-api.md) — Cellular modem API.
+- [KMWAN](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/kmwan) — KMWAN multi-WAN services.
+- [MWAN3](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/mwan3) — MWAN3 multi-WAN services.
+- [Modem API Coverage](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/modem-api) — Cellular modem API.

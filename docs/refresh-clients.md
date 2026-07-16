@@ -30,5 +30,5 @@ action: glinet_router.refresh_clients
 
 ## Related Pages
 
-- [Targeting a Specific Router](router-targeting.md)
-- [Services & Actions parent page](services.md)
+- [Targeting a Specific Router](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/router-targeting)
+- [Services & Actions parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/services)

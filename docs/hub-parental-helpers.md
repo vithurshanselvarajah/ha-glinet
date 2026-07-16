@@ -11,8 +11,8 @@ These properties and methods are used internally by entities and service handler
 
 ## Related Pages
 
-- [Hub Overview](hub.md)
-- [Hub Core Functions](hub-core.md)
-- [Data Fetching](hub-data-fetching.md)
-- [Action Functions](hub-action-functions.md)
-- [Option Updates](hub-option-updates.md)
+- [Hub Overview](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub)
+- [Hub Core Functions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-core)
+- [Data Fetching](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-data-fetching)
+- [Action Functions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-action-functions)
+- [Option Updates](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub-option-updates)

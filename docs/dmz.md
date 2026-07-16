@@ -30,7 +30,7 @@ Configures DMZ settings.
 
 ## Related Pages
 
-- [Firewall Rules](firewall-rules.md) — Add and remove custom firewall rules.
-- [Port Forwards](port-forwards.md) — Add and remove port forwarding rules.
-- [WAN Access](wan-access.md) — Toggle WAN ping, HTTPS, and SSH access.
-- [Firewall parent page](firewall.md)
+- [Firewall Rules](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/firewall-rules) — Add and remove custom firewall rules.
+- [Port Forwards](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/port-forwards) — Add and remove port forwarding rules.
+- [WAN Access](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/wan-access) — Toggle WAN ping, HTTPS, and SSH access.
+- [Firewall parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/firewall)

@@ -72,5 +72,5 @@ Enables or bypasses configured schedules for a parental control group.
 
 ## Related Pages
 
-- [Access Control](access-control.md) — Blacklist/whitelist internet access control per device.
-- [Parental & Access Control parent page](parental-control.md)
+- [Access Control](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/access-control) — Blacklist/whitelist internet access control per device.
+- [Parental & Access Control parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/parental-control)

@@ -30,5 +30,5 @@ This feature is especially useful if you want Home Assistant to stay tidy and on
 
 ## Related Pages
 
-- [Device Trackers](device-trackers.md) — Per-client device tracking.
-- [Entity Reference](entities.md) — All core and optional entities.
+- [Device Trackers](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/device-trackers) — Per-client device tracking.
+- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities) — All core and optional entities.

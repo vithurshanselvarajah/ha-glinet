@@ -26,5 +26,5 @@ condition:
 
 ## Related Pages
 
-- [Triggers](triggers.md)
-- [Services & Actions parent page](services.md)
+- [Triggers](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/triggers)
+- [Services & Actions parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/services)

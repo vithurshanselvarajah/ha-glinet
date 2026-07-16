@@ -18,6 +18,6 @@ The integration exposes core binary sensors. Some are always available, while ot
 
 ## Related Pages
 
-- [Entity Reference parent page](entities.md)
-- [System Sensors](system-sensors.md) — CPU, load, memory, flash, and WAN status sensors.
-- [Core Switches](core-switches.md) — WiFi and LED core switches.
+- [Entity Reference parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities)
+- [System Sensors](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/system-sensors) — CPU, load, memory, flash, and WAN status sensors.
+- [Core Switches](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/core-switches) — WiFi and LED core switches.

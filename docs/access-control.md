@@ -39,5 +39,5 @@ Blocks or unblocks a specific client device by MAC address.
 
 ## Related Pages
 
-- [Parental Control](parental-control.md) — Group switches, filtering mode, overrides, and signature updates.
-- [Parental & Access Control parent page](parental-control.md)
+- [Parental Control](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/parental-control) — Group switches, filtering mode, overrides, and signature updates.
+- [Parental & Access Control parent page](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/parental-control)
