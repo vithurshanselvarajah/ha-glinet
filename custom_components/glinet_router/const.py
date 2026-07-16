@@ -13,6 +13,7 @@ CONF_WAN_STATUS_MONITORS = "wan_status_monitors"
 CONF_UNKNOWN_DEVICES_FILTER_MODE = "unknown_devices_filter_mode"
 CONF_UNKNOWN_DEVICES_FILTER_SELECT = "unknown_devices_filter_select"
 CONF_UNKNOWN_DEVICES_FILTER_MANUAL = "unknown_devices_filter_manual"
+CONF_VERIFY_SSL = "verify_ssl"
 DEFAULT_UNKNOWN_DEVICES_FILTER_MODE = "blacklist"
 
 WAN_INTERFACE_NAMES = {

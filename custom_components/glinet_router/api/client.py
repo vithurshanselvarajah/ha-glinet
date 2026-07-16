@@ -92,8 +92,10 @@ class GLinetApiClient:
         base_url: str,
         session: ClientSession,
         sid: str | None = None,
+        verify_ssl: bool = True
     ) -> None:
         self._base_url = base_url.rstrip("/")
+        self._ssl_setting = None if verify_ssl else False
         self._session = session
         self.sid = sid
         self._logged_in = sid is not None
@@ -148,6 +150,7 @@ class GLinetApiClient:
             self._base_url,
             json=payload,
             timeout=timeout_seconds,
+            ssl=self._ssl_setting
         ) as response:
             return await _extract_response_data(response)
 
