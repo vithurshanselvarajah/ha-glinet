@@ -856,9 +856,7 @@ def _make_register_cellular_limit_sensors_callback(
         entity_registry = er.async_get(hub.hass)
         existing_ids = {
             entry.unique_id
-            for entry in er.async_entries_for_config_entry(
-                entity_registry, hub._entry.entry_id
-            )
+            for entry in er.async_entries_for_config_entry(entity_registry, hub._entry.entry_id)
             if entry.unique_id.startswith(
                 f"glinet_sensor/{hub.device_mac}/{CELLULAR_TRAFFIC_SIM_PREFIX}_"
             )
@@ -878,9 +876,7 @@ def _make_register_cellular_limit_sensors_callback(
             for description in _build_cellular_traffic_descriptions(slot, sim_type):
                 if not description.requires_limit:
                     continue
-                candidate = CellularTrafficSensor(
-                    hub=hub, entity_description=description
-                )
+                candidate = CellularTrafficSensor(hub=hub, entity_description=description)
                 if candidate.unique_id in existing_ids:
                     continue
                 new_entities.append(candidate)
@@ -954,9 +950,7 @@ async def async_setup_entry(
             for description in _build_cellular_traffic_descriptions(slot, sim_type):
                 if description.requires_limit and not limit_enabled:
                     continue
-                entities.append(
-                    CellularTrafficSensor(hub=hub, entity_description=description)
-                )
+                entities.append(CellularTrafficSensor(hub=hub, entity_description=description))
 
     async_add_entities(entities, True)
 

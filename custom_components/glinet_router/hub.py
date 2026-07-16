@@ -1497,9 +1497,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
     async def _async_cleanup_orphaned_sensor_entities(self) -> None:
         rules = getattr(self, "_entity_cleanup_rules", None) or []
         entity_registry = er.async_get(self.hass)
-        entries = er.async_entries_for_config_entry(
-            entity_registry, self._entry.entry_id
-        )
+        entries = er.async_entries_for_config_entry(entity_registry, self._entry.entry_id)
         for rule in rules:
             for entry in entries:
                 if not rule.matches(entry):
@@ -1521,14 +1519,14 @@ class GLinetHub(DataUpdateCoordinator[None]):
         def _matches(entry: RegistryEntry) -> bool:
             if not entry.unique_id.startswith(prefix):
                 return False
-            suffix = entry.unique_id[len(prefix):]
+            suffix = entry.unique_id[len(prefix) :]
             parts = suffix.split("_")
             if len(parts) < 4:
                 return False
             return "_".join(parts[2:]) in limit_keys
 
         def _should_keep(entry: RegistryEntry) -> bool:
-            suffix = entry.unique_id[len(prefix):]
+            suffix = entry.unique_id[len(prefix) :]
             parts = suffix.split("_")
             if len(parts) < 4:
                 return True

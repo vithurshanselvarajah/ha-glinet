@@ -819,11 +819,13 @@ async def test_register_cellular_limit_sensors_creates_when_limit_enabled() -> N
                 new_entities.append(candidate)
         if new_entities:
             import asyncio
+
             asyncio.get_event_loop().create_task(_add(new_entities))
 
     _register_cellular_limit_sensors()
 
     import asyncio
+
     await asyncio.sleep(0.01)
 
     assert any("data_limit" in uid for uid in added)
@@ -875,13 +877,9 @@ async def test_register_cellular_limit_sensors_recreates_after_cleanup() -> None
             added.append(entity.unique_id)
             _make_entry(entity.unique_id)
 
-    callback = sensor_module._make_register_cellular_limit_sensors_callback(
-        hub, _capture
-    )
+    callback = sensor_module._make_register_cellular_limit_sensors_callback(hub, _capture)
 
-    _make_entry(
-        "glinet_sensor/00:11:22:33:44:55/cellular_traffic_sim_1_0_traffic_total"
-    )
+    _make_entry("glinet_sensor/00:11:22:33:44:55/cellular_traffic_sim_1_0_traffic_total")
     callback()
     assert any("data_limit" in uid for uid in added)
     assert any("days_until_reset" in uid for uid in added)

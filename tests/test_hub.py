@@ -1526,9 +1526,7 @@ async def test_async_cleanup_cellular_limit_sensors_removes_disabled(monkeypatch
     hub._refresh_cellular_limit_cleanup_rule()
     await hub._async_cleanup_orphaned_sensor_entities()
 
-    removed = {
-        call.args[0] for call in mock_er.async_remove.call_args_list
-    }
+    removed = {call.args[0] for call in mock_er.async_remove.call_args_list}
     assert "sensor.cellular_sim_2_data_limit" in removed
     assert "sensor.cellular_sim_2_days_until_reset" in removed
     assert "sensor.cellular_sim_1_data_limit" not in removed
@@ -1606,9 +1604,7 @@ async def test_register_periodic_cleanup_registers_interval_tracker(monkeypatch)
         captured["interval"] = interval
         return lambda: None
 
-    monkeypatch.setattr(
-        hub_module, "async_track_time_interval", _fake_track_time_interval
-    )
+    monkeypatch.setattr(hub_module, "async_track_time_interval", _fake_track_time_interval)
 
     hub = GLinetHub.__new__(GLinetHub)
     hub.hass = MagicMock()
@@ -1649,6 +1645,7 @@ async def test_async_cleanup_orphaned_sensor_entities_runs_with_no_rules() -> No
     mock_er = MagicMock()
     mock_er.async_remove = MagicMock()
     import homeassistant.helpers.entity_registry as er
+
     monkeypatch_holder = {}
 
     def _fake_async_get(hass):
