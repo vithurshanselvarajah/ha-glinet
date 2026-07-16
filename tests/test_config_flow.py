@@ -22,7 +22,7 @@ from custom_components.glinet_router.const import (
 
 
 async def test_process_user_input_stores_enabled_features(monkeypatch) -> None:
-    def fake_init(self, host: str, hass: Any) -> None:
+    def fake_init(self, host: str, hass: Any, verify_ssl: bool = True) -> None:
         self.host = host
         self.username = DEFAULT_USERNAME
         self.router_mac = "00:00:00:00:00:00"
@@ -58,7 +58,7 @@ async def test_process_user_input_stores_enabled_features(monkeypatch) -> None:
 
 
 async def test_process_user_input_defaults_enabled_features_when_missing(monkeypatch) -> None:
-    def fake_init(self, host: str, hass: Any) -> None:
+    def fake_init(self, host: str, hass: Any, verify_ssl: bool = True) -> None:
         self.host = host
         self.username = DEFAULT_USERNAME
         self.router_mac = "00:00:00:00:00:00"
