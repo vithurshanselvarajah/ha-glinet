@@ -92,7 +92,7 @@ class GLinetApiClient:
         base_url: str,
         session: ClientSession,
         sid: str | None = None,
-        verify_ssl: bool = True
+        verify_ssl: bool = False
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._ssl_setting = None if verify_ssl else False

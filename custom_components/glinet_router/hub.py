@@ -384,7 +384,7 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
     def _create_api_client(self) -> GLinetApiClient:
         session = async_get_clientsession(self.hass)
-        verify_ssl = self._settings.get(CONF_VERIFY_SSL, True)
+        verify_ssl = self._settings.get(CONF_VERIFY_SSL, False)
         return GLinetApiClient(
             base_url=f"{self._host}{API_PATH}", session=session, verify_ssl=verify_ssl
         )

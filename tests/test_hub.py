@@ -1733,7 +1733,7 @@ def test_create_api_client_passes_verify_ssl_from_settings(monkeypatch) -> None:
     assert captured["base_url"] == "http://192.168.8.1/rpc"
 
 
-def test_create_api_client_defaults_verify_ssl_to_true(monkeypatch) -> None:
+def test_create_api_client_defaults_verify_ssl_to_false(monkeypatch) -> None:
     from custom_components.glinet_router.api.client import GLinetApiClient
 
     captured: dict[str, Any] = {}
@@ -1750,4 +1750,4 @@ def test_create_api_client_defaults_verify_ssl_to_true(monkeypatch) -> None:
 
     hub._create_api_client()
 
-    assert captured["verify_ssl"] is True
+    assert captured["verify_ssl"] is False

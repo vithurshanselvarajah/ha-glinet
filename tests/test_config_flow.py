@@ -139,7 +139,7 @@ async def test_process_user_input_persists_verify_ssl_choice(monkeypatch) -> Non
     assert result["data"]["verify_ssl"] is False
 
 
-async def test_process_user_input_defaults_verify_ssl_to_true(monkeypatch) -> None:
+async def test_process_user_input_defaults_verify_ssl_to_false(monkeypatch) -> None:
     def fake_init(self, host: str, hass: Any, verify_ssl: bool = True) -> None:
         self.host = host
         self.username = DEFAULT_USERNAME
@@ -162,7 +162,7 @@ async def test_process_user_input_defaults_verify_ssl_to_true(monkeypatch) -> No
         types.SimpleNamespace(),
     )
 
-    assert result["data"]["verify_ssl"] is True
+    assert result["data"]["verify_ssl"] is False
 
 
 def test_parallel_requests_default_is_false() -> None:

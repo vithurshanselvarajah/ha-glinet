@@ -153,7 +153,7 @@ def _config_schema(
         vol.Required(CONF_PASSWORD, default=DEFAULT_PASSWORD): selector.TextSelector(
             selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
         ),
-        vol.Required(CONF_VERIFY_SSL, default=True): bool,
+        vol.Required(CONF_VERIFY_SSL, default=False): bool,
         vol.Optional(
             CONF_PARALLEL_REQUESTS,
             default=defaults.get(CONF_PARALLEL_REQUESTS, DEFAULT_PARALLEL_REQUESTS),
@@ -244,7 +244,7 @@ STEP_USER_DATA_SCHEMA = _config_schema()
 class SetupHub:
 
     def __init__(
-        self, host: str, hass: HomeAssistant, verify_ssl: bool = True
+        self, host: str, hass: HomeAssistant, verify_ssl: bool = False
     ) -> None:
         self.host = host
         self.username = DEFAULT_USERNAME
@@ -295,7 +295,7 @@ class SetupHub:
 async def process_user_input(
     data: dict[str, Any], hass: HomeAssistant, raise_on_invalid_auth: bool = True
 ) -> dict[str, Any]:
-    verify_ssl_choice = data.get(CONF_VERIFY_SSL, True)
+    verify_ssl_choice = data.get(CONF_VERIFY_SSL, False)
     hub = SetupHub(data[CONF_HOST], hass, verify_ssl=verify_ssl_choice)
     if not await hub.check_reachable():
         raise CannotConnect

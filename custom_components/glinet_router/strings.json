@@ -7,7 +7,7 @@
         "data": {
           "host": "Router Address",
           "password": "Admin Password",
-	  "verify_ssl": "Verify SSL Certificate",
+          "verify_ssl": "Verify SSL Certificate",
           "consider_home": "Away Delay",
           "scan_interval": "Update Interval",
           "enabled_features": "Enabled features",
@@ -21,7 +21,7 @@
         "data_description": {
           "host": "Use the router URL or IP address (for example: http://192.168.8.1).",
           "password": "Provide the same password you use for the router admin interface.",
-          "verify_ssl": "Validate the router's TLS certificate. Disable this if your router uses a self-signed certificate (common on stock GL.iNet firmware). Disabling verification reduces security on your local network.",
+          "verify_ssl": "Validate the router's TLS certificate. Enable this only if your router uses a valid certificate.",
           "consider_home": "Set how many seconds a client can be offline before it is marked away.",
           "scan_interval": "Number of seconds between polling the router for updates.",
           "enabled_features": "Choose the integration feature groups to set up. Disabled feature groups will not create their related entities or services.",
@@ -63,7 +63,7 @@
         "data_description": {
           "host": "Use the router URL or IP address (for example: http://192.168.8.1).",
           "password": "Provide the same password you use for the router admin interface.",
-          "verify_ssl": "Validate the router's TLS certificate. Disable this if your router uses a self-signed certificate (common on stock GL.iNet firmware). Disabling verification reduces security on your local network.",
+          "verify_ssl": "Validate the router's TLS certificate. Enable this only if your router uses a valid certificate.",
           "consider_home": "Set how many seconds a client can be offline before it is marked away.",
           "scan_interval": "Number of seconds between polling the router for updates.",
           "enabled_features": "Choose the integration feature groups to set up. Disabled feature groups will not create their related entities or services.",
