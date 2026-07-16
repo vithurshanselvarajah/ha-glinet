@@ -100,7 +100,6 @@ class GLinetApiClient:
         self.sid = sid
         self._logged_in = sid is not None
 
-
         self.system = SystemModule(self)
         self.modem = ModemModule(self)
         self.mcu = McuModule(self)
@@ -142,6 +141,15 @@ class GLinetApiClient:
             "params": params,
             "id": 0,
         }
+
+    async def _ensure_firmware_version(self) -> None:
+        if self._firmware_version is None:
+            await self.system.get_info()
+
+    async def _is_firmware_at_least(self, version: tuple[int, int, int, int]) -> bool:
+        await self._ensure_firmware_version()
+        fw_ver = self._firmware_version
+        return fw_ver is not None and fw_ver >= version
 
     async def _send_request(
         self, payload: dict[str, Any], timeout_seconds: int = DEFAULT_TIMEOUT
@@ -186,13 +194,9 @@ class GLinetApiClient:
             if algorithm == 1:
                 cipher_password = md5_crypt.using(salt=salt).hash(login_password)
             elif algorithm == 5:
-                cipher_password = sha256_crypt.using(salt=salt, rounds=5000).hash(
-                    login_password
-                )
+                cipher_password = sha256_crypt.using(salt=salt, rounds=5000).hash(login_password)
             elif algorithm == 6:
-                cipher_password = sha512_crypt.using(salt=salt, rounds=5000).hash(
-                    login_password
-                )
+                cipher_password = sha512_crypt.using(salt=salt, rounds=5000).hash(login_password)
             else:
                 raise ValueError("Unsupported router cipher algorithm")
 
@@ -246,6 +250,3 @@ class GLinetApiClient:
             else:
                 payload = self._build_sid_payload(method, [params], self.sid)
         return await self._send_request(payload)
-
-
-

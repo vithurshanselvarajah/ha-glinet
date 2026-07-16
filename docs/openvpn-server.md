@@ -23,3 +23,8 @@ To enable this feature, check the **OpenVPN Server** option under **Enabled Feat
 | Entity | Description | API Source |
 | --- | --- | --- |
 | **OpenVPN Server** | Toggles the OpenVPN server on or off. | `ovpn-server` API |
+
+## Related Pages
+
+- [Services & Actions](services.md) — How to use Home Assistant services with this integration.
+- [Entity Reference](entities.md) — All core and optional entities.

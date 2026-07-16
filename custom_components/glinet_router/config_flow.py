@@ -20,6 +20,7 @@ from .const import (
     CONF_ADD_ALL_DEVICES,
     CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
+    CONF_PARALLEL_REQUESTS,
     CONF_SCAN_INTERVAL,
     CONF_TITLE,
     CONF_UNKNOWN_DEVICES_FILTER_MANUAL,
@@ -27,6 +28,7 @@ from .const import (
     CONF_UNKNOWN_DEVICES_FILTER_SELECT,
     CONF_VERIFY_SSL,
     CONF_WAN_STATUS_MONITORS,
+    DEFAULT_PARALLEL_REQUESTS,
     DEFAULT_PASSWORD,
     DEFAULT_UNKNOWN_DEVICES_FILTER_MODE,
     DEFAULT_URL,
@@ -141,11 +143,9 @@ def _config_schema(
 ) -> vol.Schema:
     defaults = defaults or {}
     wan_interfaces = wan_interfaces or DEFAULT_WAN_INTERFACES
-    selected_interfaces = _wan_interfaces_from_monitors(
-        defaults.get(CONF_WAN_STATUS_MONITORS, [])
-    )
+    selected_interfaces = _wan_interfaces_from_monitors(defaults.get(CONF_WAN_STATUS_MONITORS, []))
     wan_interfaces = [*dict.fromkeys([*wan_interfaces, *selected_interfaces])]
-    
+
     schema_dict = {
         vol.Required(CONF_HOST, default=DEFAULT_URL): selector.TextSelector(
             selector.TextSelectorConfig(type=selector.TextSelectorType.URL)
@@ -154,6 +154,10 @@ def _config_schema(
             selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
         ),
         vol.Required(CONF_VERIFY_SSL, default=True): bool,
+        vol.Optional(
+            CONF_PARALLEL_REQUESTS,
+            default=defaults.get(CONF_PARALLEL_REQUESTS, DEFAULT_PARALLEL_REQUESTS),
+        ): selector.BooleanSelector(),
         vol.Optional(
             CONF_CONSIDER_HOME,
             default=DEFAULT_CONSIDER_HOME.total_seconds(),
@@ -242,6 +246,7 @@ class SetupHub:
     def __init__(
         self, host: str, hass: HomeAssistant, verify_ssl: bool = True
     ) -> None:
+    def __init__(self, host: str, hass: HomeAssistant) -> None:
         self.host = host
         self.username = DEFAULT_USERNAME
         self.router = GLinetApiClient(
@@ -342,20 +347,21 @@ async def process_user_input(
                 CONF_UNKNOWN_DEVICES_FILTER_MANUAL,
                 "",
             ),
+            CONF_PARALLEL_REQUESTS: data.get(
+                CONF_PARALLEL_REQUESTS,
+                DEFAULT_PARALLEL_REQUESTS,
+            ),
         },
     }
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-
     VERSION = 1
 
     def __init__(self) -> None:
         self._discovered_data: dict[str, Any] | None = None
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
@@ -415,10 +421,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
             try:

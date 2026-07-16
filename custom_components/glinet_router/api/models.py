@@ -4,12 +4,12 @@ from typing import Any
 
 
 class TailscaleConnection(Enum):
-
     DISCONNECTED = 0
     LOGIN_REQUIRED = 1
     AUTHORIZATION_REQUIRED = 2
     CONNECTED = 3
     CONNECTING = 4
+
 
 @dataclass
 class SystemInfo:
@@ -18,6 +18,7 @@ class SystemInfo:
     mac: str = ""
     sn: str = ""
     device_id: str = ""
+
 
 @dataclass
 class RouterStatus:
@@ -33,6 +34,7 @@ class RouterStatus:
     network: list[dict[str, Any]] = field(default_factory=list)
     mcu: dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
 class WifiInterfaceInfo:
     enabled: bool = False
@@ -40,6 +42,7 @@ class WifiInterfaceInfo:
     guest: bool = False
     hidden: bool = False
     encryption: str = ""
+
 
 @dataclass
 class ModemInfo:

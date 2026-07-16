@@ -39,7 +39,6 @@ async def async_setup_entry(
 
 
 class RepeaterConnectedBinarySensor(CoordinatorEntity[GLinetHub], BinarySensorEntity):
-
     _attr_has_entity_name = True
     _attr_name = "Repeater connected"
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
@@ -80,7 +79,6 @@ class RepeaterConnectedBinarySensor(CoordinatorEntity[GLinetHub], BinarySensorEn
 
 
 class RepeaterBareModeBinarySensor(CoordinatorEntity[GLinetHub], BinarySensorEntity):
-
     _attr_has_entity_name = True
     _attr_translation_key = "repeater_bare_mode"
     _attr_icon = "mdi:wifi-off"

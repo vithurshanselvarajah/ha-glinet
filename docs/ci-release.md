@@ -32,3 +32,7 @@ v<manifest-version>
 ```
 
 The release job runs CI first, builds a HACS-friendly zip containing `custom_components/glinet_router`, asks GitHub Models to generate release notes via `actions/ai-inference`, then publishes a GitHub release. If GitHub Models is not available, the workflow falls back to commit-based release notes.
+
+## Related Pages
+
+- [Developer Reference](developer-reference.md) — Contributing, tooling, and project structure.

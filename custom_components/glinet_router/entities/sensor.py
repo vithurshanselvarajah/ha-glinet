@@ -52,14 +52,13 @@ def _get_cellular_ip(hub: GLinetHub, version: str) -> str | None:
         if not isinstance(modem, dict):
             continue
         network = modem.get("network")
-        if not isinstance(network, dict):
-            continue
-        ip_info = network.get(version)
-        if not isinstance(ip_info, dict):
-            continue
-        ip = ip_info.get("ip")
-        if ip not in (None, ""):
-            return str(ip)
+        network_ip = network.get(version) if isinstance(network, dict) else None
+        for ip_info in (network_ip, modem.get(version)):
+            if not isinstance(ip_info, dict):
+                continue
+            ip = ip_info.get("ip")
+            if ip not in (None, ""):
+                return str(ip)
     return None
 
 
@@ -271,21 +270,6 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         value_fn=lambda hub: _battery_charging_status(hub),
     ),
     HubSensorEntityDescription(
-        key="cellular_signal",
-        name="Cellular signal",
-        has_entity_name=True,
-        icon="mdi:signal-cellular-2",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        native_unit_of_measurement="dBm",
-        state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: get_first_int(
-            hub.cellular_status,
-            ("signal", "signal_strength", "rssi", "rsrp", "csq"),
-            nested=("modem", "cellular", "sim", "signal"),
-        ),
-        extra_attributes_fn=lambda hub: hub.cellular_status,
-    ),
-    HubSensorEntityDescription(
         key="cellular_apn",
         name="Cellular APN",
         has_entity_name=True,
@@ -295,20 +279,6 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
             hub.cellular_status,
             ("apn",),
             nested=("modem", "cellular", "sim", "simcard"),
-        ),
-    ),
-    HubSensorEntityDescription(
-        key="cellular_rssi",
-        name="Cellular RSSI",
-        has_entity_name=True,
-        icon="mdi:signal-cellular-outline",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        native_unit_of_measurement="dBm",
-        state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: get_first_int(
-            hub.cellular_status,
-            ("rssi",),
-            nested=("modem", "cellular", "sim", "signal"),
         ),
     ),
     HubSensorEntityDescription(
@@ -366,30 +336,14 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
         ),
     ),
     HubSensorEntityDescription(
-        key="cellular_network",
-        name="Cellular network",
-        has_entity_name=True,
-        icon="mdi:signal-cellular-outline",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda hub: get_first_value(
-            hub.cellular_status,
-            ("network", "operator", "operator_name", "carrier", "mode", "service_type"),
-            nested=("modem", "cellular", "sim"),
-        ),
-    ),
-    HubSensorEntityDescription(
         key="sms_messages",
         name="Unread messages",
         has_entity_name=True,
         icon="mdi:email-alert",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda hub: sum(
-            1 for m in hub.sms_messages.values() if m.status == 0
-        ),
+        value_fn=lambda hub: sum(1 for m in hub.sms_messages.values() if m.status == 0),
         extra_attributes_fn=lambda hub: {
-            "unread_count": sum(
-                1 for m in hub.sms_messages.values() if m.status == 0
-            ),
+            "unread_count": sum(1 for m in hub.sms_messages.values() if m.status == 0),
             "message_count": len(hub.sms_messages),
             "incoming_count": sum(
                 1 for m in hub.sms_messages.values() if m.direction == "incoming"
@@ -532,13 +486,10 @@ HUB_SENSORS: tuple[HubSensorEntityDescription, ...] = (
 )
 
 FEATURE_SENSOR_MAP: dict[str, str] = {
-    "cellular_signal": FEATURE_CELLULAR,
-    "cellular_rssi": FEATURE_CELLULAR,
     "cellular_rsrp": FEATURE_CELLULAR,
     "cellular_rsrq": FEATURE_CELLULAR,
     "cellular_sinr": FEATURE_CELLULAR,
     "cellular_band": FEATURE_CELLULAR,
-    "cellular_network": FEATURE_CELLULAR,
     "cellular_apn": FEATURE_CELLULAR,
     "sms_messages": FEATURE_SMS,
     "repeater_state": FEATURE_REPEATER,
@@ -563,10 +514,7 @@ def _sensor_is_enabled(hub: GLinetHub, description: HubSensorEntityDescription) 
         monitors = hub.wan_status_monitors
         protocol = "ipv4" if description.key == "cellular_ipv4" else "ipv6"
         if monitors is None:
-            return any(
-                iface.get("interface") == "modem_0001"
-                for iface in _wan_interfaces(hub)
-            )
+            return any(iface.get("interface") == "modem_0001" for iface in _wan_interfaces(hub))
         return f"modem_0001:{protocol}" in monitors
 
     feature = FEATURE_SENSOR_MAP.get(description.key)
@@ -700,6 +648,20 @@ def _wan_interface_label(interface_name: str) -> str:
 
 
 def _wan_interface_by_name(hub: GLinetHub, interface_name: str) -> dict[str, Any] | None:
+    if interface_name == "modem_0001" and getattr(hub, "is_firmware_4_9_or_above", False):
+        for candidate in ("modem_0001_s1", "modem_0001_s2"):
+            entry = _wan_lookup_exact(hub, candidate)
+            if entry is not None and entry.get("status_v4") == 0:
+                return entry
+        for candidate in ("modem_0001_s1", "modem_0001_s2"):
+            entry = _wan_lookup_exact(hub, candidate)
+            if entry is not None:
+                return entry
+        return None
+    return _wan_lookup_exact(hub, interface_name)
+
+
+def _wan_lookup_exact(hub: GLinetHub, interface_name: str) -> dict[str, Any] | None:
     for interface in _wan_interfaces(hub):
         if interface.get("interface") == interface_name:
             return interface
@@ -935,9 +897,16 @@ class WanStatusSensor(CoordinatorEntity[GLinetHub], SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         interface = _wan_interface_by_name(self.hub, self._interface_name) or {}
+        resolved_interface_name = str(interface.get("interface") or self._interface_name)
+        resolved_label = (
+            _wan_interface_label(resolved_interface_name)
+            if resolved_interface_name != self._interface_name
+            else self._interface_label
+        )
         return {
-            "interface": self._interface_name,
-            "interface_name": self._interface_label,
+            "interface": resolved_interface_name,
+            "interface_name": resolved_label,
+            "requested_interface": self._interface_name,
             "monitored_protocols": sorted(self._protocols),
             "ipv4_status": _wan_protocol_status(interface, "ipv4"),
             "ipv6_status": _wan_protocol_status(interface, "ipv6"),
@@ -993,7 +962,6 @@ class ClientSensor(CoordinatorEntity[GLinetHub], SensorEntity):
 
 
 class RepeaterChannelSensor(CoordinatorEntity[GLinetHub], SensorEntity):
-
     _attr_has_entity_name = True
     _attr_icon = "mdi:radio-tower"
     _attr_device_class = SensorDeviceClass.ENUM

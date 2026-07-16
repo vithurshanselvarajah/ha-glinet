@@ -63,6 +63,7 @@ class FakeSession:
             return FakePostContext(payload)
         return FakePostContext(FakeResponse(payload))
 
+
 @pytest.mark.parametrize(
     ("version", "expected"),
     [
@@ -181,17 +182,20 @@ async def test_repeater_scan_and_connect_use_documented_payloads() -> None:
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
 
     assert await client.repeater.scan({"refresh": True}) == [{"ssid": "SecuredNet"}]
-    assert await client.repeater.connect(
-        {
-            "ssid": "SecuredNet",
-            "key": "secret-pass",
-            "remember": True,
-            "manual": False,
-            "protocol": "dhcp",
-            "disguise": False,
-            "auto_portal": False,
-        }
-    ) == {}
+    assert (
+        await client.repeater.connect(
+            {
+                "ssid": "SecuredNet",
+                "key": "secret-pass",
+                "remember": True,
+                "manual": False,
+                "protocol": "dhcp",
+                "disguise": False,
+                "auto_portal": False,
+            }
+        )
+        == {}
+    )
 
     assert [request["json"]["params"] for request in session.requests] == [
         ["sid-1", "repeater", "scan", {"refresh": True}],
@@ -252,6 +256,7 @@ async def test_sms_methods_use_sms_module_payloads() -> None:
         ]
     )
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+    client._firmware_version = (4, 7, 0, 0)
 
     assert await client.modem.get_sms_list() == [{"name": "sms-1", "body": "hello"}]
     assert await client.modem.send_sms("1-1", "+441234567890", "hi") == {"sent": True}
@@ -274,9 +279,7 @@ async def test_send_sms_includes_slot_when_supplied() -> None:
     session = FakeSession([{"result": {"sent": True}}])
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
 
-    assert await client.modem.send_sms(
-        "cpu", "+441234567890", "hi", slot=2
-    ) == {"sent": True}
+    assert await client.modem.send_sms("cpu", "+441234567890", "hi", slot=2) == {"sent": True}
 
     assert session.requests[0]["json"]["params"] == [
         "sid-1",
@@ -295,6 +298,7 @@ async def test_send_sms_includes_slot_when_supplied() -> None:
 async def test_get_modem_info_uses_documented_modem_endpoint() -> None:
     session = FakeSession([{"result": {"modems": [{"bus": "1-1"}]}}])
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+    client._firmware_version = (4, 7, 0, 0)
 
     assert await client.modem.get_info() == {"modems": [{"bus": "1-1"}]}
     assert session.requests[0]["json"]["params"] == ["sid-1", "modem", "get_info", {}]
@@ -415,15 +419,7 @@ async def test_modem_sms_list_uses_49_bus_payload_for_new_firmware() -> None:
 
 async def test_get_kmwan_status_uses_kmwan_endpoint() -> None:
     session = FakeSession(
-        [
-            {
-                "result": {
-                    "interfaces": [
-                        {"interface": "wan", "status_v4": 1, "status_v6": 0}
-                    ]
-                }
-            }
-        ]
+        [{"result": {"interfaces": [{"interface": "wan", "status_v4": 1, "status_v6": 0}]}}]
     )
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
 
@@ -578,6 +574,7 @@ async def test_get_modem_info_extracts_nested_fields() -> None:
         ]
     )
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
+    client._firmware_version = (4, 7, 0, 0)
 
     info = await client.modem.get_modem_info()
     assert len(info) == 1
@@ -588,19 +585,19 @@ async def test_get_modem_info_extracts_nested_fields() -> None:
     assert info[0].apn == "test.apn"
 
 
-async def test_wireguard_state_uses_new_vpn_client_module_for_new_firmware() -> None:
+async def test_wireguard_state_uses_vpn_client_module_for_4_9() -> None:
     session = FakeSession([{"result": {"status_list": [{"type": "wireguard", "peer_id": 7}]}}])
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
-    client._firmware_version = (4, 8, 0, 0)
+    client._firmware_version = (4, 9, 0, 0)
 
     assert await client.wg_client.get_wireguard_state() == [{"type": "wireguard", "peer_id": 7}]
     assert session.requests[0]["json"]["params"] == ["sid-1", "vpn-client", "get_status", {}]
 
 
-async def test_wireguard_state_uses_legacy_module_for_old_firmware() -> None:
+async def test_wireguard_state_uses_legacy_module_for_4_8() -> None:
     session = FakeSession([{"result": {"status": 1, "peer_id": 7}}])
     client = GLinetApiClient("http://router/rpc", session, sid="sid-1")
-    client._firmware_version = (4, 7, 9, 0)
+    client._firmware_version = (4, 8, 0, 0)
 
     assert await client.wg_client.get_wireguard_state() == [{"status": 1, "peer_id": 7}]
     assert session.requests[0]["json"]["params"] == ["sid-1", "wg-client", "get_status", {}]
@@ -640,4 +637,3 @@ async def test_custom_call_sends_expected_payloads() -> None:
             "id": 0,
         },
     ]
-

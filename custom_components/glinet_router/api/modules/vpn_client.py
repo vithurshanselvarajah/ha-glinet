@@ -17,8 +17,26 @@ class VpnClientModule(BaseModule):
     async def set_tunnel(
         self, tunnel_id: int, enabled: bool, via: dict[str, Any] | None = None
     ) -> dict[str, Any]:
-        params = {"enabled": enabled, "tunnel_id": tunnel_id}
+        params: dict[str, Any] = {"enabled": enabled, "tunnel_id": tunnel_id}
         if via:
             params["via"] = via
+        response = await self._call("vpn-client", "set_tunnel", params)
+        return dict(response)
+
+    async def set_tunnel_by_peer(
+        self,
+        enabled: bool,
+        tunnel_type: str,
+        group_id: int | None = None,
+        peer_id: int | None = None,
+        tunnel_id: int | None = None,
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {"enabled": enabled, "type": tunnel_type}
+        if group_id is not None:
+            params["group_id"] = group_id
+        if peer_id is not None:
+            params["peer_id"] = peer_id
+        if tunnel_id is not None:
+            params["tunnel_id"] = tunnel_id
         response = await self._call("vpn-client", "set_tunnel", params)
         return dict(response)

@@ -61,6 +61,7 @@ from custom_components.glinet_router.const import (
     SERVICE_PARENTAL_CONTROL_SET_TEMPORARY_OVERRIDE,
     SERVICE_PARENTAL_CONTROL_UPDATE_SIGNATURES,
     SERVICE_PLAYGROUND,
+    SERVICE_REFRESH_CLIENTS,
     SERVICE_REFRESH_SMS,
     SERVICE_REMOVE_FIREWALL_RULE,
     SERVICE_REMOVE_PORT_FORWARD,
@@ -92,7 +93,6 @@ class DummyServices:
     def async_remove(self, domain: str, service: str) -> None:
         self.registrations = [(s, k) for s, k in self.registrations if s != service]
         self.handlers.pop(service, None)
-
 
 
 class DummyHass:
@@ -189,6 +189,7 @@ async def test_register_services_records_only_enabled_feature_services() -> None
         SERVICE_GET_SAVED_NETWORKS,
         SERVICE_REMOVE_SAVED_NETWORK,
         SERVICE_SET_FAN_TEMPERATURE,
+        SERVICE_REFRESH_CLIENTS,
     }
 
 
@@ -574,7 +575,9 @@ async def test_register_services_skips_disabled_features() -> None:
     await async_register_services(hass)
 
     assert hass.services.has_service(DOMAIN, SERVICE_SET_FAN_TEMPERATURE)
-    assert [s for s, _ in hass.services.registrations if s != SERVICE_SET_FAN_TEMPERATURE] == []
+    assert hass.services.has_service(DOMAIN, SERVICE_REFRESH_CLIENTS)
+    core_services = {SERVICE_SET_FAN_TEMPERATURE, SERVICE_REFRESH_CLIENTS}
+    assert [s for s, _ in hass.services.registrations if s not in core_services] == []
 
 
 async def test_repeater_scan_action_passes_refresh_flags() -> None:
@@ -730,3 +733,27 @@ async def test_playground_service_handler_calls_hub_method() -> None:
     assert calls == [("system/get_info", {"test": 1})]
     assert response == {"status": "ok"}
 
+
+async def test_refresh_clients_service_handler_calls_hub_methods() -> None:
+    calls: list[tuple[str, Any]] = []
+
+    class Hub:
+        device_mac = "00:11:22:33:44:55"
+
+        async def fetch_connected_devices(self) -> None:
+            calls.append(("fetch_connected_devices", None))
+
+        async def async_request_refresh(self) -> None:
+            calls.append(("async_request_refresh", None))
+
+    entry = DummyEntry()
+    entry.runtime_data = Hub()
+    hass = DummyHass([entry])
+    await async_register_services(hass)
+
+    await hass.services.handlers[SERVICE_REFRESH_CLIENTS](SimpleNamespace(data={}))
+
+    assert calls == [
+        ("fetch_connected_devices", None),
+        ("async_request_refresh", None),
+    ]

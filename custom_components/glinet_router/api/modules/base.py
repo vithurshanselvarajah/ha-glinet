@@ -9,7 +9,6 @@ if TYPE_CHECKING:
 
 
 class BaseModule:
-
     def __init__(self, client: GLinetApiClient) -> None:
         self._client = client
 

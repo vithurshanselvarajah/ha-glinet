@@ -23,3 +23,8 @@ To enable this feature, check the **WireGuard Server** option under **Enabled Fe
 | Entity | Description | API Source |
 | --- | --- | --- |
 | **WG Server** | Toggles the WireGuard server on or off. | `wg-server/start` / `wg-server/stop` |
+
+## Related Pages
+
+- [Services & Actions](services.md) — How to use Home Assistant services with this integration.
+- [Entity Reference](entities.md) — All core and optional entities.

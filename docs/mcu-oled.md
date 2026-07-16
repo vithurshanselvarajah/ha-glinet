@@ -8,30 +8,39 @@ To enable this feature, check the **MCU OLED** option under **Enabled Features**
 
 - **Option key**: `mcu_oled`
 
-> **Note**: Disabling this feature removes all MCU OLED actions.
-
----
+> Disabling this feature removes all MCU OLED actions.
 
 ## Actions (Services)
 
 The following services are registered under the `glinet_router` domain when the MCU OLED feature is enabled:
 
 ### `get_mcu_oled_config`
+
 Retrieves the current OLED screen display configuration from the router. Supports response data.
 
-- **`mac`** (Optional): Target a specific router by MAC address.
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `mac` | string | No | Target a specific router by MAC address. |
 
 **Response**: Returns the current `screen_display` configuration flags.
 
 ### `set_mcu_oled_config`
+
 Updates sections displayed on the MCU OLED screen. Omitted fields retain their current router values.
 
-- **`main`** (Optional): Toggle showing the main screen.
-- **`wifi_password`** (Optional): Toggle showing the WiFi password.
-- **`wifi_2g`** (Optional): Toggle showing 2.4 GHz WiFi status.
-- **`wifi_5g`** (Optional): Toggle showing 5 GHz WiFi status.
-- **`lan`** (Optional): Toggle showing LAN network status.
-- **`vpn`** (Optional): Toggle showing VPN connection status.
-- **`custom`** (Optional): Toggle showing custom display content.
-- **`content`** (Optional): Custom display content or command string.
-- **`mac`** (Optional): Target a specific router by MAC address.
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `main` | boolean | No | Toggle showing the main screen. |
+| `wifi_password` | boolean | No | Toggle showing the WiFi password. |
+| `wifi_2g` | boolean | No | Toggle showing 2.4 GHz WiFi status. |
+| `wifi_5g` | boolean | No | Toggle showing 5 GHz WiFi status. |
+| `lan` | boolean | No | Toggle showing LAN network status. |
+| `vpn` | boolean | No | Toggle showing VPN connection status. |
+| `custom` | boolean | No | Toggle showing custom display content. |
+| `content` | string | No | Custom display content or command string. |
+| `mac` | string | No | Target a specific router by MAC address. |
+
+## Related Pages
+
+- [Services & Actions](services.md) — How to use Home Assistant services with this integration.
+- [Entity Reference](entities.md) — All core and optional entities.
