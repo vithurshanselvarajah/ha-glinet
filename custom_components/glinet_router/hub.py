@@ -16,7 +16,6 @@ from homeassistant.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_USERNAME,
-    CONF_VERIFY_SSL,
 )
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
@@ -46,6 +45,7 @@ from .const import (
     CONF_UNKNOWN_DEVICES_FILTER_MANUAL,
     CONF_UNKNOWN_DEVICES_FILTER_MODE,
     CONF_UNKNOWN_DEVICES_FILTER_SELECT,
+    CONF_VERIFY_SSL,
     CONF_WAN_STATUS_MONITORS,
     DEFAULT_USERNAME,
     DOMAIN,
