@@ -699,7 +699,7 @@ def test_cellular_traffic_sensor_value_fns_return_per_slot_values() -> None:
     by_key = {d.key: d for d in descs}
     assert by_key["traffic_total"].value_fn(hub, 1, 0) == 4096
     assert by_key["days_until_reset"].value_fn(hub, 1, 0) == 12
-    assert by_key["data_limit"].value_fn(hub, 1, 0) == 10 * (1000**3)
+    assert by_key["data_limit"].value_fn(hub, 1, 0) == 10
 
     for d in descs:
         assert d.value_fn(hub, 2, 0) is None
@@ -748,3 +748,15 @@ def test_cellular_traffic_sensor_unavailable_when_sim_missing() -> None:
     sensor = CellularTrafficSensor(hub=hub, entity_description=descs[0])
     assert sensor.available is False
     assert sensor.native_value is None
+
+
+def test_cellular_traffic_data_limit_sensors_require_limit_enabled() -> None:
+    from custom_components.glinet_router.entities.sensor import (
+        _build_cellular_traffic_descriptions,
+    )
+
+    descs = _build_cellular_traffic_descriptions(1, 0)
+    by_key = {d.key: d for d in descs}
+    assert by_key["traffic_total"].requires_limit is False
+    assert by_key["days_until_reset"].requires_limit is True
+    assert by_key["data_limit"].requires_limit is True

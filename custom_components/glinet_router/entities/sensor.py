@@ -79,6 +79,13 @@ def _traffic_sim_present(hub: GLinetHub, slot: int) -> bool:
     return int(record.get("traffic_total") or 0) > 0
 
 
+def _traffic_sim_limit_enabled(hub: GLinetHub, slot: int) -> bool:
+    record = _get_traffic_sim(hub, slot)
+    if record is None:
+        return False
+    return bool(record.get("limit_enabled"))
+
+
 def _traffic_sim_label(slot: int) -> str:
     return f"SIM {slot}"
 
@@ -92,6 +99,7 @@ class CellularTrafficSensorDescription(SensorEntityDescription):
     sim_type: int = 0
     value_fn: Callable[[GLinetHub, int, int], int | float | None] = lambda hub, slot, sim_type: None
     extra_attributes_fn: Callable[[GLinetHub, int, int], dict[str, Any] | None] | None = None
+    requires_limit: bool = False
 
 
 def _build_cellular_traffic_descriptions(
@@ -125,9 +133,10 @@ def _build_cellular_traffic_descriptions(
             native_unit_of_measurement="d",
             slot=slot,
             sim_type=sim_type,
+            requires_limit=True,
             value_fn=lambda hub, current_slot, current_sim_type: (
                 _get_traffic_sim(hub, current_slot).get("days_until_reset")
-                if _traffic_sim_present(hub, current_slot)
+                if _traffic_sim_limit_enabled(hub, current_slot)
                 else None
             ),
         ),
@@ -142,14 +151,15 @@ def _build_cellular_traffic_descriptions(
             state_class=SensorStateClass.MEASUREMENT,
             slot=slot,
             sim_type=sim_type,
+            requires_limit=True,
             value_fn=lambda hub, current_slot, current_sim_type: (
-                _get_traffic_sim(hub, current_slot).get("threshold_bytes")
-                if _traffic_sim_present(hub, current_slot)
+                _get_traffic_sim(hub, current_slot).get("threshold")
+                if _traffic_sim_limit_enabled(hub, current_slot)
                 else None
             ),
             extra_attributes_fn=lambda hub, current_slot, current_sim_type: (
                 _cellular_traffic_attributes(hub, current_slot)
-                if _traffic_sim_present(hub, current_slot)
+                if _traffic_sim_limit_enabled(hub, current_slot)
                 else None
             ),
         ),
@@ -895,10 +905,13 @@ async def async_setup_entry(
             if not sim_record.get("present"):
                 continue
             sim_type = int(sim_record.get("sim_type") or 0)
-            entities.extend(
-                CellularTrafficSensor(hub=hub, entity_description=description)
-                for description in _build_cellular_traffic_descriptions(slot, sim_type)
-            )
+            limit_enabled = bool(sim_record.get("limit_enabled"))
+            for description in _build_cellular_traffic_descriptions(slot, sim_type):
+                if description.requires_limit and not limit_enabled:
+                    continue
+                entities.append(
+                    CellularTrafficSensor(hub=hub, entity_description=description)
+                )
 
     async_add_entities(entities, True)
 
