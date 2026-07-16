@@ -637,3 +637,33 @@ async def test_custom_call_sends_expected_payloads() -> None:
             "id": 0,
         },
     ]
+
+
+@pytest.mark.parametrize(
+    ("verify_ssl", "expected_ssl"),
+    [
+        (True, None),
+        (False, False),
+    ],
+)
+async def test_send_request_forwards_verify_ssl_to_session(
+    verify_ssl: bool, expected_ssl: bool | None
+) -> None:
+    session = FakeSession([{"jsonrpc": "2.0", "result": {"ok": True}, "id": 0}])
+    client = GLinetApiClient(
+        "http://router/rpc", session, verify_ssl=verify_ssl
+    )
+
+    assert await client.is_router_reachable() is True
+
+    assert len(session.requests) == 1
+    assert session.requests[0]["ssl"] is expected_ssl
+
+
+async def test_send_request_defaults_to_aiohttp_default_ssl_verification() -> None:
+    session = FakeSession([{"jsonrpc": "2.0", "result": {"ok": True}, "id": 0}])
+    client = GLinetApiClient("http://router/rpc", session)
+
+    assert await client.is_router_reachable() is True
+
+    assert session.requests[0]["ssl"] is None

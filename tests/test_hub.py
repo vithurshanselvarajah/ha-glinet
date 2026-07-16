@@ -11,6 +11,7 @@ from custom_components.glinet_router.const import (
     CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
     CONF_SCAN_INTERVAL,
+    CONF_VERIFY_SSL,
     CONF_WAN_STATUS_MONITORS,
     FEATURE_REPEATER,
     FEATURE_WG_CLIENT,
@@ -1705,3 +1706,48 @@ def test_apply_option_updates_without_scan_interval_keeps_default() -> None:
 
     hub.apply_option_updates({"some_other_option": "value"})
     assert hub.update_interval == timedelta(seconds=30)
+
+
+def test_create_api_client_passes_verify_ssl_from_settings(monkeypatch) -> None:
+    from custom_components.glinet_router.api.client import GLinetApiClient
+
+    captured: dict[str, Any] = {}
+
+    def fake_constructor(self, *args: Any, **kwargs: Any) -> None:
+        captured.update(kwargs)
+
+    monkeypatch.setattr(GLinetApiClient, "__init__", fake_constructor)
+
+    entry = _make_entry(
+        data={
+            "host": "http://192.168.8.1",
+            "password": "pass",
+            CONF_VERIFY_SSL: False,
+        }
+    )
+    hub = GLinetHub(MagicMock(), entry)
+
+    hub._create_api_client()
+
+    assert captured["verify_ssl"] is False
+    assert captured["base_url"] == "http://192.168.8.1/rpc"
+
+
+def test_create_api_client_defaults_verify_ssl_to_true(monkeypatch) -> None:
+    from custom_components.glinet_router.api.client import GLinetApiClient
+
+    captured: dict[str, Any] = {}
+
+    def fake_constructor(self, *args: Any, **kwargs: Any) -> None:
+        captured.update(kwargs)
+
+    monkeypatch.setattr(GLinetApiClient, "__init__", fake_constructor)
+
+    entry = _make_entry(
+        data={"host": "http://192.168.8.1", "password": "pass"}
+    )
+    hub = GLinetHub(MagicMock(), entry)
+
+    hub._create_api_client()
+
+    assert captured["verify_ssl"] is True
