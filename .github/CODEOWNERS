@@ -1,0 +1,11 @@
+# CODEOWNERS
+# This file controls who is automatically requested as a reviewer for
+# pull requests. The repository's branch-protection rules require
+# review from a code owner before any PR can be merged.
+#
+# Documentation: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repository.
+# Add or remove handles below. Use GitHub usernames prefixed with `@`
+# or team handles prefixed with `@<org>/<team>`.
+*       @vithurshanselvarajah
