@@ -351,7 +351,9 @@ class GLinetHub(DataUpdateCoordinator[None]):
     def _create_api_client(self) -> GLinetApiClient:
         session = async_get_clientsession(self.hass)
         verify_ssl = self._settings.get(CONF_VERIFY_SSL, True)
-        return GLinetApiClient(base_url=f"{self._host}{API_PATH}", session=session, verify_ssl=verify_ssl)
+        return GLinetApiClient(
+            base_url=f"{self._host}{API_PATH}", session=session, verify_ssl=verify_ssl
+        )
 
     async def _async_load_router_info(self) -> None:
         try:

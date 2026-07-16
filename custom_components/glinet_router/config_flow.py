@@ -239,7 +239,9 @@ STEP_USER_DATA_SCHEMA = _config_schema()
 
 class SetupHub:
 
-    def __init__(self, host: str, hass: HomeAssistant, verify_ssl: book = True) -> None:
+    def __init__(
+        self, host: str, hass: HomeAssistant, verify_ssl: book = True
+    ) -> None:
         self.host = host
         self.username = DEFAULT_USERNAME
         self.router = GLinetApiClient(

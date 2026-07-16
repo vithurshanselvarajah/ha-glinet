@@ -54,7 +54,9 @@ class FakeSession:
         self.responses = list(responses)
         self.requests: list[dict[str, Any]] = []
 
-    def post(self, url: str, json: dict[str, Any], timeout: int, ssl: Any = None) -> FakePostContext:
+    def post(
+        self, url: str, json: dict[str, Any], timeout: int, ssl: Any = None
+    ) -> FakePostContext:
         self.requests.append({"url": url, "json": json, "timeout": timeout})
         payload = self.responses.pop(0)
         if isinstance(payload, FakeResponse):
