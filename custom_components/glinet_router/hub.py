@@ -49,6 +49,7 @@ from .const import (
     CONF_UNKNOWN_DEVICES_FILTER_MANUAL,
     CONF_UNKNOWN_DEVICES_FILTER_MODE,
     CONF_UNKNOWN_DEVICES_FILTER_SELECT,
+    CONF_VERIFY_SSL,
     CONF_WAN_STATUS_MONITORS,
     DEFAULT_PARALLEL_REQUESTS,
     DEFAULT_USERNAME,
@@ -383,7 +384,10 @@ class GLinetHub(DataUpdateCoordinator[None]):
 
     def _create_api_client(self) -> GLinetApiClient:
         session = async_get_clientsession(self.hass)
-        return GLinetApiClient(base_url=f"{self._host}{API_PATH}", session=session)
+        verify_ssl = self._settings.get(CONF_VERIFY_SSL, False)
+        return GLinetApiClient(
+            base_url=f"{self._host}{API_PATH}", session=session, verify_ssl=verify_ssl
+        )
 
     async def _async_load_router_info(self) -> None:
         try:
