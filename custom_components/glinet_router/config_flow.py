@@ -256,7 +256,6 @@ class SetupHub:
         self.router_mac = ""
         self.router_model = ""
         self.wan_interfaces: list[str] = DEFAULT_WAN_INTERFACES
-        self.verify_ssl = verify_ssl
 
     async def check_reachable(self) -> bool:
         try:
