@@ -18,3 +18,8 @@ To enable this feature, check the **AdGuard Home** option under **Enabled Featur
 | --- | --- | --- |
 | **AdGuard Home** | Toggles the AdGuard Home service on or off. | `adguardhome/get_config` / `adguardhome/set_config` |
 | **AdGuard Home DNS** | Toggles DNS redirection through AdGuard Home. | `adguardhome/get_config` / `adguardhome/set_config` |
+
+## Related Pages
+
+- [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/services) — How to use Home Assistant services with this integration.
+- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities) — All core and optional entities.

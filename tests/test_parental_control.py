@@ -296,8 +296,7 @@ async def test_async_initialize_hub_cleans_up_parental_control_entities(
         SimpleNamespace(
             entity_id="binary_sensor.parental_override",
             unique_id=(
-                "glinet_binary_sensor/00:11:22:33:44:55/"
-                "parental_control_group_group1_override"
+                "glinet_binary_sensor/00:11:22:33:44:55/parental_control_group_group1_override"
             ),
             domain="binary_sensor",
         ),

@@ -10,6 +10,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import (
@@ -26,7 +27,15 @@ from ..const import (
     FEATURE_ZEROTIER,
 )
 from ..hub import GLinetHub
-from ..models import ClientDeviceInfo, OpenVpnClient, ParentalGroup, WifiInterface, WireGuardClient
+from ..models import (
+    ClientDeviceInfo,
+    OpenVpnClient,
+    ParentalGroup,
+    VpnTunnel,
+    VpnTunnelType,
+    WifiInterface,
+    WireGuardClient,
+)
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -41,12 +50,34 @@ async def async_setup_entry(
 ) -> None:
     hub: GLinetHub = entry.runtime_data
     entities: list[SwitchEntity] = []
-    if hub.feature_enabled(FEATURE_WG_CLIENT):
-        entities.extend(WireGuardSwitch(hub, client) for client in hub.vpn_clients.values())
+    dashboard_tunnels: list[VpnTunnel] = []
+    if hub.feature_enabled(FEATURE_WG_CLIENT) or hub.feature_enabled(FEATURE_OVPN_CLIENT):
+        for tunnel in hub.vpn_tunnels.values():
+            if tunnel.tunnel_type == VpnTunnelType.WIREGUARD and hub.feature_enabled(
+                FEATURE_WG_CLIENT
+            ):
+                dashboard_tunnels.append(tunnel)
+            elif tunnel.tunnel_type == VpnTunnelType.OPENVPN and hub.feature_enabled(
+                FEATURE_OVPN_CLIENT
+            ):
+                dashboard_tunnels.append(tunnel)
+            elif tunnel.tunnel_type == VpnTunnelType.UNKNOWN:
+                if hub.feature_enabled(FEATURE_WG_CLIENT) or hub.feature_enabled(
+                    FEATURE_OVPN_CLIENT
+                ):
+                    dashboard_tunnels.append(tunnel)
+
+    if dashboard_tunnels:
+        entities.extend(VpnTunnelSwitch(hub, tunnel) for tunnel in dashboard_tunnels)
+    else:
+        if hub.feature_enabled(FEATURE_WG_CLIENT):
+            entities.extend(WireGuardSwitch(hub, client) for client in hub.vpn_clients.values())
+        if hub.feature_enabled(FEATURE_OVPN_CLIENT):
+            entities.extend(
+                OpenVpnClientSwitch(hub, client) for client in hub.ovpn_clients.values()
+            )
     if hub.feature_enabled(FEATURE_WG_SERVER):
         entities.append(WireGuardServerSwitch(hub))
-    if hub.feature_enabled(FEATURE_OVPN_CLIENT):
-        entities.extend(OpenVpnClientSwitch(hub, client) for client in hub.ovpn_clients.values())
     if hub.feature_enabled(FEATURE_OVPN_SERVER):
         entities.append(OpenVpnServerSwitch(hub))
     if hub.has_tailscale and hub.feature_enabled(FEATURE_TAILSCALE):
@@ -73,11 +104,74 @@ async def async_setup_entry(
     if hub.feature_enabled(FEATURE_PARENTAL_CONTROL):
         entities.append(GLinetParentalControlGlobalSwitch(hub))
         entities.extend(
-            GLinetParentalControlGroupSwitch(hub, group)
-            for group in hub.parental_groups.values()
+            GLinetParentalControlGroupSwitch(hub, group) for group in hub.parental_groups.values()
         )
     entities.append(LedSwitch(hub))
     async_add_entities(entities, True)
+
+    vpn_tunnel_switches: dict[int, VpnTunnelSwitch] = {
+        entity._tunnel_id: entity for entity in entities if isinstance(entity, VpnTunnelSwitch)
+    }
+
+    def _candidate_tunnels_for_features() -> list[VpnTunnel]:
+        result: list[VpnTunnel] = []
+        for tunnel in hub.vpn_tunnels.values():
+            if tunnel.tunnel_type == VpnTunnelType.WIREGUARD and hub.feature_enabled(
+                FEATURE_WG_CLIENT
+            ):
+                result.append(tunnel)
+            elif tunnel.tunnel_type == VpnTunnelType.OPENVPN and hub.feature_enabled(
+                FEATURE_OVPN_CLIENT
+            ):
+                result.append(tunnel)
+            elif tunnel.tunnel_type == VpnTunnelType.UNKNOWN and (
+                hub.feature_enabled(FEATURE_WG_CLIENT) or hub.feature_enabled(FEATURE_OVPN_CLIENT)
+            ):
+                result.append(tunnel)
+        return result
+
+    @callback
+    def _reconcile_vpn_tunnels(current_ids: set[int] | None = None) -> None:
+        hass = hub.hass
+        hass.async_create_task(_async_reconcile_vpn_tunnels(current_ids))
+
+    async def _async_reconcile_vpn_tunnels(
+        current_ids: set[int] | None = None,
+    ) -> None:
+        if current_ids is None:
+            current_ids = {t.tunnel_id for t in _candidate_tunnels_for_features()}
+
+        existing_ids = set(vpn_tunnel_switches.keys())
+
+        new_tunnels = [
+            tunnel
+            for tunnel in _candidate_tunnels_for_features()
+            if tunnel.tunnel_id not in existing_ids and tunnel.tunnel_id in current_ids
+        ]
+        if new_tunnels:
+            new_entities = [VpnTunnelSwitch(hub, tunnel) for tunnel in new_tunnels]
+            for entity in new_entities:
+                vpn_tunnel_switches[entity._tunnel_id] = entity
+            async_add_entities(new_entities, True)
+
+        stale_ids = existing_ids - current_ids
+        if stale_ids:
+            registry = async_get_entity_registry(hub.hass)
+            for stale_id in list(stale_ids):
+                entity = vpn_tunnel_switches.pop(stale_id, None)
+                if entity is None:
+                    continue
+                await entity.async_remove(force_remove=True)
+                if entity.entity_id:
+                    registry.async_remove(entity.entity_id)
+
+    entry.async_on_unload(
+        async_dispatcher_connect(
+            hub.hass,
+            hub.event_vpn_tunnels_updated,
+            _reconcile_vpn_tunnels,
+        )
+    )
 
     if hub.feature_enabled(FEATURE_PARENTAL_CONTROL):
         tracked: set[str] = set()
@@ -163,7 +257,6 @@ class WifiApSwitch(GLinetSwitchBase):
         await self._hub.async_request_refresh()
 
 
-
 class TailscaleSwitch(GLinetSwitchBase):
     _attr_icon = "mdi:vpn"
 
@@ -203,12 +296,14 @@ class TailscaleSwitch(GLinetSwitchBase):
             return
         await self._hub.async_request_refresh()
 
+
 class WireGuardSwitch(GLinetSwitchBase):
     _attr_icon = "mdi:vpn"
 
     def __init__(self, hub: GLinetHub, client: WireGuardClient) -> None:
         super().__init__(hub)
         self._client = client
+
     @property
     def unique_id(self) -> str:
         return f"glinet_switch/{self._hub.device_mac}/{self._client.name}/wireguard_client"
@@ -232,11 +327,11 @@ class WireGuardSwitch(GLinetSwitchBase):
                 and self._client not in self._hub.connected_vpn_clients
             ):
                 for client in self._hub.connected_vpn_clients:
-                    await self._hub.stop_vpn_client(client.peer_id)
+                    await self._hub.stop_vpn_client(client.group_id, client.peer_id)
 
             await self._hub.start_vpn_client(
                 self._client.group_id,
-                self._client.tunnel_id or self._client.peer_id,
+                self._client.peer_id,
             )
         except OSError:
             _LOGGER.exception("Unable to enable WireGuard client")
@@ -246,7 +341,8 @@ class WireGuardSwitch(GLinetSwitchBase):
     async def async_turn_off(self, **_: Any) -> None:
         try:
             await self._hub.stop_vpn_client(
-                self._client.tunnel_id or self._client.peer_id
+                self._client.group_id,
+                self._client.peer_id,
             )
         except OSError:
             _LOGGER.exception("Unable to stop WireGuard client")
@@ -287,7 +383,6 @@ class WireGuardServerSwitch(GLinetSwitchBase):
             return
         await asyncio.sleep(10)
         await self._hub.async_request_refresh()
-
 
 
 class RepeaterAutoSwitchSwitch(GLinetSwitchBase):
@@ -396,7 +491,7 @@ class OpenVpnClientSwitch(GLinetSwitchBase):
     def name(self) -> str:
         name = f"OpenVPN {self._client.name}"
         if self._client.group_name:
-             name = f"OpenVPN {self._client.group_name} {self._client.name}"
+            name = f"OpenVPN {self._client.group_name} {self._client.name}"
         return name
 
     @property
@@ -428,6 +523,75 @@ class OpenVpnClientSwitch(GLinetSwitchBase):
             _LOGGER.exception("Unable to stop OpenVPN client")
             return
         await asyncio.sleep(10)
+        await self._hub.async_request_refresh()
+
+
+class VpnTunnelSwitch(GLinetSwitchBase):
+    _attr_icon = "mdi:vpn"
+
+    def __init__(self, hub: GLinetHub, tunnel: VpnTunnel) -> None:
+        super().__init__(hub)
+        self._tunnel_id = tunnel.tunnel_id
+        self._tunnel_type = tunnel.tunnel_type
+        self._cached_tunnel = tunnel
+
+    def _current_tunnel(self) -> VpnTunnel | None:
+        tunnel = self._hub.vpn_tunnels.get(self._tunnel_id)
+        if tunnel is not None:
+            self._cached_tunnel = tunnel
+        return tunnel
+
+    @property
+    def _tunnel(self) -> VpnTunnel:
+        return self._current_tunnel() or self._cached_tunnel
+
+    @property
+    def unique_id(self) -> str:
+        if self._tunnel_type in {VpnTunnelType.WIREGUARD, VpnTunnelType.OPENVPN}:
+            type_token = "wg" if self._tunnel_type == VpnTunnelType.WIREGUARD else "ovpn"
+            return f"glinet_switch/{self._hub.device_mac}/vpn_tunnel/{type_token}/{self._tunnel_id}"
+        return f"glinet_switch/{self._hub.device_mac}/vpn_tunnel/unknown/{self._tunnel_id}"
+
+    @property
+    def name(self) -> str:
+        tunnel = self._tunnel
+        tunnel_name = tunnel.name or f"Tunnel {self._tunnel_id}"
+        if self._tunnel_type == VpnTunnelType.WIREGUARD:
+            return f"WG Tunnel {tunnel_name}"
+        if self._tunnel_type == VpnTunnelType.OPENVPN:
+            return f"OpenVPN Tunnel {tunnel_name}"
+        return f"VPN Tunnel {tunnel_name}"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._tunnel.enabled
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        tunnel = self._tunnel
+        return {
+            "tunnel_id": tunnel.tunnel_id,
+            "tunnel_type": tunnel.tunnel_type.value,
+            "connected": tunnel.connected,
+            "killswitch": tunnel.killswitch,
+            "is_default": tunnel.is_default,
+            "via": tunnel.via,
+        }
+
+    async def async_turn_on(self, **_: Any) -> None:
+        try:
+            await self._hub.set_vpn_tunnel(self._tunnel_id, True)
+        except OSError:
+            _LOGGER.exception("Unable to enable VPN tunnel %s", self._tunnel_id)
+            return
+        await self._hub.async_request_refresh()
+
+    async def async_turn_off(self, **_: Any) -> None:
+        try:
+            await self._hub.set_vpn_tunnel(self._tunnel_id, False)
+        except OSError:
+            _LOGGER.exception("Unable to disable VPN tunnel %s", self._tunnel_id)
+            return
         await self._hub.async_request_refresh()
 
 

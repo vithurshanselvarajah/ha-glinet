@@ -27,3 +27,8 @@ When unknown device discovery is enabled, the integration evaluates each new dev
 ## Notes
 
 This feature is especially useful if you want Home Assistant to stay tidy and only track the devices you actually care about.
+
+## Related Pages
+
+- [Device Trackers](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/device-trackers) — Per-client device tracking.
+- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities) — All core and optional entities.

@@ -171,3 +171,9 @@ data:
   "hash-method": "sha256"
 }
 ```
+
+## Related Pages
+
+- [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/services) — How to use Home Assistant services with this integration.
+- [Targeting a Specific Router](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/router-targeting) — The optional `mac` parameter.
+- [Router API Notes](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/router-api) — Endpoints, authentication, and module inventory.

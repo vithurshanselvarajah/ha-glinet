@@ -92,12 +92,13 @@ class GLinetApiClient:
         base_url: str,
         session: ClientSession,
         sid: str | None = None,
+        verify_ssl: bool = False,
     ) -> None:
         self._base_url = base_url.rstrip("/")
+        self._ssl_setting = None if verify_ssl else False
         self._session = session
         self.sid = sid
         self._logged_in = sid is not None
-
 
         self.system = SystemModule(self)
         self.modem = ModemModule(self)
@@ -141,13 +142,20 @@ class GLinetApiClient:
             "id": 0,
         }
 
+    async def _ensure_firmware_version(self) -> None:
+        if self._firmware_version is None:
+            await self.system.get_info()
+
+    async def _is_firmware_at_least(self, version: tuple[int, int, int, int]) -> bool:
+        await self._ensure_firmware_version()
+        fw_ver = self._firmware_version
+        return fw_ver is not None and fw_ver >= version
+
     async def _send_request(
         self, payload: dict[str, Any], timeout_seconds: int = DEFAULT_TIMEOUT
     ) -> dict[str, Any] | list[Any]:
         async with self._session.post(
-            self._base_url,
-            json=payload,
-            timeout=timeout_seconds,
+            self._base_url, json=payload, timeout=timeout_seconds, ssl=self._ssl_setting
         ) as response:
             return await _extract_response_data(response)
 
@@ -183,13 +191,9 @@ class GLinetApiClient:
             if algorithm == 1:
                 cipher_password = md5_crypt.using(salt=salt).hash(login_password)
             elif algorithm == 5:
-                cipher_password = sha256_crypt.using(salt=salt, rounds=5000).hash(
-                    login_password
-                )
+                cipher_password = sha256_crypt.using(salt=salt, rounds=5000).hash(login_password)
             elif algorithm == 6:
-                cipher_password = sha512_crypt.using(salt=salt, rounds=5000).hash(
-                    login_password
-                )
+                cipher_password = sha512_crypt.using(salt=salt, rounds=5000).hash(login_password)
             else:
                 raise ValueError("Unsupported router cipher algorithm")
 
@@ -243,6 +247,3 @@ class GLinetApiClient:
             else:
                 payload = self._build_sid_payload(method, [params], self.sid)
         return await self._send_request(payload)
-
-
-

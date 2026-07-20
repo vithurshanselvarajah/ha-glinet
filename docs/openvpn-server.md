@@ -23,3 +23,8 @@ To enable this feature, check the **OpenVPN Server** option under **Enabled Feat
 | Entity | Description | API Source |
 | --- | --- | --- |
 | **OpenVPN Server** | Toggles the OpenVPN server on or off. | `ovpn-server` API |
+
+## Related Pages
+
+- [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/services) — How to use Home Assistant services with this integration.
+- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities) — All core and optional entities.

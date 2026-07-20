@@ -24,7 +24,6 @@ class OvpnModule(BaseModule):
 
 
 class OvpnClientModule(BaseModule):
-
     def __init__(self, client: GLinetApiClient) -> None:
         super().__init__(client)
         self.ovpn_legacy = OvpnModule(client)
@@ -32,17 +31,17 @@ class OvpnClientModule(BaseModule):
 
     async def get_ovpn_clients(self) -> list[dict[str, Any]]:
         configs: list[dict[str, Any]] = []
-        
+
         groups_response = await self.ovpn_legacy.get_group_list()
         groups = dict(groups_response).get("groups", [])
-        
+
         for group in groups:
             group_id = group.get("group_id")
             group_name = group.get("group_name")
-            
+
             clients_response = await self.ovpn_legacy.get_config_list(group_id)
             clients = dict(clients_response).get("clients", [])
-            
+
             for client in clients:
                 configs.append(
                     {
@@ -56,25 +55,25 @@ class OvpnClientModule(BaseModule):
                         "raw_data": client,
                     }
                 )
-        
+
         tunnels_response = await self.vpn_client.get_tunnel()
         tunnels = dict(tunnels_response).get("tunnels", [])
-        
+
         ovpn_tunnel_id = None
         for tunnel in tunnels:
             if tunnel.get("via", {}).get("type") == "openvpn":
                 ovpn_tunnel_id = tunnel.get("tunnel_id")
                 break
-        
+
         if ovpn_tunnel_id is None:
-             for tunnel in tunnels:
-                 if tunnel.get("name") == "Primary Tunnel":
-                     ovpn_tunnel_id = tunnel.get("tunnel_id")
-                     break
+            for tunnel in tunnels:
+                if tunnel.get("name") == "Primary Tunnel":
+                    ovpn_tunnel_id = tunnel.get("tunnel_id")
+                    break
 
         for config in configs:
             config["tunnel_id"] = ovpn_tunnel_id
-            
+
         return configs
 
     async def get_status(self) -> list[dict[str, Any]]:
@@ -90,10 +89,10 @@ class OvpnClientModule(BaseModule):
                 if tunnel.get("via", {}).get("type") == "openvpn":
                     tunnel_id = tunnel.get("tunnel_id")
                     break
-        
+
         if tunnel_id is None:
-             raise ValueError("No OpenVPN tunnel found to start connection")
-            
+            raise ValueError("No OpenVPN tunnel found to start connection")
+
         return await self.vpn_client.set_tunnel(
             tunnel_id,
             True,
@@ -104,14 +103,13 @@ class OvpnClientModule(BaseModule):
         self, group_id: int, client_id: int, tunnel_id: int | None = None
     ) -> dict[str, Any]:
         if tunnel_id is None:
-             # Just find any active openvpn tunnel to stop it
-             status = await self.get_status()
-             for state in status:
-                 if state.get("type") == "openvpn" and state.get("status") == 1:
-                     tunnel_id = state.get("tunnel_id")
-                     break
-        
+            status = await self.get_status()
+            for state in status:
+                if state.get("type") == "openvpn" and state.get("status") == 1:
+                    tunnel_id = state.get("tunnel_id")
+                    break
+
         if tunnel_id is None:
-             return {"ok": True} # Already stopped
-             
+            return {"ok": True}
+
         return await self.vpn_client.set_tunnel(tunnel_id, False)

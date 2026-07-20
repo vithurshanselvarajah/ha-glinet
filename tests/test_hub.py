@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import types
-from datetime import timedelta
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -11,6 +11,7 @@ from custom_components.glinet_router.const import (
     CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
     CONF_SCAN_INTERVAL,
+    CONF_VERIFY_SSL,
     CONF_WAN_STATUS_MONITORS,
     FEATURE_REPEATER,
     FEATURE_WG_CLIENT,
@@ -31,7 +32,7 @@ def _hub_with_devices() -> GLinetHub:
     hub._all_connected_clients = {}
     hub._invoke_api = _invoke_api_empty_clients
     hub._api = types.SimpleNamespace(clients=types.SimpleNamespace(get_online=object()))
-    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
     hub.hass = object()
     return hub
 
@@ -41,7 +42,6 @@ async def _invoke_api_empty_clients(_: Any) -> dict[str, dict[str, Any]]:
 
 
 def test_router_traffic_sensors_sum_all_connected_clients() -> None:
-    """Traffic properties should aggregate from raw API data, not tracked devices."""
     hub = GLinetHub.__new__(GLinetHub)
     hub._devices = {}
     hub._all_connected_clients = {
@@ -56,17 +56,13 @@ def test_router_traffic_sensors_sum_all_connected_clients() -> None:
 
 
 def test_router_traffic_includes_untracked_devices() -> None:
-    """Traffic totals must include devices not tracked by HA (not in _devices)."""
     hub = GLinetHub.__new__(GLinetHub)
-    # Only one device is tracked
     hub._devices = {"aa:bb:cc:dd:ee:ff": ClientDeviceInfo("aa:bb:cc:dd:ee:ff")}
-    # But the API reports two devices
     hub._all_connected_clients = {
         "aa:bb:cc:dd:ee:ff": {"rx": 10, "tx": 20, "total_rx": 100, "total_tx": 200},
         "11:22:33:44:55:66": {"rx": 5, "tx": 8, "total_rx": 50, "total_tx": 80},
     }
 
-    # Both devices should contribute to traffic
     assert hub.current_traffic_download == 15
     assert hub.current_traffic_upload == 28
     assert hub.total_traffic_download == 150
@@ -166,6 +162,127 @@ async def test_fetch_cellular_status_extracts_apn() -> None:
     assert hub.cellular_status["modems"][0]["simcard"]["apn"] == "test.apn"
 
 
+async def test_fetch_cellular_status_fetches_sim_config_on_firmware_4_9() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._cached_modem_info = None
+    hub._settings = {}
+    hub._cellular_status = {}
+    hub._default_modem_bus = None
+    hub._sw_version = "4.9.0"
+    hub._api = None
+    hub.is_firmware_4_9_or_above = True
+
+    info_response = {
+        "modems": [{"bus": "0001:01:00.0", "iccid": "8944200204977051694F", "slot": "1"}]
+    }
+    status_response = {
+        "modems": [
+            {
+                "bus": "0001:01:00.0",
+                "slot": "1",
+                "iccid": "8944200204977051694F",
+                "simcard": {"iccid": "8944200204977051694F"},
+            }
+        ]
+    }
+    sim_config_response = {
+        "8944200204977051694F": {
+            "manual": True,
+            "username": "",
+            "pincode": "",
+            "ip_type": 1,
+            "cid": 1,
+            "roaming": False,
+            "apn": "mob.asm.net",
+            "password": "",
+            "auth": "NONE",
+        }
+    }
+
+    sim_calls: list[str] = []
+    info_calls: list[Any] = []
+    status_calls: list[Any] = []
+
+    async def invoke_optional_api(callable_: Any) -> Any:
+        callable_()
+        if callable_ is hub._api.modem.get_info:
+            info_calls.append(callable_)
+            return info_response
+        if callable_ is hub._api.modem.get_status:
+            status_calls.append(callable_)
+            return status_response
+        if callable_.__name__ == "<lambda>" or "get_sim_config" in str(callable_):
+            sim_calls.append(str(callable_.__closure__[0].cell_contents))
+            return sim_config_response
+        return None
+
+    hub._invoke_optional_api = invoke_optional_api
+    hub._api = types.SimpleNamespace(
+        modem=types.SimpleNamespace(
+            get_info=lambda: info_response,
+            get_status=lambda: status_response,
+            get_sim_config=lambda bus: sim_config_response,
+        )
+    )
+
+    await hub.fetch_cellular_status()
+
+    modem = hub.cellular_status["modems"][0]
+    assert modem["simcard"]["apn"] == "mob.asm.net"
+    assert sim_calls == ["0001:01:00.0"]
+
+
+async def test_fetch_cellular_status_keeps_4_8_apn_source() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._cached_modem_info = None
+    hub._settings = {}
+    hub._cellular_status = {}
+    hub._default_modem_bus = None
+    hub._sw_version = "4.8.3"
+    hub._api = None
+    hub.is_firmware_4_9_or_above = False
+
+    info_response = {"modems": [{"bus": "0001:01:00.0", "iccid": "ICCID-1"}]}
+    status_response = {
+        "modems": [
+            {
+                "bus": "0001:01:00.0",
+                "iccid": "ICCID-1",
+                "simcard": {"iccid": "ICCID-1", "apn": "legacy.apn"},
+            }
+        ]
+    }
+
+    sim_calls: list[Any] = []
+
+    async def invoke_optional_api(callable_: Any) -> Any:
+        if callable_.__name__ == "<lambda>" or "get_sim_config" in str(callable_):
+            sim_calls.append(callable_)
+        return None
+
+    hub._invoke_optional_api = invoke_optional_api
+    hub._api = types.SimpleNamespace(
+        modem=types.SimpleNamespace(
+            get_info=lambda: info_response,
+            get_status=lambda: status_response,
+            get_sim_config=lambda bus: None,
+        )
+    )
+
+    queue = iter([info_response, status_response])
+
+    async def invoke(_: Any) -> Any:
+        return next(queue, None)
+
+    hub._invoke_optional_api = invoke
+
+    await hub.fetch_cellular_status()
+
+    modem = hub.cellular_status["modems"][0]
+    assert sim_calls == []
+    assert modem["simcard"]["apn"] == "legacy.apn"
+
+
 async def test_send_sms_uses_default_modem_bus() -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {}
@@ -192,6 +309,42 @@ async def test_send_sms_uses_default_modem_bus() -> None:
     assert sent == [("1-1", "+441234567890", "hello")]
 
 
+def test_traffic_config_bus_uses_modem_record_bus_when_present() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._modems = {"1-1:00.0": {"bus": "0001:01:00.0"}}
+    hub._default_modem_bus = "1-1:00.0"
+
+    assert hub._traffic_config_bus() == "0001:01:00.0"
+
+
+def test_traffic_config_bus_uses_short_bus_from_4_9_modem_record() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._modems = {
+        "modem_0001_s1": {"bus": "0001", "slot": 1},
+        "modem_0001_s2": {"bus": "0001", "slot": 2},
+    }
+    hub._default_modem_bus = "cpu"
+    hub._sw_version = "4.9.0"
+
+    assert hub._traffic_config_bus() == "0001"
+
+
+def test_traffic_config_bus_falls_back_to_default_modem_bus() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._modems = {}
+    hub._default_modem_bus = "1-1:00.0"
+
+    assert hub._traffic_config_bus() == "1-1:00.0"
+
+
+def test_traffic_config_bus_returns_none_when_no_bus_known() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._modems = {}
+    hub._default_modem_bus = None
+
+    assert hub._traffic_config_bus() is None
+
+
 async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {CONF_ENABLED_FEATURES: [FEATURE_REPEATER]}
@@ -200,7 +353,7 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
     hub._cellular_status = {"signal": 10}
     hub._modems = {"1-1": {}}
     hub._saved_networks = [{"ssid": "old"}]
-    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
     hub._host = "192.168.8.1"
     hub._last_upgrade_check = None
     hub.hass = object()
@@ -272,12 +425,226 @@ async def test_fetch_all_data_skips_disabled_features(monkeypatch) -> None:
     assert hub._modems == {}
 
 
+async def test_fetch_all_data_runs_tasks_in_parallel_when_enabled(
+    monkeypatch,
+) -> None:
+    import asyncio
+
+    from custom_components.glinet_router.const import CONF_PARALLEL_REQUESTS
+
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {CONF_ENABLED_FEATURES: [], CONF_PARALLEL_REQUESTS: True}
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
+    hub._host = "192.168.8.1"
+    hub._last_upgrade_check = None
+    hub.hass = object()
+    hub.refresh_session_token = _noop
+
+    started: list[str] = []
+    completed: list[str] = []
+    events = asyncio.Event()
+
+    async def make_slow_fetch(name: str) -> Any:
+        async def _run() -> None:
+            started.append(name)
+            await events.wait()
+            completed.append(name)
+
+        return _run
+
+    async def fake_fetch_system_status() -> None:
+        started.append("system")
+        await events.wait()
+        completed.append("system")
+
+    async def fake_fetch_kmwan_status() -> None:
+        started.append("kmwan")
+        await events.wait()
+        completed.append("kmwan")
+
+    async def fake_fetch_connected_devices() -> None:
+        started.append("clients")
+        await events.wait()
+        completed.append("clients")
+
+    async def fake_fetch_wifi_interfaces() -> None:
+        started.append("wifi")
+        await events.wait()
+        completed.append("wifi")
+
+    async def fake_fetch_fan_status() -> None:
+        started.append("fan")
+        await events.wait()
+        completed.append("fan")
+
+    async def fake_fetch_led_status() -> None:
+        started.append("led")
+        await events.wait()
+        completed.append("led")
+
+    hub.fetch_system_status = fake_fetch_system_status
+    hub.fetch_kmwan_status = fake_fetch_kmwan_status
+    hub.fetch_connected_devices = fake_fetch_connected_devices
+    hub.fetch_wifi_interfaces = fake_fetch_wifi_interfaces
+    hub.fetch_fan_status = fake_fetch_fan_status
+    hub.fetch_led_status = fake_fetch_led_status
+
+    async def _release() -> None:
+        await asyncio.sleep(0)
+        events.set()
+
+    release_task = asyncio.create_task(_release())
+    await hub.fetch_all_data()
+    await release_task
+
+    assert set(started) == {"system", "kmwan", "clients", "wifi", "fan", "led"}
+    assert completed == []
+
+
+async def test_fetch_all_data_runs_tasks_sequentially_by_default(
+    monkeypatch,
+) -> None:
+    import asyncio
+
+    from custom_components.glinet_router.const import CONF_PARALLEL_REQUESTS
+
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {
+        CONF_ENABLED_FEATURES: [],
+        CONF_PARALLEL_REQUESTS: False,
+    }
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
+    hub._host = "192.168.8.1"
+    hub._last_upgrade_check = None
+    hub.hass = object()
+    hub.refresh_session_token = _noop
+
+    order: list[str] = []
+    started: dict[str, asyncio.Event] = {}
+    completed: dict[str, asyncio.Event] = {}
+
+    async def _ordered_fetch(name: str) -> None:
+        order.append(f"{name}:start")
+        started[name].set()
+        await completed[name].wait()
+        order.append(f"{name}:end")
+
+    for name in (
+        "system",
+        "kmwan",
+        "clients",
+        "wifi",
+        "fan",
+        "led",
+    ):
+        started[name] = asyncio.Event()
+        completed[name] = asyncio.Event()
+        setattr(
+            hub,
+            f"fetch_{name.replace('clients', 'connected_devices').replace('led', 'led_status')}",
+            _ordered_fetch(name),
+        )
+
+    expected_names = [
+        "system_status",
+        "kmwan_status",
+        "connected_devices",
+        "wifi_interfaces",
+        "fan_status",
+        "led_status",
+    ]
+    for name, attr in zip(
+        ("system", "kmwan", "clients", "wifi", "fan", "led"),
+        expected_names,
+        strict=True,
+    ):
+        setattr(hub, f"fetch_{attr}", _ordered_fetch(name))
+
+    async def _drive() -> None:
+        for name in ("system", "kmwan", "clients", "wifi", "fan", "led"):
+            await started[name].wait()
+            completed[name].set()
+
+    drive_task = asyncio.create_task(_drive())
+    await hub.fetch_all_data()
+    await drive_task
+
+    expected_order = []
+    for name in ("system", "kmwan", "clients", "wifi", "fan", "led"):
+        expected_order.append(f"{name}:start")
+        expected_order.append(f"{name}:end")
+    assert order == expected_order
+
+
+def test_parallel_requests_property_default() -> None:
+    from custom_components.glinet_router.hub import GLinetHub
+
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {}
+    assert hub.parallel_requests is False
+
+
+def test_parallel_requests_property_explicit_true() -> None:
+    from custom_components.glinet_router.const import CONF_PARALLEL_REQUESTS
+    from custom_components.glinet_router.hub import GLinetHub
+
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {CONF_PARALLEL_REQUESTS: True}
+    assert hub.parallel_requests is True
+
+
+def test_firmware_version_tuple_decodes_sw_version() -> None:
+    from custom_components.glinet_router.hub import GLinetHub
+
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._sw_version = "4.9.0"
+    assert hub.firmware_version_tuple == (4, 9, 0, 0)
+
+    hub._sw_version = "4.8.1-rc2"
+    assert hub.firmware_version_tuple == (4, 8, 1, 2)
+
+    hub._sw_version = "UNKNOWN"
+    assert hub.firmware_version_tuple is None
+
+    hub._sw_version = ""
+    assert hub.firmware_version_tuple is None
+
+
+def test_is_firmware_4_9_or_above_uses_sw_version() -> None:
+    from custom_components.glinet_router.hub import GLinetHub
+
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._api = None
+
+    hub._sw_version = "4.9.0"
+    assert hub.is_firmware_4_9_or_above is True
+
+    hub._sw_version = "4.9.1"
+    assert hub.is_firmware_4_9_or_above is True
+
+    hub._sw_version = "4.8.3"
+    assert hub.is_firmware_4_9_or_above is False
+
+    hub._sw_version = "4.8.0"
+    assert hub.is_firmware_4_9_or_above is False
+
+    hub._sw_version = "UNKNOWN"
+    hub._api = types.SimpleNamespace(_firmware_version=(4, 9, 0, 0))
+    assert hub.is_firmware_4_9_or_above is True
+
+    hub._api = types.SimpleNamespace(_firmware_version=(4, 8, 0, 0))
+    assert hub.is_firmware_4_9_or_above is False
+
+    hub._api = types.SimpleNamespace(_firmware_version=None)
+    assert hub.is_firmware_4_9_or_above is False
+
+
 async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
     monkeypatch,
 ) -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {CONF_ENABLED_FEATURES: []}
-    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
     hub._host = "192.168.8.1"
     hub._last_upgrade_check = None
     hub.hass = object()
@@ -328,7 +695,7 @@ async def test_fetch_all_data_with_no_optional_features_still_runs_core_fetches(
 async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {CONF_ENABLED_FEATURES: [FEATURE_WG_CLIENT, FEATURE_WG_SERVER]}
-    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
     hub._host = "192.168.8.1"
     hub._last_upgrade_check = None
     hub.hass = object()
@@ -378,7 +745,7 @@ async def test_fetch_all_data_includes_wireguard_when_enabled(monkeypatch) -> No
 async def test_fetch_all_data_skips_upgrade_info_within_a_day(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {CONF_ENABLED_FEATURES: []}
-    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
     hub._host = "192.168.8.1"
     hub.hass = object()
     hub._last_upgrade_check = utcnow() - timedelta(hours=12)
@@ -424,7 +791,7 @@ async def test_fetch_all_data_skips_upgrade_info_within_a_day(monkeypatch) -> No
 async def test_fetch_all_data_runs_upgrade_info_after_a_day(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {CONF_ENABLED_FEATURES: []}
-    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
     hub._host = "192.168.8.1"
     hub.hass = object()
     hub._last_upgrade_check = utcnow() - timedelta(days=2)
@@ -477,9 +844,7 @@ async def test_scan_wifi_networks_stores_results(monkeypatch) -> None:
     hub._scanned_networks = []
     hub._last_wifi_scan = None
 
-    async def fake_scan_wifi_networks(
-        params: dict[str, Any]
-    ) -> list[dict[str, Any]]:
+    async def fake_scan_wifi_networks(params: dict[str, Any]) -> list[dict[str, Any]]:
         calls.append(params)
         return [
             {
@@ -625,9 +990,7 @@ async def test_set_repeater_band_updates_config(monkeypatch) -> None:
     called: list[Any] = []
 
     class RepeaterModule:
-        async def set_config(
-            self, params: dict[str, Any]
-        ) -> dict[str, Any]:
+        async def set_config(self, params: dict[str, Any]) -> dict[str, Any]:
             called.append(params.get("lock_band"))
             return {}
 
@@ -749,27 +1112,27 @@ async def test_get_saved_wifi_networks_and_remove_saved_wifi_network(monkeypatch
 async def test_async_initialize_hub_cleans_up_orphaned_entities(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {CONF_ENABLED_FEATURES: []}
-    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
     hub.hass = MagicMock()
     hub._late_init_complete = True
     hub._factory_mac = "00:11:22:33:44:55"
 
-
     orphan_entry = types.SimpleNamespace(
         entity_id="sensor.glinet_cellular_signal",
         unique_id="glinet_sensor/00:11:22:33:44:55/cellular_signal",
-        domain="sensor"
+        domain="sensor",
     )
     valid_entry = types.SimpleNamespace(
         entity_id="sensor.glinet_uptime",
         unique_id="glinet_sensor/00:11:22:33:44:55/system_uptime",
-        domain="sensor"
+        domain="sensor",
     )
 
     mock_er = MagicMock()
     mock_er.async_remove = MagicMock()
 
     import homeassistant.helpers.entity_registry as er
+
     monkeypatch.setattr(er, "async_get", lambda _: mock_er)
     monkeypatch.setattr(
         er,
@@ -780,11 +1143,120 @@ async def test_async_initialize_hub_cleans_up_orphaned_entities(monkeypatch) -> 
     hub.refresh_session_token = _noop
     hub.fetch_all_data = _noop
 
+    await hub.async_initialize_hub()
+
+    mock_er.async_remove.assert_called_once_with("sensor.glinet_cellular_signal")
+
+
+async def test_async_initialize_hub_removes_legacy_cellular_sensors_on_firmware_4_9(
+    monkeypatch,
+) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {CONF_ENABLED_FEATURES: ["cellular"]}
+    hub._entry = types.SimpleNamespace(
+        entry_id="test_entry",
+        async_on_unload=lambda fn: None,
+    )
+    hub.hass = MagicMock()
+    hub._late_init_complete = True
+    hub._factory_mac = "00:11:22:33:44:55"
+    hub._sw_version = "4.9.0"
+    hub._api = None
+
+    legacy_signal = types.SimpleNamespace(
+        entity_id="sensor.glinet_cellular_signal",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_signal",
+        domain="sensor",
+    )
+    legacy_rssi = types.SimpleNamespace(
+        entity_id="sensor.glinet_cellular_rssi",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_rssi",
+        domain="sensor",
+    )
+    kept_ipv4 = types.SimpleNamespace(
+        entity_id="sensor.cellular_wan_ipv4",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_ipv4",
+        domain="sensor",
+    )
+    kept_rsrp = types.SimpleNamespace(
+        entity_id="sensor.glinet_cellular_rsrp",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_rsrp",
+        domain="sensor",
+    )
+
+    mock_er = MagicMock()
+    mock_er.async_remove = MagicMock()
+
+    import homeassistant.helpers.entity_registry as er
+
+    monkeypatch.setattr(er, "async_get", lambda _: mock_er)
+    monkeypatch.setattr(
+        er,
+        "async_entries_for_config_entry",
+        MagicMock(
+            return_value=[
+                legacy_signal,
+                legacy_rssi,
+                kept_ipv4,
+                kept_rsrp,
+            ]
+        ),
+    )
+
+    hub.refresh_session_token = _noop
+    hub.fetch_all_data = _noop
 
     await hub.async_initialize_hub()
 
+    assert mock_er.async_remove.call_count == 2
+    mock_er.async_remove.assert_any_call("sensor.glinet_cellular_signal")
+    mock_er.async_remove.assert_any_call("sensor.glinet_cellular_rssi")
+    for call in mock_er.async_remove.call_args_list:
+        assert call.args[0] != "sensor.cellular_wan_ipv4"
+        assert call.args[0] != "sensor.glinet_cellular_rsrp"
 
-    mock_er.async_remove.assert_called_once_with("sensor.glinet_cellular_signal")
+
+async def test_async_initialize_hub_keeps_legacy_cellular_sensors_on_firmware_4_8(
+    monkeypatch,
+) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._settings = {CONF_ENABLED_FEATURES: ["cellular"]}
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
+    hub.hass = MagicMock()
+    hub._late_init_complete = True
+    hub._factory_mac = "00:11:22:33:44:55"
+    hub._sw_version = "4.8.3"
+    hub._api = None
+
+    legacy_signal = types.SimpleNamespace(
+        entity_id="sensor.glinet_cellular_signal",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_signal",
+        domain="sensor",
+    )
+    legacy_rssi = types.SimpleNamespace(
+        entity_id="sensor.glinet_cellular_rssi",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_rssi",
+        domain="sensor",
+    )
+
+    mock_er = MagicMock()
+    mock_er.async_remove = MagicMock()
+
+    import homeassistant.helpers.entity_registry as er
+
+    monkeypatch.setattr(er, "async_get", lambda _: mock_er)
+    monkeypatch.setattr(
+        er,
+        "async_entries_for_config_entry",
+        MagicMock(return_value=[legacy_signal, legacy_rssi]),
+    )
+
+    hub.refresh_session_token = _noop
+    hub.fetch_all_data = _noop
+
+    await hub.async_initialize_hub()
+
+    assert mock_er.async_remove.call_count == 0
 
 
 async def test_async_initialize_hub_cleans_up_repeater_entities_when_disabled(
@@ -792,7 +1264,7 @@ async def test_async_initialize_hub_cleans_up_repeater_entities_when_disabled(
 ) -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {CONF_ENABLED_FEATURES: []}
-    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
     hub.hass = MagicMock()
     hub._late_init_complete = True
     hub._factory_mac = "00:11:22:33:44:55"
@@ -870,7 +1342,7 @@ async def test_async_initialize_hub_cleans_up_unselected_wan_status_sensors(
         CONF_ADD_ALL_DEVICES: True,
         CONF_WAN_STATUS_MONITORS: ["wan:ipv4", "wan:ipv6", "wwan:ipv4"],
     }
-    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
     hub.hass = MagicMock()
     hub._late_init_complete = True
     hub._factory_mac = "00:11:22:33:44:55"
@@ -934,7 +1406,7 @@ async def test_async_initialize_hub_cleans_up_unselected_cellular_ip_sensors(
         CONF_WAN_STATUS_MONITORS: ["wan:ipv4", "modem_0001:ipv4"],
         CONF_ENABLED_FEATURES: ["cellular"],
     }
-    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
     hub.hass = MagicMock()
     hub._late_init_complete = True
     hub._factory_mac = "00:11:22:33:44:55"
@@ -982,8 +1454,214 @@ async def test_async_initialize_hub_cleans_up_unselected_cellular_ip_sensors(
     mock_er.async_remove.assert_any_call("sensor.cellular_wan_ipv6")
 
 
+async def test_async_cleanup_cellular_limit_sensors_removes_disabled(monkeypatch) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
+    hub._factory_mac = "00:11:22:33:44:55"
+    hub._entity_cleanup_rules = []
+    hub._traffic_sim_data = {
+        1: {"slot": 1, "sim_type": 0, "limit_enabled": True, "traffic_total": 100},
+        2: {"slot": 2, "sim_type": 0, "limit_enabled": False, "traffic_total": 50},
+    }
+    hub.hass = MagicMock()
+
+    sim1_data_limit = types.SimpleNamespace(
+        entity_id="sensor.cellular_sim_1_data_limit",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_traffic_sim_1_0_data_limit",
+        domain="sensor",
+    )
+    sim1_days_until_reset = types.SimpleNamespace(
+        entity_id="sensor.cellular_sim_1_days_until_reset",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_traffic_sim_1_0_days_until_reset",
+        domain="sensor",
+    )
+    sim1_traffic_total = types.SimpleNamespace(
+        entity_id="sensor.cellular_sim_1_traffic_total",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_traffic_sim_1_0_traffic_total",
+        domain="sensor",
+    )
+    sim2_data_limit = types.SimpleNamespace(
+        entity_id="sensor.cellular_sim_2_data_limit",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_traffic_sim_2_0_data_limit",
+        domain="sensor",
+    )
+    sim2_days_until_reset = types.SimpleNamespace(
+        entity_id="sensor.cellular_sim_2_days_until_reset",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_traffic_sim_2_0_days_until_reset",
+        domain="sensor",
+    )
+    sim2_traffic_total = types.SimpleNamespace(
+        entity_id="sensor.cellular_sim_2_traffic_total",
+        unique_id="glinet_sensor/00:11:22:33:44:55/cellular_traffic_sim_2_0_traffic_total",
+        domain="sensor",
+    )
+    unrelated = types.SimpleNamespace(
+        entity_id="sensor.connected_clients",
+        unique_id="glinet_sensor/00:11:22:33:44:55/connected_clients",
+        domain="sensor",
+    )
+
+    mock_er = MagicMock()
+    mock_er.async_remove = MagicMock()
+
+    import homeassistant.helpers.entity_registry as er
+
+    monkeypatch.setattr(er, "async_get", lambda _: mock_er)
+    monkeypatch.setattr(
+        er,
+        "async_entries_for_config_entry",
+        MagicMock(
+            return_value=[
+                sim1_data_limit,
+                sim1_days_until_reset,
+                sim1_traffic_total,
+                sim2_data_limit,
+                sim2_days_until_reset,
+                sim2_traffic_total,
+                unrelated,
+            ]
+        ),
+    )
+
+    hub._refresh_cellular_limit_cleanup_rule()
+    await hub._async_cleanup_orphaned_sensor_entities()
+
+    removed = {call.args[0] for call in mock_er.async_remove.call_args_list}
+    assert "sensor.cellular_sim_2_data_limit" in removed
+    assert "sensor.cellular_sim_2_days_until_reset" in removed
+    assert "sensor.cellular_sim_1_data_limit" not in removed
+    assert "sensor.cellular_sim_1_days_until_reset" not in removed
+    assert "sensor.cellular_sim_1_traffic_total" not in removed
+    assert "sensor.cellular_sim_2_traffic_total" not in removed
+    assert "sensor.connected_clients" not in removed
+
+
+async def test_fetch_traffic_config_dispatches_event_when_sim_data_updates(
+    monkeypatch,
+) -> None:
+    import custom_components.glinet_router.hub as hub_module
+
+    dispatched: list[str] = []
+    monkeypatch.setattr(
+        hub_module,
+        "async_dispatcher_send",
+        lambda hass, signal: dispatched.append(signal),
+    )
+
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._modems = {"1-1:00.0": {"bus": "0001:01:00.0"}}
+    hub._default_modem_bus = "0001:01:00.0"
+    hub.hass = MagicMock()
+    hub._factory_mac = "AA:BB:CC:DD:EE:FF"
+    hub._traffic_sim_data = {}
+    hub._traffic_config_save_to_flash = None
+    hub._entity_cleanup_rules = []
+    hub._sw_version = "4.8.0"
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
+    mock_api = MagicMock()
+    mock_api.modem.get_traffic_config = AsyncMock(
+        return_value={
+            "save_to_flash": True,
+            "sim1_traffic_total": "100",
+            "sim1_limit": {
+                "enable": True,
+                "threshold": "1000",
+                "unit": "MB",
+                "reset_period": "month",
+                "day": "1",
+                "hour": "0",
+                "month": "0",
+            },
+            "sim2_traffic_total": "0",
+            "sim2_limit": {"enable": False},
+        }
+    )
+    hub._api = mock_api
+    hub._invoke_optional_api = lambda fn: fn()
+
+    await hub.fetch_traffic_config()
+
+    assert hub.event_cellular_traffic_config_updated in dispatched
+
+
+def test_event_cellular_traffic_config_updated_is_per_mac() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._factory_mac = "AA:BB:CC:DD:EE:FF"
+    assert (
+        hub.event_cellular_traffic_config_updated
+        == "glinet_router-cellular-traffic-config-updated-AA:BB:CC:DD:EE:FF"
+    )
+
+
+async def test_register_periodic_cleanup_registers_interval_tracker(monkeypatch) -> None:
+    import custom_components.glinet_router.hub as hub_module
+
+    captured: dict = {}
+
+    def _fake_track_time_interval(hass, action, interval):
+        captured["hass"] = hass
+        captured["action"] = action
+        captured["interval"] = interval
+        return lambda: None
+
+    monkeypatch.setattr(hub_module, "async_track_time_interval", _fake_track_time_interval)
+
+    hub = GLinetHub.__new__(GLinetHub)
+    hub.hass = MagicMock()
+    on_unload_calls: list = []
+    hub._entry = types.SimpleNamespace(
+        entry_id="test_entry",
+        async_on_unload=lambda fn: on_unload_calls.append(fn),
+    )
+
+    hub._register_periodic_cleanup()
+
+    assert on_unload_calls
+    assert captured["action"] == hub._periodic_cleanup_callback
+    assert captured["interval"] == timedelta(minutes=30)
+
+
+async def test_periodic_cleanup_callback_swallows_transport_errors(monkeypatch) -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
+
+    async def _boom() -> None:
+        raise TimeoutError("router unreachable")
+
+    hub._async_cleanup_orphaned_sensor_entities = _boom
+
+    await hub._periodic_cleanup_callback(datetime.now())
+
+
+async def test_async_cleanup_orphaned_sensor_entities_runs_with_no_rules() -> None:
+    hub = GLinetHub.__new__(GLinetHub)
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
+    hub._factory_mac = "00:11:22:33:44:55"
+    hub._traffic_sim_data = {}
+    hub._entity_cleanup_rules = []
+    hub._entity_cleanup_rules = []
+    hub.hass = MagicMock()
+
+    mock_er = MagicMock()
+    mock_er.async_remove = MagicMock()
+    import homeassistant.helpers.entity_registry as er
+
+    monkeypatch_holder = {}
+
+    def _fake_async_get(hass):
+        return mock_er
+
+    async def _noop(*_args, **_kwargs):
+        return None
+
+    monkeypatch_holder["er"] = er
+    # Call without monkeypatching — the rule list is empty so nothing should be removed
+    await hub._async_cleanup_orphaned_sensor_entities()
+
+
 async def test_fetch_connected_devices_respects_add_all_devices_option(monkeypatch) -> None:
     import custom_components.glinet_router.hub as hub_module
+
     monkeypatch.setattr(hub_module, "async_dispatcher_send", _noop_arg)
 
     hub = GLinetHub.__new__(GLinetHub)
@@ -994,12 +1672,11 @@ async def test_fetch_connected_devices_respects_add_all_devices_option(monkeypat
     hub._entry = types.SimpleNamespace(entry_id="test_entry", unique_id="unique_id")
     hub.hass = MagicMock()
 
-
     mock_dr = MagicMock()
     mock_dr.async_get_device.return_value = None
     import homeassistant.helpers.device_registry as dr
-    monkeypatch.setattr(dr, "async_get", lambda _: mock_dr)
 
+    monkeypatch.setattr(dr, "async_get", lambda _: mock_dr)
 
     hub._api = types.SimpleNamespace(clients=types.SimpleNamespace(get_online=AsyncMock()))
     hub._invoke_api = AsyncMock(
@@ -1008,7 +1685,6 @@ async def test_fetch_connected_devices_respects_add_all_devices_option(monkeypat
 
     await hub.fetch_connected_devices()
 
-
     assert "11:22:33:44:55:66" in hub._devices
     assert hub._devices["11:22:33:44:55:66"].is_known is False
 
@@ -1016,21 +1692,18 @@ async def test_fetch_connected_devices_respects_add_all_devices_option(monkeypat
 async def test_async_initialize_hub_cleans_up_unknown_devices(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {CONF_ADD_ALL_DEVICES: False}
-    hub._entry = types.SimpleNamespace(entry_id="test_entry")
+    hub._entry = types.SimpleNamespace(entry_id="test_entry", async_on_unload=lambda fn: None)
     hub.hass = MagicMock()
     hub._late_init_complete = True
     hub._factory_mac = "00:11:22:33:44:55"
 
-
     unknown_tracker = types.SimpleNamespace(
-        entity_id="device_tracker.unknown",
-        unique_id="aa:bb:cc:dd:ee:ff",
-        domain="device_tracker"
+        entity_id="device_tracker.unknown", unique_id="aa:bb:cc:dd:ee:ff", domain="device_tracker"
     )
     unknown_sensor = types.SimpleNamespace(
         entity_id="sensor.unknown_bandwidth",
         unique_id="glinet_client_sensor/aa:bb:cc:dd:ee:ff/download",
-        domain="sensor"
+        domain="sensor",
     )
 
     mock_er = MagicMock()
@@ -1038,6 +1711,7 @@ async def test_async_initialize_hub_cleans_up_unknown_devices(monkeypatch) -> No
 
     import homeassistant.helpers.device_registry as dr
     import homeassistant.helpers.entity_registry as er
+
     monkeypatch.setattr(er, "async_get", lambda _: mock_er)
     monkeypatch.setattr(
         er,
@@ -1045,12 +1719,9 @@ async def test_async_initialize_hub_cleans_up_unknown_devices(monkeypatch) -> No
         MagicMock(return_value=[unknown_tracker, unknown_sensor]),
     )
 
-
     mock_dr = MagicMock()
     mock_dr.async_get_device.return_value = types.SimpleNamespace(
-        id="device_id",
-        name="Test Device",
-        config_entries={"test_entry"}
+        id="device_id", name="Test Device", config_entries={"test_entry"}
     )
     mock_dr.async_remove_device = MagicMock()
     monkeypatch.setattr(dr, "async_get", lambda _: mock_dr)
@@ -1060,11 +1731,9 @@ async def test_async_initialize_hub_cleans_up_unknown_devices(monkeypatch) -> No
 
     await hub.async_initialize_hub()
 
-
     assert mock_er.async_remove.call_count == 2
     mock_er.async_remove.assert_any_call("device_tracker.unknown")
     mock_er.async_remove.assert_any_call("sensor.unknown_bandwidth")
-
 
     assert mock_dr.async_remove_device.call_count >= 1
     mock_dr.async_remove_device.assert_any_call("device_id")
@@ -1086,6 +1755,7 @@ async def test_fetch_wg_server_status(monkeypatch) -> None:
     assert hub.wg_server_status.enabled is True
     assert hub.wg_server_connected_users == 1
 
+
 async def test_start_wg_server(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._settings = {}
@@ -1095,6 +1765,7 @@ async def test_start_wg_server(monkeypatch) -> None:
         async def start(self) -> dict[str, Any]:
             called.append("start")
             return {"ok": True}
+
         async def get_status(self) -> dict[str, Any]:
             return {"server": {"status": 1}}
 
@@ -1103,6 +1774,7 @@ async def test_start_wg_server(monkeypatch) -> None:
 
     await hub.start_wg_server()
     assert "start" in called
+
 
 async def test_stop_wg_server(monkeypatch) -> None:
     hub = GLinetHub.__new__(GLinetHub)
@@ -1113,6 +1785,7 @@ async def test_stop_wg_server(monkeypatch) -> None:
         async def stop(self) -> dict[str, Any]:
             called.append("stop")
             return {"ok": True}
+
         async def get_status(self) -> dict[str, Any]:
             return {"server": {"status": 0}}
 
@@ -1131,7 +1804,7 @@ async def test_cleanup_stale_devices_removes_known_device_entities(monkeypatch) 
     device = ClientDeviceInfo(mac)
     device.apply_update({"online": False})
     device._last_activity = hub_module.utcnow() - hub_module.timedelta(minutes=10)
-    device.is_known = True  # Known device should also be cleaned up
+    device.is_known = True
     hub._devices = {mac: device}
     hub._settings = {CONF_CLEANUP_DEVICES: 5}
     hub._entry = SimpleNamespace(entry_id="entry")
@@ -1180,11 +1853,13 @@ def _make_entry(data: dict[str, Any] | None = None, options: dict[str, Any] | No
 def test_hub_uses_configured_scan_interval() -> None:
     from datetime import timedelta
 
-    entry = _make_entry(data={
-        "host": "http://192.168.8.1",
-        "password": "pass",
-        CONF_SCAN_INTERVAL: 60,
-    })
+    entry = _make_entry(
+        data={
+            "host": "http://192.168.8.1",
+            "password": "pass",
+            CONF_SCAN_INTERVAL: 60,
+        }
+    )
     hub = GLinetHub(MagicMock(), entry)
     assert hub.update_interval == timedelta(seconds=60)
 
@@ -1192,10 +1867,12 @@ def test_hub_uses_configured_scan_interval() -> None:
 def test_hub_defaults_scan_interval_when_not_configured() -> None:
     from datetime import timedelta
 
-    entry = _make_entry(data={
-        "host": "http://192.168.8.1",
-        "password": "pass",
-    })
+    entry = _make_entry(
+        data={
+            "host": "http://192.168.8.1",
+            "password": "pass",
+        }
+    )
     hub = GLinetHub(MagicMock(), entry)
     assert hub.update_interval == timedelta(seconds=30)
 
@@ -1218,11 +1895,13 @@ def test_hub_scan_interval_from_options_overrides_data() -> None:
 def test_apply_option_updates_changes_scan_interval() -> None:
     from datetime import timedelta
 
-    entry = _make_entry(data={
-        "host": "http://192.168.8.1",
-        "password": "pass",
-        CONF_SCAN_INTERVAL: 30,
-    })
+    entry = _make_entry(
+        data={
+            "host": "http://192.168.8.1",
+            "password": "pass",
+            CONF_SCAN_INTERVAL: 30,
+        }
+    )
     hub = GLinetHub(MagicMock(), entry)
     assert hub.update_interval == timedelta(seconds=30)
 
@@ -1233,12 +1912,57 @@ def test_apply_option_updates_changes_scan_interval() -> None:
 def test_apply_option_updates_without_scan_interval_keeps_default() -> None:
     from datetime import timedelta
 
-    entry = _make_entry(data={
-        "host": "http://192.168.8.1",
-        "password": "pass",
-    })
+    entry = _make_entry(
+        data={
+            "host": "http://192.168.8.1",
+            "password": "pass",
+        }
+    )
     hub = GLinetHub(MagicMock(), entry)
     assert hub.update_interval == timedelta(seconds=30)
 
     hub.apply_option_updates({"some_other_option": "value"})
     assert hub.update_interval == timedelta(seconds=30)
+
+
+def test_create_api_client_passes_verify_ssl_from_settings(monkeypatch) -> None:
+    from custom_components.glinet_router.api.client import GLinetApiClient
+
+    captured: dict[str, Any] = {}
+
+    def fake_constructor(self, *args: Any, **kwargs: Any) -> None:
+        captured.update(kwargs)
+
+    monkeypatch.setattr(GLinetApiClient, "__init__", fake_constructor)
+
+    entry = _make_entry(
+        data={
+            "host": "http://192.168.8.1",
+            "password": "pass",
+            CONF_VERIFY_SSL: False,
+        }
+    )
+    hub = GLinetHub(MagicMock(), entry)
+
+    hub._create_api_client()
+
+    assert captured["verify_ssl"] is False
+    assert captured["base_url"] == "http://192.168.8.1/rpc"
+
+
+def test_create_api_client_defaults_verify_ssl_to_false(monkeypatch) -> None:
+    from custom_components.glinet_router.api.client import GLinetApiClient
+
+    captured: dict[str, Any] = {}
+
+    def fake_constructor(self, *args: Any, **kwargs: Any) -> None:
+        captured.update(kwargs)
+
+    monkeypatch.setattr(GLinetApiClient, "__init__", fake_constructor)
+
+    entry = _make_entry(data={"host": "http://192.168.8.1", "password": "pass"})
+    hub = GLinetHub(MagicMock(), entry)
+
+    hub._create_api_client()
+
+    assert captured["verify_ssl"] is False

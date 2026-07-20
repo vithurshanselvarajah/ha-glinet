@@ -33,7 +33,7 @@ The `GLinetHub` is the heart of the integration. It inherits from `DataUpdateCoo
 - **Polling Loop:** Executing API requests sequentially every scan interval (user-configurable, default 30s) to prevent overwhelming the router's lighttpd server.
 - **Caching:** Storing the latest fetched values from the API models so Home Assistant entities can read them instantly without making network calls.
 
-> For more details on the Hub's functions and data fetching logic, see the [Runtime State & Poller Reference](hub.md).
+> For more details on the Hub's functions and data fetching logic, see the [Runtime State & Poller Reference](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub).
 
 ### Diagnostics (`diagnostics.py`)
 The integration implements the Home Assistant `diagnostics` platform. This allows users to download a sanitized JSON snapshot of the router's state for debugging. 
@@ -68,3 +68,40 @@ python -m ruff format custom_components tests
 
 ### Dependencies
 Do not add massive third-party library dependencies unless absolutely necessary. Home Assistant integrations should remain lightweight. The core integration relies only on `aiohttp` (which is native to HA).
+
+## Branching & PRs
+
+The repository uses a two-branch model: `main` is the release branch
+and `development` is the integration branch. **All day-to-day pull
+requests target `development`.** Releases are cut as a `development`
+→ `main` PR by the maintainer(s).
+
+A bot ([`pr-target-check.yml`](../.github/workflows/pr-target-check.yml))
+comments and applies the `wrong-target` label to any PR opened
+against `main` that is not a `development` → `main` release. Outside
+contributors fork the repository and submit from a fork — no one
+outside the maintainer team has direct write access.
+
+`main` is protected by a ruleset (1 approval, code-owner review,
+CI must pass). `development` has no ruleset on purpose: maintainers
+can push directly there, and Dependabot and bot updates don't need
+to fight branch protection. See
+[`.github/BRANCH_PROTECTION.md`](../.github/BRANCH_PROTECTION.md)
+for the full ruleset and rationale.
+
+> **Solo-maintainer note:** the `main` ruleset leaves the
+> *"Require approval of the most recent reviewable push"* rule
+> **off** so the only maintainer can self-merge release PRs.
+> Re-enable it when a second maintainer is added.
+
+For the full contribution flow, see
+[`CONTRIBUTING.md`](../CONTRIBUTING.md).
+
+## Related Pages
+
+- [Architecture](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/architecture) — How the integration is structured and interacts with Home Assistant.
+- [Runtime State & Poller (Hub)](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/hub) — Details on the `GLinetHub` and `DataUpdateCoordinator`.
+- [Router API Notes](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/router-api) — Endpoints, authentication, and module inventory.
+- [Modem API Coverage](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/modem-api) — Details on the optional cellular modem API.
+- [CI and Release Workflows](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/ci-release) — How automated testing and releases work.
+- [`CONTRIBUTING.md`](../CONTRIBUTING.md) — Full contributor guide.

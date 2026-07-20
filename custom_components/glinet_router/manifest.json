@@ -15,12 +15,12 @@
       "macaddress": "9483C4*"
     }
   ],
-  "documentation": "https://github.com/vithurshanselvarajah/glinet-router",
+  "documentation": "https://github.com/vithurshanselvarajah/ha-glinet-router",
   "integration_type": "hub",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/vithurshanselvarajah/glinet-router/issues",
+  "issue_tracker": "https://github.com/vithurshanselvarajah/ha-glinet-router/issues",
   "requirements": [
     "passlib==1.7.4"
   ],
-  "version": "1.6.0"
+  "version": "1.6.1"
 }

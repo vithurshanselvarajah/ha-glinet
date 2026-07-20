@@ -13,6 +13,9 @@ CONF_WAN_STATUS_MONITORS = "wan_status_monitors"
 CONF_UNKNOWN_DEVICES_FILTER_MODE = "unknown_devices_filter_mode"
 CONF_UNKNOWN_DEVICES_FILTER_SELECT = "unknown_devices_filter_select"
 CONF_UNKNOWN_DEVICES_FILTER_MANUAL = "unknown_devices_filter_manual"
+CONF_VERIFY_SSL = "verify_ssl"
+CONF_PARALLEL_REQUESTS = "parallel_requests"
+DEFAULT_PARALLEL_REQUESTS = False
 DEFAULT_UNKNOWN_DEVICES_FILTER_MODE = "blacklist"
 
 WAN_INTERFACE_NAMES = {
@@ -20,6 +23,8 @@ WAN_INTERFACE_NAMES = {
     "wwan": "Repeater",
     "tethering": "Tethering",
     "modem_0001": "Cellular",
+    "modem_0001_s1": "Cellular SIM 1",
+    "modem_0001_s2": "Cellular SIM 2",
     "secondwan": "Ethernet 2",
 }
 
@@ -63,6 +68,7 @@ SERVICE_GET_SMS = "get_sms"
 SERVICE_REMOVE_SMS = "remove_sms"
 SERVICE_REFRESH_SMS = "refresh_sms"
 SERVICE_SEND_SMS = "send_sms"
+SERVICE_REFRESH_CLIENTS = "refresh_clients"
 
 SERVICE_SCAN_WIFI = "scan_wifi"
 SERVICE_CONNECT_WIFI = "connect_wifi"

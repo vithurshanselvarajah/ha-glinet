@@ -20,12 +20,15 @@ from .const import (
     CONF_ADD_ALL_DEVICES,
     CONF_CLEANUP_DEVICES,
     CONF_ENABLED_FEATURES,
+    CONF_PARALLEL_REQUESTS,
     CONF_SCAN_INTERVAL,
     CONF_TITLE,
     CONF_UNKNOWN_DEVICES_FILTER_MANUAL,
     CONF_UNKNOWN_DEVICES_FILTER_MODE,
     CONF_UNKNOWN_DEVICES_FILTER_SELECT,
+    CONF_VERIFY_SSL,
     CONF_WAN_STATUS_MONITORS,
+    DEFAULT_PARALLEL_REQUESTS,
     DEFAULT_PASSWORD,
     DEFAULT_UNKNOWN_DEVICES_FILTER_MODE,
     DEFAULT_URL,
@@ -140,11 +143,9 @@ def _config_schema(
 ) -> vol.Schema:
     defaults = defaults or {}
     wan_interfaces = wan_interfaces or DEFAULT_WAN_INTERFACES
-    selected_interfaces = _wan_interfaces_from_monitors(
-        defaults.get(CONF_WAN_STATUS_MONITORS, [])
-    )
+    selected_interfaces = _wan_interfaces_from_monitors(defaults.get(CONF_WAN_STATUS_MONITORS, []))
     wan_interfaces = [*dict.fromkeys([*wan_interfaces, *selected_interfaces])]
-    
+
     schema_dict = {
         vol.Required(CONF_HOST, default=DEFAULT_URL): selector.TextSelector(
             selector.TextSelectorConfig(type=selector.TextSelectorType.URL)
@@ -152,6 +153,11 @@ def _config_schema(
         vol.Required(CONF_PASSWORD, default=DEFAULT_PASSWORD): selector.TextSelector(
             selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
         ),
+        vol.Required(CONF_VERIFY_SSL, default=False): bool,
+        vol.Optional(
+            CONF_PARALLEL_REQUESTS,
+            default=defaults.get(CONF_PARALLEL_REQUESTS, DEFAULT_PARALLEL_REQUESTS),
+        ): selector.BooleanSelector(),
         vol.Optional(
             CONF_CONSIDER_HOME,
             default=DEFAULT_CONSIDER_HOME.total_seconds(),
@@ -236,13 +242,13 @@ STEP_USER_DATA_SCHEMA = _config_schema()
 
 
 class SetupHub:
-
-    def __init__(self, host: str, hass: HomeAssistant) -> None:
+    def __init__(self, host: str, hass: HomeAssistant, verify_ssl: bool = False) -> None:
         self.host = host
         self.username = DEFAULT_USERNAME
         self.router = GLinetApiClient(
             base_url=f"{host}{API_PATH}",
             session=async_get_clientsession(hass),
+            verify_ssl=verify_ssl,
         )
         self.router_mac = ""
         self.router_model = ""
@@ -286,7 +292,8 @@ class SetupHub:
 async def process_user_input(
     data: dict[str, Any], hass: HomeAssistant, raise_on_invalid_auth: bool = True
 ) -> dict[str, Any]:
-    hub = SetupHub(data[CONF_HOST], hass)
+    verify_ssl_choice = data.get(CONF_VERIFY_SSL, False)
+    hub = SetupHub(data[CONF_HOST], hass, verify_ssl=verify_ssl_choice)
     if not await hub.check_reachable():
         raise CannotConnect
 
@@ -304,6 +311,7 @@ async def process_user_input(
             CONF_USERNAME: DEFAULT_USERNAME,
             CONF_HOST: data[CONF_HOST],
             CONF_PASSWORD: data.get(CONF_PASSWORD, DEFAULT_PASSWORD) if valid_auth else "",
+            CONF_VERIFY_SSL: verify_ssl_choice,
             CONF_CONSIDER_HOME: data.get(
                 CONF_CONSIDER_HOME,
                 DEFAULT_CONSIDER_HOME.total_seconds(),
@@ -334,20 +342,21 @@ async def process_user_input(
                 CONF_UNKNOWN_DEVICES_FILTER_MANUAL,
                 "",
             ),
+            CONF_PARALLEL_REQUESTS: data.get(
+                CONF_PARALLEL_REQUESTS,
+                DEFAULT_PARALLEL_REQUESTS,
+            ),
         },
     }
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-
     VERSION = 1
 
     def __init__(self) -> None:
         self._discovered_data: dict[str, Any] | None = None
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
@@ -407,10 +416,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
             try:

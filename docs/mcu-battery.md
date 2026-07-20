@@ -8,9 +8,7 @@ To enable this feature, check the **MCU Battery** option under **Enabled Feature
 
 - **Option key**: `mcu_battery`
 
-> **Note**: Disabling this feature removes all battery sensors from the registry.
-
----
+> Disabling this feature removes all battery sensors from the registry.
 
 ## Exposed Entities
 
@@ -28,26 +26,35 @@ To enable this feature, check the **MCU Battery** option under **Enabled Feature
 | --- | --- | --- |
 | **Battery abnormal** | Diagnostic binary sensor — `True` when the MCU reports an abnormal status flag. | `system/get_status` MCU data |
 
----
-
 ## Actions (Services)
 
 The following services are registered under the `glinet_router` domain when the MCU Battery feature is enabled:
 
 ### `get_mcu_battery_config`
+
 Retrieves the current battery warning configuration from the router. Supports response data.
 
-- **`mac`** (Optional): Target a specific router by MAC address.
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `mac` | string | No | Target a specific router by MAC address. |
 
 **Response**: Returns current warning thresholds for `capacity`, `temp_high`, and `temp_low`, including whether each is enabled.
 
 ### `set_mcu_battery_config`
+
 Sets the battery warning configuration parameters.
 
-- **`capacity_enabled`**: Toggles low-capacity warnings.
-- **`capacity`**: Low-capacity warning percentage threshold.
-- **`temp_high_enabled`**: Toggles high-temperature warnings.
-- **`temp_high`**: High-temperature warning threshold in Celsius.
-- **`temp_low_enabled`**: Toggles low-temperature warnings.
-- **`temp_low`**: Low-temperature warning threshold in Celsius.
-- **`mac`** (Optional): Target a specific router by MAC address.
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `capacity_enabled` | boolean | Yes | Toggles low-capacity warnings. |
+| `capacity` | integer (1-100) | Yes | Low-capacity warning percentage threshold. |
+| `temp_high_enabled` | boolean | Yes | Toggles high-temperature warnings. |
+| `temp_high` | integer | Yes | High-temperature warning threshold in Celsius. |
+| `temp_low_enabled` | boolean | Yes | Toggles low-temperature warnings. |
+| `temp_low` | integer | Yes | Low-temperature warning threshold in Celsius. |
+| `mac` | string | No | Target a specific router by MAC address. |
+
+## Related Pages
+
+- [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/services) — How to use Home Assistant services with this integration.
+- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities) — All core and optional entities.

@@ -7,6 +7,7 @@
         "data": {
           "host": "Router Address",
           "password": "Admin Password",
+          "verify_ssl": "Verify SSL Certificate",
           "consider_home": "Away Delay",
           "scan_interval": "Update Interval",
           "enabled_features": "Enabled features",
@@ -15,11 +16,13 @@
           "cleanup_devices": "Auto-cleanup unknown devices",
           "unknown_devices_filter_mode": "Unknown Devices Filter Mode",
           "unknown_devices_filter_select": "Select Unknown Devices",
-          "unknown_devices_filter_manual": "Unknown Devices Manual MAC Address List (One per line)"
+          "unknown_devices_filter_manual": "Unknown Devices Manual MAC Address List (One per line)",
+          "parallel_requests": "Faster updates (parallel fetching)"
         },
         "data_description": {
           "host": "Type the router hostname, URL, or IP address.",
           "password": "Enter the admin password configured on your GL.iNet router.",
+          "verify_ssl": "Validate the router's TLS certificate. Enable this only if your router uses a valid certificate.",
           "consider_home": "Number of seconds before a disconnected client is treated as away.",
           "scan_interval": "Number of seconds between polling the router for updates.",
           "enabled_features": "Choose the integration feature groups to set up. Disabled feature groups will not create their related entities or services.",
@@ -28,7 +31,8 @@
           "cleanup_devices": "Set this to 0 to disable automatic cleanup. Any other number is treated as minutes; unknown discovered devices are removed after that period if they remain offline or disconnected.",
           "unknown_devices_filter_mode": "Select whether the list of unknown devices behaves as a whitelist or blacklist. (Blank defaults to Blacklist which won't block anything)",
           "unknown_devices_filter_select": "Select from currently discovered unknown devices to whitelist or blacklist.",
-          "unknown_devices_filter_manual": "Manually enter MAC addresses (one per line) of unknown devices to whitelist or blacklist."
+          "unknown_devices_filter_manual": "Manually enter MAC addresses (one per line) of unknown devices to whitelist or blacklist.",
+          "parallel_requests": "Fetch data from all features at the same time to speed up each refresh. Off (default) is gentler on small routers."
         }
       }
     },
@@ -47,6 +51,7 @@
         "data": {
           "host": "Router Address",
           "password": "Admin Password",
+          "verify_ssl": "Verify SSL Certificate",
           "consider_home": "Away Delay",
           "scan_interval": "Update Interval",
           "enabled_features": "Enabled features",
@@ -55,11 +60,13 @@
           "cleanup_devices": "Auto-cleanup unknown devices",
           "unknown_devices_filter_mode": "Unknown Devices Filter Mode",
           "unknown_devices_filter_select": "Select Unknown Devices",
-          "unknown_devices_filter_manual": "Unknown Devices Manual MAC Address List (One per line)"
+          "unknown_devices_filter_manual": "Unknown Devices Manual MAC Address List (One per line)",
+          "parallel_requests": "Faster updates (parallel fetching)"
         },
         "data_description": {
           "host": "Type the router hostname, URL, or IP address.",
           "password": "Enter the admin password configured on your GL.iNet router.",
+          "verify_ssl": "Validate the router's TLS certificate. Enable this only if your router uses a valid certificate.",
           "consider_home": "Number of seconds before a disconnected client is treated as away.",
           "scan_interval": "Number of seconds between polling the router for updates.",
           "enabled_features": "Choose the integration feature groups to set up. Disabled feature groups will not create their related entities or services.",
@@ -68,7 +75,8 @@
           "cleanup_devices": "Set this to 0 to disable automatic cleanup. Any other number is treated as minutes; unknown discovered devices are removed after that period if they remain offline or disconnected.",
           "unknown_devices_filter_mode": "Select whether the list of unknown devices behaves as a whitelist or blacklist. (Blank defaults to Blacklist which won't block anything)",
           "unknown_devices_filter_select": "Select from currently discovered unknown devices to whitelist or blacklist.",
-          "unknown_devices_filter_manual": "Manually enter MAC addresses (one per line) of unknown devices to whitelist or blacklist."
+          "unknown_devices_filter_manual": "Manually enter MAC addresses (one per line) of unknown devices to whitelist or blacklist.",
+          "parallel_requests": "Fetch data from all features at the same time to speed up each refresh. Off (default) is gentler on small routers."
         }
       }
     }

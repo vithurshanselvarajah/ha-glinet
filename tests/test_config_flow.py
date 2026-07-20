@@ -12,7 +12,9 @@ from custom_components.glinet_router.config_flow import (
     process_user_input,
 )
 from custom_components.glinet_router.const import (
+    CONF_PARALLEL_REQUESTS,
     CONF_WAN_STATUS_MONITORS,
+    DEFAULT_PARALLEL_REQUESTS,
     DEFAULT_USERNAME,
     FEATURE_KMWAN,
     FEATURE_MWAN3,
@@ -22,7 +24,7 @@ from custom_components.glinet_router.const import (
 
 
 async def test_process_user_input_stores_enabled_features(monkeypatch) -> None:
-    def fake_init(self, host: str, hass: Any) -> None:
+    def fake_init(self, host: str, hass: Any, verify_ssl: bool = True) -> None:
         self.host = host
         self.username = DEFAULT_USERNAME
         self.router_mac = "00:00:00:00:00:00"
@@ -58,7 +60,7 @@ async def test_process_user_input_stores_enabled_features(monkeypatch) -> None:
 
 
 async def test_process_user_input_defaults_enabled_features_when_missing(monkeypatch) -> None:
-    def fake_init(self, host: str, hass: Any) -> None:
+    def fake_init(self, host: str, hass: Any, verify_ssl: bool = True) -> None:
         self.host = host
         self.username = DEFAULT_USERNAME
         self.router_mac = "00:00:00:00:00:00"
@@ -105,3 +107,121 @@ def test_wan_monitor_options_use_friendly_known_interface_names() -> None:
         {"label": "custom_wan IPv4", "value": "custom_wan:ipv4"},
         {"label": "custom_wan IPv6", "value": "custom_wan:ipv6"},
     ]
+
+
+async def test_process_user_input_persists_verify_ssl_choice(monkeypatch) -> None:
+    def fake_init(self, host: str, hass: Any, verify_ssl: bool = True) -> None:
+        self.host = host
+        self.username = DEFAULT_USERNAME
+        self.router_mac = "00:00:00:00:00:00"
+        self.router_model = "mr200"
+        self.wan_interfaces = ["wan"]
+
+    async def fake_check_reachable(self) -> bool:
+        return True
+
+    async def fake_attempt_login(self, password: str) -> bool:
+        return True
+
+    monkeypatch.setattr(SetupHub, "__init__", fake_init)
+    monkeypatch.setattr(SetupHub, "check_reachable", fake_check_reachable)
+    monkeypatch.setattr(SetupHub, "attempt_login", fake_attempt_login)
+
+    result = await process_user_input(
+        {
+            "host": "http://router",
+            "password": "secret",
+            "verify_ssl": False,
+        },
+        types.SimpleNamespace(),
+    )
+
+    assert result["data"]["verify_ssl"] is False
+
+
+async def test_process_user_input_defaults_verify_ssl_to_false(monkeypatch) -> None:
+    def fake_init(self, host: str, hass: Any, verify_ssl: bool = True) -> None:
+        self.host = host
+        self.username = DEFAULT_USERNAME
+        self.router_mac = "00:00:00:00:00:00"
+        self.router_model = "mr200"
+        self.wan_interfaces = ["wan"]
+
+    async def fake_check_reachable(self) -> bool:
+        return True
+
+    async def fake_attempt_login(self, password: str) -> bool:
+        return True
+
+    monkeypatch.setattr(SetupHub, "__init__", fake_init)
+    monkeypatch.setattr(SetupHub, "check_reachable", fake_check_reachable)
+    monkeypatch.setattr(SetupHub, "attempt_login", fake_attempt_login)
+
+    result = await process_user_input(
+        {"host": "http://router", "password": "secret"},
+        types.SimpleNamespace(),
+    )
+
+    assert result["data"]["verify_ssl"] is False
+
+
+def test_parallel_requests_default_is_false() -> None:
+    assert DEFAULT_PARALLEL_REQUESTS is False
+
+
+async def test_process_user_input_stores_parallel_requests(monkeypatch) -> None:
+
+    def fake_init(self, host: str, hass: Any) -> None:
+        self.host = host
+        self.username = DEFAULT_USERNAME
+        self.router_mac = "00:00:00:00:00:00"
+        self.router_model = "mr200"
+        self.wan_interfaces = ["wan"]
+
+    async def fake_check_reachable(self) -> bool:
+        return True
+
+    async def fake_attempt_login(self, password: str) -> bool:
+        return True
+
+    monkeypatch.setattr(SetupHub, "__init__", fake_init)
+    monkeypatch.setattr(SetupHub, "check_reachable", fake_check_reachable)
+    monkeypatch.setattr(SetupHub, "attempt_login", fake_attempt_login)
+
+    result = await process_user_input(
+        {
+            "host": "http://router",
+            "password": "secret",
+            CONF_PARALLEL_REQUESTS: True,
+        },
+        types.SimpleNamespace(),
+    )
+
+    assert result["data"][CONF_PARALLEL_REQUESTS] is True
+
+
+async def test_process_user_input_defaults_parallel_requests(monkeypatch) -> None:
+
+    def fake_init(self, host: str, hass: Any) -> None:
+        self.host = host
+        self.username = DEFAULT_USERNAME
+        self.router_mac = "00:00:00:00:00:00"
+        self.router_model = "mr200"
+        self.wan_interfaces = ["wan"]
+
+    async def fake_check_reachable(self) -> bool:
+        return True
+
+    async def fake_attempt_login(self, password: str) -> bool:
+        return True
+
+    monkeypatch.setattr(SetupHub, "__init__", fake_init)
+    monkeypatch.setattr(SetupHub, "check_reachable", fake_check_reachable)
+    monkeypatch.setattr(SetupHub, "attempt_login", fake_attempt_login)
+
+    result = await process_user_input(
+        {"host": "http://router", "password": "secret"},
+        types.SimpleNamespace(),
+    )
+
+    assert result["data"][CONF_PARALLEL_REQUESTS] is DEFAULT_PARALLEL_REQUESTS

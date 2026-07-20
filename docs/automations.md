@@ -20,4 +20,10 @@ Ready-made Home Assistant automation templates for the GL.iNet integration. Thes
 
 | Template | Description |
 |----------|-------------|
-| [SMS Notification](https://github.com/vithurshanselvarajah/glinet-router/wiki/automation-sms-notification) | Forward incoming SMS from your router to Home Assistant persistent notifications. |
+| [SMS Notification](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/automation-sms-notification) | Forward incoming SMS from your router to Home Assistant persistent notifications. |
+
+## Related Pages
+
+- [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/services) — How to use Home Assistant services with this integration.
+- [Triggers](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/triggers) — Building automations that react to GL.iNet router state.
+- [Conditions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/conditions) — Using Home Assistant's built-in conditions on integration entities.

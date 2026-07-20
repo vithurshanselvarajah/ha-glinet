@@ -45,9 +45,7 @@ async def test_firewall_module_methods_use_expected_payloads() -> None:
 
     assert await client.firewall.get_rule_list() == {"res": [{"id": "rule-1"}]}
     assert await client.firewall.add_rule({"name": "Allow SSH"}) == {"ok": True}
-    assert await client.firewall.set_rule({"id": "rule-1", "name": "Allow SSH"}) == {
-        "ok": True
-    }
+    assert await client.firewall.set_rule({"id": "rule-1", "name": "Allow SSH"}) == {"ok": True}
     assert await client.firewall.remove_rule({"id": "rule-1"}) == {"ok": True}
     assert await client.firewall.get_acl_rule_list() == [{"name": "ACL"}]
     assert await client.firewall.add_acl_rule({"name": "ACL"}) == {"ok": True}
@@ -302,9 +300,7 @@ async def test_fetch_kmwan_status_stores_response() -> None:
     hub = GLinetHub.__new__(GLinetHub)
     hub._api = SimpleNamespace(system=SimpleNamespace(get_kmwan_status=object()))
     hub._invoke_optional_api = AsyncMock(
-        return_value={
-            "interfaces": [{"interface": "wan", "status_v4": 1, "status_v6": 1}]
-        }
+        return_value={"interfaces": [{"interface": "wan", "status_v4": 1, "status_v6": 1}]}
     )
 
     await hub.fetch_kmwan_status()
@@ -400,10 +396,6 @@ async def test_wan_access_switch_toggles_selected_access_type() -> None:
     await switch.async_turn_on()
     await switch.async_turn_off()
 
-    hub.set_wan_access.assert_any_await(
-        {"enable_ping": True, "enable_ssh": True}
-    )
-    hub.set_wan_access.assert_any_await(
-        {"enable_ping": False, "enable_ssh": True}
-    )
+    hub.set_wan_access.assert_any_await({"enable_ping": True, "enable_ssh": True})
+    hub.set_wan_access.assert_any_await({"enable_ping": False, "enable_ssh": True})
     assert hub.async_request_refresh.await_count == 2

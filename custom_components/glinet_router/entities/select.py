@@ -43,7 +43,6 @@ async def async_setup_entry(
     if hub.feature_enabled(FEATURE_REPEATER):
         entities.extend([WifiNetworkSelect(hub), RepeaterBandSelect(hub)])
 
-
     async_add_entities(entities, True)
 
     if hub.feature_enabled(FEATURE_PARENTAL_CONTROL):
@@ -72,7 +71,6 @@ async def async_setup_entry(
 
 
 class WifiNetworkSelect(CoordinatorEntity[GLinetHub], SelectEntity):
-
     _attr_has_entity_name = True
     _attr_name = "WiFi network"
     _attr_icon = "mdi:wifi"
@@ -83,7 +81,6 @@ class WifiNetworkSelect(CoordinatorEntity[GLinetHub], SelectEntity):
         self._hub = hub
         self._attr_device_info = hub.device_info
         self._selected_ssid: str | None = None
-
 
     @property
     def unique_id(self) -> str:
@@ -183,7 +180,6 @@ class WifiNetworkSelect(CoordinatorEntity[GLinetHub], SelectEntity):
 
 
 class RepeaterBandSelect(CoordinatorEntity[GLinetHub], SelectEntity):
-
     _attr_has_entity_name = True
     _attr_name = "Repeater band"
     _attr_icon = "mdi:wifi-settings"
@@ -241,6 +237,3 @@ class GLinetClientParentalGroupSelect(CoordinatorEntity[GLinetHub], SelectEntity
         group = None if option == "None" else option
         await self._hub.assign_device_to_parental_group(self._device.mac, group)
         await self._hub.async_request_refresh()
-
-
-

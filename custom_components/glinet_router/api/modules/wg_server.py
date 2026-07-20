@@ -7,8 +7,8 @@ from .base import BaseModule
 if TYPE_CHECKING:
     pass
 
-class WgServerModule(BaseModule):
 
+class WgServerModule(BaseModule):
     async def get_status(self) -> dict[str, Any]:
         response = await self._call("wg-server", "get_status")
         return dict(response)

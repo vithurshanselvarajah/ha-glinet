@@ -132,6 +132,72 @@ class WireGuardClient:
     tunnel_id: int | None = None
 
 
+class VpnTunnelType(StrEnum):
+    WIREGUARD = "wireguard"
+    OPENVPN = "openvpn"
+    UNKNOWN = "unknown"
+
+
+@dataclass(slots=True)
+class VpnTunnel:
+    tunnel_id: int
+    name: str
+    tunnel_type: VpnTunnelType
+    enabled: bool = False
+    connected: bool = field(compare=False, default=False)
+    killswitch: bool = False
+    group_id: int | None = None
+    peer_id: int | None = None
+    client_id: int | None = None
+    via: str | None = None
+    is_default: bool = False
+
+    @classmethod
+    def from_api_response(cls, data: dict, *, is_default: bool = False) -> VpnTunnel:
+        via = data.get("via") or {}
+        raw_type = via.get("type") or data.get("type")
+        try:
+            tunnel_type = VpnTunnelType(raw_type) if raw_type else VpnTunnelType.UNKNOWN
+        except ValueError:
+            tunnel_type = VpnTunnelType.UNKNOWN
+
+        configs = via.get("configs") if isinstance(via, dict) else None
+        group_id: int | None = None
+        peer_id: int | None = None
+        client_id: int | None = None
+        if isinstance(configs, list) and configs:
+            first = configs[0] if isinstance(configs[0], dict) else {}
+            group_id = first.get("group_id")
+            id_list = first.get("id_list")
+            if isinstance(id_list, list) and id_list:
+                raw_inner = id_list[0]
+                if tunnel_type == VpnTunnelType.WIREGUARD:
+                    peer_id = int(raw_inner) if raw_inner is not None else None
+                elif tunnel_type == VpnTunnelType.OPENVPN:
+                    client_id = int(raw_inner) if raw_inner is not None else None
+        if group_id is None and isinstance(via, dict):
+            group_id = via.get("group_id")
+        if peer_id is None and isinstance(via, dict) and tunnel_type == VpnTunnelType.WIREGUARD:
+            peer_id = via.get("peer_id")
+        if client_id is None and isinstance(via, dict) and tunnel_type == VpnTunnelType.OPENVPN:
+            client_id = via.get("client_id")
+
+        tunnel_id = data.get("tunnel_id")
+        return cls(
+            tunnel_id=int(tunnel_id) if tunnel_id is not None else 0,
+            name=str(data.get("name") or f"Tunnel {tunnel_id or ''}").strip()
+            or f"Tunnel {tunnel_id or ''}",
+            tunnel_type=tunnel_type,
+            enabled=bool(data.get("enabled", False)),
+            killswitch=bool(data.get("killswitch", False)),
+            group_id=int(group_id) if group_id is not None else None,
+            peer_id=int(peer_id) if peer_id is not None else None,
+            client_id=int(client_id) if client_id is not None else None,
+            via=str(via.get("via")) if isinstance(via, dict) and via.get("via") else None,
+            is_default=is_default,
+        )
+
+
 @dataclass(slots=True)
 class WireGuardServerStatus:
     enabled: bool
@@ -156,7 +222,7 @@ class WireGuardServerStatus:
             rx_bytes=server.get("rx_bytes", 0),
             tx_bytes=server.get("tx_bytes", 0),
         )
-    
+
 
 @dataclass(slots=True)
 class OpenVpnClient:
@@ -255,10 +321,7 @@ class ParentalGroup:
         group_id = str(data.get("id") or data.get("group_id") or data.get(".name") or "")
         name = str(data.get("name") or data.get("alias") or group_id)
         macs = _mac_list(
-            data.get("mac")
-            or data.get("macs")
-            or data.get("clients")
-            or data.get("devices")
+            data.get("mac") or data.get("macs") or data.get("clients") or data.get("devices")
         )
         rule = data.get("rule") or data.get("rule_id")
         return cls(
@@ -278,11 +341,7 @@ class ParentalGroup:
             ),
             active_schedule_ids=[
                 str(item)
-                for item in (
-                    data.get("active_schedule_ids")
-                    or data.get("active_schedules")
-                    or []
-                )
+                for item in (data.get("active_schedule_ids") or data.get("active_schedules") or [])
             ],
             raw=dict(data),
         )
@@ -424,6 +483,153 @@ class SmsMessage:
         return status_labels.get(self.status, f"Unknown ({self.status})")
 
 
+@dataclass(slots=True)
+class TrafficSim:
+    slot: int
+    sim_type: int
+    traffic_total: int = 0
+    limit_enabled: bool = False
+    threshold: int | None = None
+    unit: str | None = None
+    reset_period: str | None = None
+    day: int | None = None
+    hour: int | None = None
+    month: int | None = None
+    save_to_flash: bool = False
+
+    @property
+    def threshold_bytes(self) -> int | None:
+        if not self.limit_enabled or self.threshold is None or not self.unit:
+            return None
+        unit_multipliers = {
+            "KB": 1024,
+            "MB": 1024**2,
+            "GB": 1024**3,
+            "TB": 1024**4,
+        }
+        multiplier = unit_multipliers.get(self.unit.upper())
+        if multiplier is None:
+            return None
+        try:
+            return int(self.threshold) * multiplier
+        except (TypeError, ValueError):
+            return None
+
+    @property
+    def present(self) -> bool:
+        return self.traffic_total > 0
+
+    @property
+    def days_until_reset(self) -> int | None:
+        if not self.limit_enabled or not self.reset_period:
+            return None
+        try:
+            now = dt_util.utcnow().replace(tzinfo=None)
+            anchor_day = int(self.day) if self.day is not None else 1
+            anchor_hour = int(self.hour) if self.hour is not None else 0
+            anchor_month = int(self.month) if self.month is not None else now.month
+
+            if self.reset_period == "day":
+                next_reset = now.replace(hour=anchor_hour, minute=0, second=0, microsecond=0)
+                if next_reset <= now:
+                    next_reset = next_reset + timedelta(days=1)
+                return (next_reset - now).days
+            if self.reset_period == "week":
+                iso_day = max(1, min(7, anchor_day))
+                days_ahead = (iso_day - now.isoweekday()) % 7
+                next_reset = now.replace(hour=anchor_hour, minute=0, second=0, microsecond=0)
+                next_reset = next_reset + timedelta(days=days_ahead)
+                if next_reset <= now:
+                    next_reset = next_reset + timedelta(days=7)
+                return (next_reset - now).days
+            if self.reset_period in {"month", "season", "year"}:
+                return _days_until_monthly_reset(
+                    now, anchor_day, anchor_hour, anchor_month, self.reset_period
+                )
+        except (TypeError, ValueError):
+            return None
+        return None
+
+
+def _days_until_monthly_reset(
+    now: datetime,
+    anchor_day: int,
+    anchor_hour: int,
+    anchor_month: int,
+    period: str,
+) -> int | None:
+    from calendar import monthrange
+
+    safe_anchor_day = max(1, min(28, anchor_day))
+    safe_anchor_hour = max(0, min(23, anchor_hour))
+
+    if period == "year":
+        try:
+            candidate = now.replace(
+                month=max(1, min(12, anchor_month)),
+                day=safe_anchor_day,
+                hour=safe_anchor_hour,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+        except ValueError:
+            return None
+        if candidate <= now:
+            try:
+                candidate = candidate.replace(year=now.year + 1)
+            except ValueError:
+                return None
+        return (candidate - now).days
+
+    if period == "season":
+        try:
+            current_quarter = (now.month - 1) // 3
+            candidate_month = current_quarter * 3 + max(1, min(3, anchor_month))
+        except (TypeError, ValueError):
+            return None
+        try:
+            candidate = now.replace(
+                month=candidate_month,
+                day=safe_anchor_day,
+                hour=safe_anchor_hour,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+        except ValueError:
+            return None
+        if candidate <= now:
+            candidate = candidate + timedelta(days=92)
+        return (candidate - now).days
+
+    days_in_month = monthrange(now.year, now.month)[1]
+    candidate_day = min(safe_anchor_day, days_in_month)
+    try:
+        candidate = now.replace(
+            day=candidate_day,
+            hour=safe_anchor_hour,
+            minute=0,
+            second=0,
+            microsecond=0,
+        )
+    except ValueError:
+        return None
+    if candidate <= now:
+        next_month = now.month + 1
+        next_year = now.year
+        if next_month > 12:
+            next_month = 1
+            next_year += 1
+        next_days = monthrange(next_year, next_month)[1]
+        candidate = candidate.replace(
+            year=next_year,
+            month=next_month,
+            day=min(safe_anchor_day, next_days),
+        )
+    return (candidate - now).days
+
+
 class ClientDeviceInfo:
     def __init__(self, mac: str, name: str | None = None) -> None:
         self._mac = mac
@@ -465,7 +671,7 @@ class ClientDeviceInfo:
 
         if self._connected:
             self._connected = (now - self._last_activity).total_seconds() < consider_home
-        
+
         if not self._connected:
             self._ip_address = None
 

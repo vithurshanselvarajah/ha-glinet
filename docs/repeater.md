@@ -8,8 +8,6 @@ To enable this feature, check the **Repeater** option under **Enabled Features**
 
 - **Option key**: `repeater`
 
----
-
 ## Exposed Entities
 
 ### Sensors
@@ -49,30 +47,34 @@ The **Repeater state** sensor remains available whenever the repeater feature is
 | **Repeater bare mode** | Toggle bare mode for the active repeater connection. | `repeater/enter_bare_mode` / `repeater/exit_bare_mode` |
 | **Repeater smart reconnect** | Toggle smart reconnection logic. | `repeater/set_config` |
 
----
-
 ## Actions (Services)
 
 The following services are registered under the `glinet_router` domain when the Repeater feature is enabled:
 
 ### `scan_wifi`
+
 Scans available WiFi networks for repeater mode.
 
-- **`mac`** (Optional): Target a specific router by MAC address.
-- **`refresh`** (Optional): Force a fresh scan on the router instead of returning cached results.
-- **`all_band`** (Optional): Compatibility alias that requests a fresh router scan.
-- **`dfs`** (Optional): Compatibility alias that requests a fresh router scan.
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `mac` | string | No | Target a specific router by MAC address. |
+| `refresh` | boolean | No | Force a fresh scan on the router instead of returning cached results. |
+| `all_band` | boolean | No | Compatibility alias that requests a fresh router scan. |
+| `dfs` | boolean | No | Compatibility alias that requests a fresh router scan. |
 
 **Response Format**: Returns a `networks` array containing `ssid`, `bssid`, `signal`, `band`, `channel`, `encryption` (description), and `saved` status.
 
 ### `connect_wifi`
+
 Connects the router to an open or secured external WiFi network.
 
-- **`ssid`**: SSID of the network to connect to.
-- **`password`** (Optional): Password for secured networks. Omit for open networks.
-- **`remember`** (Optional): Save credentials for auto-reconnect. Defaults to `true`.
-- **`bssid`** (Optional): Lock connection to a specific AP MAC address.
-- **`mac`** (Optional): Target a specific router by MAC address.
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ssid` | string | Yes | SSID of the network to connect to. |
+| `password` | string | No | Password for secured networks. Omit for open networks. |
+| `remember` | boolean | No | Save credentials for auto-reconnect. Defaults to `true`. |
+| `bssid` | string | No | Lock connection to a specific AP MAC address. |
+| `mac` | string | No | Target a specific router by MAC address. |
 
 Example:
 
@@ -85,17 +87,31 @@ data:
 ```
 
 ### `disconnect_wifi`
+
 Disconnects the router from the current external WiFi repeater network.
 
-- **`mac`** (Optional): Target a specific router by MAC address.
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `mac` | string | No | Target a specific router by MAC address. |
 
 ### `get_saved_networks`
+
 Retrieves saved repeater WiFi networks from the router.
 
-- **`mac`** (Optional): Target a specific router by MAC address.
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `mac` | string | No | Target a specific router by MAC address. |
 
 ### `remove_saved_network`
+
 Removes a saved repeater WiFi network from the router.
 
-- **`ssid`**: The SSID of the saved network to remove.
-- **`mac`** (Optional): Target a specific router by MAC address.
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ssid` | string | Yes | The SSID of the saved network to remove. |
+| `mac` | string | No | Target a specific router by MAC address. |
+
+## Related Pages
+
+- [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/services) — How to use Home Assistant services with this integration.
+- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities) — All core and optional entities.

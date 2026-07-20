@@ -1,4 +1,4 @@
-# Services & Actions (`services.py`)
+# Services & Actions
 
 The integration registers services under the `glinet_router` domain to allow manual interaction with the router from Home Assistant automations and scripts.
 
@@ -8,53 +8,30 @@ For full parameter details, visit the optional feature page for each service gro
 
 | Service Group | Feature Page |
 | --- | --- |
-| `send_sms`, `get_sms`, `remove_sms`, `refresh_sms` | [SMS](https://github.com/vithurshanselvarajah/glinet-router/wiki/sms) |
-| `scan_wifi`, `connect_wifi`, `disconnect_wifi`, `get_saved_networks`, `remove_saved_network` | [Repeater](https://github.com/vithurshanselvarajah/glinet-router/wiki/repeater) |
-| `add_firewall_rule`, `remove_firewall_rule`, `get_firewall_rules`, `add_port_forward`, `remove_port_forward`, `set_dmz` | [Firewall](https://github.com/vithurshanselvarajah/glinet-router/wiki/firewall) |
-| `get_mcu_battery_config`, `set_mcu_battery_config` | [MCU Battery](https://github.com/vithurshanselvarajah/glinet-router/wiki/mcu-battery) |
-| `get_mcu_oled_config`, `set_mcu_oled_config` | [MCU OLED](https://github.com/vithurshanselvarajah/glinet-router/wiki/mcu-oled) |
-| `kmwan_get_config`, `kmwan_get_status`, `kmwan_set_config`, `kmwan_set_interface`, `kmwan_set_sensitivity` | [KMWAN](https://github.com/vithurshanselvarajah/glinet-router/wiki/router-api) |
-| `mwan3_get_config`, `mwan3_get_status`, `mwan3_set_config`, `mwan3_set_interface` | [MWAN3](https://github.com/vithurshanselvarajah/glinet-router/wiki/router-api) |
-| `parental_control_set_temporary_override`, `parental_control_set_filtering_mode`, `parental_control_update_signatures`, `access_control_set_mode`, `access_control_set_device_block`, `parental_control_set_group_schedules` | [Parental & Access Control](https://github.com/vithurshanselvarajah/glinet-router/wiki/parental-control) |
-| `playground` | [API Playground](https://github.com/vithurshanselvarajah/glinet-router/wiki/playground) |
+| `send_sms`, `get_sms`, `remove_sms`, `refresh_sms` | [SMS](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/sms) |
+| `scan_wifi`, `connect_wifi`, `disconnect_wifi`, `get_saved_networks`, `remove_saved_network` | [Repeater](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/repeater) |
+| `add_firewall_rule`, `remove_firewall_rule`, `get_firewall_rules` | [Firewall Rules](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/firewall-rules) |
+| `add_port_forward`, `remove_port_forward` | [Port Forwards](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/port-forwards) |
+| `set_dmz` | [DMZ](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/dmz) |
+| `get_mcu_battery_config`, `set_mcu_battery_config` | [MCU Battery](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/mcu-battery) |
+| `get_mcu_oled_config`, `set_mcu_oled_config` | [MCU OLED](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/mcu-oled) |
+| `kmwan_get_config`, `kmwan_get_status`, `kmwan_set_config`, `kmwan_set_interface`, `kmwan_set_sensitivity` | [KMWAN](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/kmwan) |
+| `mwan3_get_config`, `mwan3_get_status`, `mwan3_set_config`, `mwan3_set_interface` | [MWAN3](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/mwan3) |
+| `parental_control_set_temporary_override`, `parental_control_set_filtering_mode`, `parental_control_update_signatures`, `parental_control_set_group_schedules` | [Parental Control](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/parental-control-feature) |
+| `access_control_set_mode`, `access_control_set_device_block` | [Access Control](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/access-control) |
+| `playground` | [API Playground](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/playground) |
 
----
+## Core Services
 
-## API Playground
+These services are always available regardless of optional feature selection.
 
-### `playground`
-
-Sends a custom JSON-RPC or ubus request to the GL.iNet router and waits to return the raw JSON response. This service is only available if **API Playground** is enabled in the configuration flow options.
-
-For a full guide, request-routing rules, and multiple examples, see the dedicated [API Playground Documentation](playground.md) (or [Wiki page](https://github.com/vithurshanselvarajah/glinet-router/wiki/playground)).
-
-- **`method`**: The RPC or ubus method. Use a slash to call ubus objects, e.g. `system/get_info`, or specify top-level RPC methods (like `challenge`).
-- **`body`** (Optional): A JSON/YAML dictionary containing parameters/arguments for the request.
-- **`mac`** (Optional): Target a specific router by MAC address.
-
----
-
-
-## Fan Control
-
-### `set_fan_temperature`
-
-Sets the temperature threshold at which the router's fan will start running. Available on routers with a controllable fan.
-
-- **`temperature`**: Target threshold temperature in Celsius (typically 70–90).
-- **`mac`** (Optional): Target a specific router by MAC address.
-
----
-
-## Targeting a Specific Router
-
-All services accept an optional **`mac`** parameter. When multiple GL.iNet routers are configured in Home Assistant, you can use the router's MAC address to target a specific instance. If omitted, the first available hub is used.
-
----
-
-## Internal Logic
-
-| Function | Purpose |
+| Service | Page |
 | --- | --- |
-| `async_register_services` | Entry point during integration setup to register all domain services. |
-| `_get_hub` | Helper to find the active `GLinetHub` instance matching the provided MAC address. |
+| `set_fan_temperature` | [Smart Fan](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/smart-fan) |
+| `refresh_clients` | [Refresh Clients](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/refresh-clients) |
+
+## Reference
+
+- [Targeting a Specific Router](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/router-targeting) — The optional `mac` parameter shared by every service.
+- [Triggers](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/triggers) — Building automations that react to GL.iNet router state.
+- [Conditions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/conditions) — Using Home Assistant's built-in conditions on integration entities.

@@ -19,3 +19,8 @@ To enable this feature, check the **ZeroTier** option under **Enabled Features**
 | Entity | Description | API Source |
 | --- | --- | --- |
 | **ZeroTier** | Toggles the ZeroTier service connection on or off. | `zerotier/get_status` / `zerotier/set_config` |
+
+## Related Pages
+
+- [Services & Actions](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/services) — How to use Home Assistant services with this integration.
+- [Entity Reference](https://github.com/vithurshanselvarajah/ha-glinet-router/wiki/entities) — All core and optional entities.
